@@ -1,0 +1,18 @@
+{
+  "name": "@visual-team/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@visual-team/codex-event-mapper": "*",
+    "@visual-team/contracts": "*",
+    "@visual-team/state-machine": "*",
+    "express": "^5.2.1",
+    "zod": "^4.6.4"
+  }
+}

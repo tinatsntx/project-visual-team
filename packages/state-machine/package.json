@@ -1,0 +1,13 @@
+{
+  "name": "@visual-team/state-machine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@visual-team/contracts": "*",
+    "zod": "^4.6.4"
+  }
+}

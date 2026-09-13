@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@visual-team/contracts": ["./packages/contracts/src/index.ts"],
+      "@visual-team/state-machine": ["./packages/state-machine/src/index.ts"],
+      "@visual-team/codex-event-mapper": ["./packages/codex-event-mapper/src/index.ts"],
+      "@visual-team/test-fixtures": ["./packages/test-fixtures/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps/*/src/**/*.ts",
+    "apps/*/src/**/*.tsx",
+    "apps/*/tests/**/*.ts",
+    "packages/*/src/**/*.ts",
+    "packages/*/tests/**/*.ts"
+  ]
+}

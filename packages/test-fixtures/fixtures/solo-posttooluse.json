@@ -1,0 +1,58 @@
+{
+  "name": "solo-posttooluse",
+  "description": "A solo task that receives real Codex activity and a finished turn. No team is fabricated for a small request.",
+  "steps": [
+    {
+      "kind": "start",
+      "input": {
+        "title": "Update the onboarding button label",
+        "summary": "Change the label and confirm the app still builds.",
+        "mode": "solo",
+        "workerRoles": ["lead"],
+        "privacyMode": "standard"
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-002",
+        "name": "UserPromptSubmit",
+        "at": "2026-09-13T15:00:05.000Z",
+        "payload": { "session_id": "sess-1", "turn_id": "turn-1" }
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-003",
+        "name": "PreToolUse",
+        "at": "2026-09-13T15:00:10.000Z",
+        "payload": { "session_id": "sess-1", "turn_id": "turn-1", "tool_name": "apply_patch" }
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-004",
+        "name": "PostToolUse",
+        "at": "2026-09-13T15:00:14.000Z",
+        "payload": { "session_id": "sess-1", "turn_id": "turn-1", "tool_name": "apply_patch" }
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-005",
+        "name": "Stop",
+        "at": "2026-09-13T15:00:30.000Z",
+        "payload": { "session_id": "sess-1", "turn_id": "turn-1" }
+      }
+    }
+  ],
+  "expect": {
+    "taskState": "ACTIVE",
+    "workerStates": { "lead": "IDLE" },
+    "needsUser": false,
+    "eventCount": 5
+  }
+}

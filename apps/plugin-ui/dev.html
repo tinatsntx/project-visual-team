@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Visual Team — dev harness</title>
+</head>
+<body>
+  <!--
+    Local dev harness. Build first: npm run build --workspace @visual-team/plugin-ui
+    Then serve this folder (npm run dev:serve) and open the printed URL.
+    window.__VISUAL_TEAM_DEV__ simulates a host tool-result notification.
+    Change displayMode to "fullscreen" or "pip" to preview other modes.
+  -->
+  <div id="root"></div>
+  <script>
+    window.__VISUAL_TEAM_DEV__ = {
+      displayMode: "inline",
+      toolResult: {
+        structuredContent: {
+          uiAvailable: true,
+          task: {
+            id: "vt_devdemo",
+            title: "Improve onboarding and check nothing broke",
+            summary: "Research options, implement the chosen approach, verify it.",
+            mode: "team",
+            privacyMode: "standard",
+            state: "ACTIVE",
+            stateProvenance: "observed",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            lastActivityAt: new Date().toISOString(),
+            noRecentActivity: false,
+            needsUser: false,
+            eventCount: 4,
+            workers: [
+              { id: "lead", role: "lead", label: "Alex", state: "WORKING", stateProvenance: "observed", isWriter: true, updatedAt: new Date().toISOString() },
+              { id: "explorer", role: "explorer", label: "Nova", state: "COMPLETED", stateProvenance: "observed", isWriter: false, updatedAt: new Date().toISOString() },
+              { id: "reviewer", role: "reviewer", label: "Remy", state: "ASSIGNED", stateProvenance: "reported", isWriter: false, updatedAt: new Date().toISOString() }
+            ]
+          },
+          recentEvents: [
+            { id: "e1", taskId: "vt_devdemo", at: new Date(Date.now() - 30000).toISOString(), provenance: "reported", kind: "task_started", label: "Alex picked up the task." },
+            { id: "e2", taskId: "vt_devdemo", at: new Date(Date.now() - 20000).toISOString(), provenance: "observed", kind: "worker_transition", workerId: "lead", to: "WORKING", label: "Working on it.", detail: "tool: apply_patch" },
+            { id: "e3", taskId: "vt_devdemo", at: new Date(Date.now() - 10000).toISOString(), provenance: "observed", kind: "specialist_finished", workerId: "explorer", label: "A specialist finished its part." }
+          ]
+        },
+        _meta: { taskCapability: "dev-only" }
+      }
+    };
+  </script>
+  <script type="module" src="./dist/visual-team.js"></script>
+</body>
+</html>

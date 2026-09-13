@@ -1,0 +1,99 @@
+/* Visual Team — system fonts, system colors, brand accent only for primary
+ * actions (PROJECT_PLAN.md §12.4). WCAG AA contrast targets throughout. */
+
+:root {
+  --vt-accent: #2f6feb;
+  --vt-info: #0969da;
+  --vt-ok: #1a7f37;
+  --vt-warn: #9a6700;
+  --vt-danger: #cf222e;
+  --vt-muted: #57606a;
+  --vt-fg: CanvasText;
+  --vt-bg: Canvas;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--vt-fg);
+  background: var(--vt-bg);
+}
+
+.vt-inline { padding: 12px; display: grid; gap: 10px; }
+.vt-inline-main { display: flex; gap: 12px; align-items: center; }
+.vt-inline-text { min-width: 0; }
+.vt-title { margin: 0; font-size: 1rem; }
+.vt-status { margin: 4px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vt-lead-line { color: var(--vt-muted); font-size: 0.9rem; }
+.vt-muted { color: var(--vt-muted); }
+
+.vt-support { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.vt-support li { display: flex; gap: 8px; align-items: center; font-size: 0.9rem; color: var(--vt-muted); }
+
+.vt-actions { display: flex; gap: 8px; }
+.vt-btn {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--vt-muted);
+  background: transparent;
+  color: var(--vt-fg);
+  cursor: pointer;
+}
+.vt-btn:focus-visible { outline: 2px solid var(--vt-accent); outline-offset: 2px; }
+.vt-btn-primary { background: var(--vt-accent); border-color: var(--vt-accent); color: #fff; }
+
+.vt-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--vt-muted);
+  color: var(--vt-muted);
+}
+.vt-badge-active, .vt-badge-working { border-color: var(--vt-accent); color: var(--vt-accent); }
+.vt-badge-completed { border-color: var(--vt-ok); color: var(--vt-ok); }
+.vt-badge-failed { border-color: var(--vt-danger); color: var(--vt-danger); }
+.vt-badge-waiting-for-user, .vt-badge-waiting-for-approval, .vt-badge-blocked { border-color: var(--vt-warn); color: var(--vt-warn); }
+.vt-badge-planning, .vt-badge-reviewing { border-color: var(--vt-info); color: var(--vt-info); }
+
+.vt-needs-user { color: var(--vt-warn); font-weight: 600; margin: 4px 0 0; }
+.vt-needs-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--vt-warn); display: inline-block;
+}
+
+.vt-full { padding: 20px; max-width: 720px; margin: 0 auto; display: grid; gap: 18px; }
+.vt-full-header { display: flex; gap: 12px; align-items: center; }
+.vt-full-header h2 { margin: 0; flex: 1; }
+.vt-full h3 { margin: 0 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vt-muted); }
+.vt-full p { margin: 0; }
+.vt-roster { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.vt-roster-item { display: flex; gap: 12px; align-items: center; }
+.vt-roster-item p { margin: 2px 0 0; font-size: 0.9rem; }
+
+.vt-pip { padding: 8px; display: flex; align-items: center; gap: 10px; }
+.vt-pip ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 12px; }
+.vt-pip li { display: flex; gap: 6px; align-items: center; }
+.vt-pip-line { font-size: 0.8rem; white-space: nowrap; }
+
+.vt-evidence { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; font-size: 0.85rem; }
+.vt-evidence li { border-left: 2px solid var(--vt-muted); padding-left: 8px; }
+.vt-evidence-label { display: block; }
+.vt-evidence-meta { color: var(--vt-muted); font-size: 0.75rem; }
+.vt-evidence-empty { color: var(--vt-muted); font-size: 0.85rem; }
+
+.vt-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* State motion — subtle bob; suppressed entirely under reduced motion. */
+@keyframes vt-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.vt-bob { animation: vt-bob 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-bob { animation: none; }
+}

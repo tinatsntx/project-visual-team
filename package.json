@@ -1,0 +1,31 @@
+{
+  "name": "project-visual-team",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Open-source ChatGPT/Codex plugin that represents real work as a small visual team. Working codename: Project Visual Team.",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @visual-team/mcp-server",
+    "dev:ui": "npm run dev --workspace @visual-team/plugin-ui",
+    "build": "npm run build --workspace @visual-team/plugin-ui",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx --test \"apps/**/*.test.ts\" \"packages/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

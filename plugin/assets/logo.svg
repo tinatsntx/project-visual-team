@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 48" width="96" height="48" role="img" aria-label="Visual Team logo">
+  <!-- Original mark: three small robots — a lead plus two specialists. -->
+  <g fill="none" stroke="#2F6FEB" stroke-width="3" stroke-linecap="round">
+    <circle cx="24" cy="7" r="3" fill="#2F6FEB" stroke="none"/>
+    <line x1="24" y1="10" x2="24" y2="14"/>
+    <rect x="10" y="14" width="28" height="22" rx="7"/>
+    <circle cx="19" cy="25" r="2.6" fill="#2F6FEB" stroke="none"/>
+    <circle cx="29" cy="25" r="2.6" fill="#2F6FEB" stroke="none"/>
+    <line x1="19" y1="31" x2="29" y2="31"/>
+  </g>
+  <g fill="none" stroke="#57606A" stroke-width="2.4" stroke-linecap="round" opacity="0.85">
+    <rect x="52" y="18" width="18" height="14" rx="5"/>
+    <circle cx="58" cy="25" r="1.8" fill="#57606A" stroke="none"/>
+    <circle cx="64" cy="25" r="1.8" fill="#57606A" stroke="none"/>
+    <rect x="74" y="18" width="18" height="14" rx="5"/>
+    <circle cx="80" cy="25" r="1.8" fill="#57606A" stroke="none"/>
+    <circle cx="86" cy="25" r="1.8" fill="#57606A" stroke="none"/>
+  </g>
+</svg>

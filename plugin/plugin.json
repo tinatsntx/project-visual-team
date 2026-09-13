@@ -1,0 +1,30 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "visual-team",
+  "version": "0.1.0",
+  "description": "See your ChatGPT and Codex work as a small visual team — who is doing what, what needs you, and what is done.",
+  "license": "Apache-2.0",
+  "keywords": ["visual", "team", "workflow", "status", "codex"],
+  "extensions": {
+    "com.openai": {
+      "apps": "./.app.json",
+      "hooks": "./hooks/hooks.json",
+      "interface": {
+        "displayName": "Visual Team",
+        "shortDescription": "Watch your work as a small visual team.",
+        "longDescription": "An open-source visual team interface that makes native ChatGPT and Codex work easier to understand — without creating another agent platform.",
+        "developerName": "Project Visual Team contributors",
+        "category": "Productivity",
+        "capabilities": ["Read"],
+        "defaultPrompt": [
+          "Use Visual Team to review my onboarding flow, improve it, and check that nothing broke.",
+          "Use Visual Team to compare three approaches and recommend one."
+        ],
+        "brandColor": "#2F6FEB",
+        "composerIcon": "./assets/composer-icon.svg",
+        "logo": "./assets/logo.svg",
+        "screenshots": []
+      }
+    }
+  }
+}
