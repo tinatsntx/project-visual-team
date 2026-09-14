@@ -41,6 +41,13 @@ and replays `packages/test-fixtures` through the real `mapCodexEvent` +
 `applyEvent` pipeline. These verify the widget-side mechanics only — the
 platform matrix above still needs real surfaces.
 
+Visually confirmed in the harness preview: inline and fullscreen modes both
+render, `team-with-permission` replays to its `expect` block exactly
+(`WAITING_FOR_USER`, lead `WAITING_FOR_APPROVAL`, specialist `COMPLETED`,
+`needsUser: true`), evidence entries show live timestamps and provenance
+labels, zero console errors, and the a11y tree (`role="alert"`, avatar
+aria-labels, sr-only status) is intact.
+
 - `ui/initialize` handshake + `ui/notifications/tool-result` deliver the
   snapshot and the UI-private `_meta.taskCapability`. ✓
 - Approach 1 refresh: the widget polls `get_visual_task` via `tools/call`
