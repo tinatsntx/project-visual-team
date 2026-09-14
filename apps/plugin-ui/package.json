@@ -4,13 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.tsx --bundle --format=esm --jsx=automatic --outfile=dist/visual-team.js --minify",
+    "build": "esbuild src/main.tsx --bundle --format=esm --jsx=automatic --outfile=dist/visual-team.js --minify && esbuild src/dev/devHost.ts --bundle --format=esm --outfile=dist/dev-host.js --minify",
     "dev": "esbuild src/main.tsx --bundle --format=esm --jsx=automatic --outfile=dist/visual-team.js --watch",
-    "dev:serve": "esbuild src/main.tsx --bundle --format=esm --jsx=automatic --outfile=dist/visual-team.js --servedir=. --serve=127.0.0.1:8788"
+    "dev:serve": "node serve.mjs"
   },
   "dependencies": {
     "@visual-team/contracts": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@visual-team/codex-event-mapper": "*",
+    "@visual-team/state-machine": "*",
+    "@visual-team/test-fixtures": "*"
   }
 }

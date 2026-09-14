@@ -33,6 +33,30 @@ Test in order and record which works per surface:
 **Method that worked:** _TBD_
 **Measured refresh latency:** _TBD_ (target: < 5 s)
 
+## Local harness verification (2026-09-14)
+
+`apps/plugin-ui/dev.html` is a simulated host: it embeds the real widget
+bundle in an iframe, answers `ui/initialize` + `tools/call` over postMessage,
+and replays `packages/test-fixtures` through the real `mapCodexEvent` +
+`applyEvent` pipeline. These verify the widget-side mechanics only — the
+platform matrix above still needs real surfaces.
+
+- `ui/initialize` handshake + `ui/notifications/tool-result` deliver the
+  snapshot and the UI-private `_meta.taskCapability`. ✓
+- Approach 1 refresh: the widget polls `get_visual_task` via `tools/call`
+  every 4 s while non-terminal; host-side events appear on the next poll as
+  data-only updates — no reload, no re-render of the frame. ✓ (mechanism
+  verified; latency is localhost-trivial, not a platform measurement)
+- Capability guard: wrong/missing token returns an `isError` result. ✓
+- `needsUser` surfaces from `PermissionRequest`; an observed `task_finished`
+  reaches COMPLETED and polling stops at a terminal state. ✓
+- `ui/request-display-mode` round-trips; harness resizes + remounts the
+  widget per mode. PiP remains behind `PIP_FEATURE_ENABLED`. ✓
+- Headless text: `summarize()` output and the `uiAvailable: false` fallback
+  are covered by `apps/mcp-server` tool tests. ✓ (unit level)
+- Not covered locally: real host chrome, CSP enforcement, cross-origin
+  isolation, hosted-tool blind spots — platform matrix only.
+
 ## Hard GO criteria (plan §14)
 
 | # | Criterion | Result | Evidence |

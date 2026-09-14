@@ -34,11 +34,14 @@ npm run build        # bundle the UI (esbuild -> apps/plugin-ui/dist)
 npm run dev          # start the MCP server on http://localhost:8787/mcp
 ```
 
-Preview the UI without ChatGPT:
+Preview the UI without ChatGPT — `dev.html` is a simulated host: it embeds
+the real widget bundle in an iframe, answers `ui/initialize` + `tools/call`
+over postMessage, and replays a repo fixture through the real event mapper
+and state machine so the widget's live `get_visual_task` polling is exercised:
 
 ```powershell
 npm run dev:serve --workspace @visual-team/plugin-ui
-# open http://127.0.0.1:8788/dev.html
+# open http://127.0.0.1:8788/dev.html  (?mode=inline|fullscreen|pip)
 ```
 
 ## Testing in ChatGPT / Codex
