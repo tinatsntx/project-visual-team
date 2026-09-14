@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { useVisualTask } from "./bridge/useVisualTask.js";
 import { hostBridge } from "./bridge/hostBridge.js";
 import { InlineView } from "./modes/InlineView.js";
@@ -6,6 +7,11 @@ import { PipView, PIP_FEATURE_ENABLED } from "./modes/PipView.js";
 
 export function App() {
   const { task, recentEvents, uiAvailable } = useVisualTask();
+  const mode = useSyncExternalStore(
+    (onChange) => hostBridge.subscribeDisplayMode(onChange),
+    () => hostBridge.currentDisplayMode(),
+    () => "inline",
+  );
 
   if (!task) {
     return (
@@ -24,7 +30,6 @@ export function App() {
     );
   }
 
-  const mode = hostBridge.currentDisplayMode();
   if (mode === "fullscreen") return <FullscreenView task={task} recentEvents={recentEvents} />;
   if (mode === "pip" && PIP_FEATURE_ENABLED) return <PipView task={task} />;
   return <InlineView task={task} recentEvents={recentEvents} />;

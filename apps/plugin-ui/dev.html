@@ -17,11 +17,12 @@
     }
     header strong { font-size: 15px; }
     header nav { display: flex; gap: 8px; align-items: center; }
-    header a, header span.lbl {
+    header a, header button, header span.lbl {
       color: #9ecbff; text-decoration: none; font-size: 13px;
       padding: 3px 10px; border: 1px solid #3a3b40; border-radius: 6px;
+      background: transparent; font: inherit;
     }
-    header a:hover { background: #2f3036; }
+    header a:hover, header button:hover { background: #2f3036; }
     header span.lbl { color: #8b8c91; border-color: transparent; }
     main { flex: 1; position: relative; padding: 24px; display: flex; }
     /* Simulated display-mode chrome: how the host would size the widget. */
@@ -54,7 +55,9 @@
 
     Params: ?mode=inline|fullscreen|pip  ?fixture=team-with-permission|solo-posttooluse
     The widget polls get_visual_task through the bridge while the task is
-    non-terminal — watch the log below for live bridge traffic.
+    non-terminal — watch the log below for live bridge traffic. The host-mode
+    buttons exercise host-initiated display changes without reloading the
+    iframe, so terminal-task mode behavior stays visible.
   -->
   <header>
     <strong>Visual Team — simulated host</strong>
@@ -63,6 +66,10 @@
       <a href="?mode=inline">inline</a>
       <a href="?mode=fullscreen">fullscreen</a>
       <a href="?mode=pip">pip</a>
+      <span class="lbl">host mode, no reload</span>
+      <button type="button" data-host-mode="inline">inline</button>
+      <button type="button" data-host-mode="fullscreen">fullscreen</button>
+      <button type="button" data-host-mode="pip">pip</button>
       <span class="lbl">fixture</span>
       <a href="?fixture=team-with-permission">team + permission</a>
       <a href="?fixture=solo-posttooluse">solo</a>

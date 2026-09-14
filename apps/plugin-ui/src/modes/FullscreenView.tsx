@@ -52,7 +52,7 @@ export function FullscreenView({ task, recentEvents }: { task: TaskSnapshot; rec
         <ul>
           {task.workers.map((w) => (
             <li key={w.id}>
-              {w.label} owns the {w.role} track{w.isWriter ? " and is writing" : ""}.
+              {w.label} owns the {w.role} track.
             </li>
           ))}
         </ul>

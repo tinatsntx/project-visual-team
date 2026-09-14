@@ -2,14 +2,32 @@
  * actions (PROJECT_PLAN.md §12.4). WCAG AA contrast targets throughout. */
 
 :root {
-  --vt-accent: #2f6feb;
-  --vt-info: #0969da;
-  --vt-ok: #1a7f37;
-  --vt-warn: #9a6700;
-  --vt-danger: #cf222e;
-  --vt-muted: #57606a;
-  --vt-fg: CanvasText;
-  --vt-bg: Canvas;
+  color-scheme: light dark;
+  --vt-bg: #ffffff;
+  --vt-fg: #1f2328;
+  --vt-accent: #075cc7;
+  --vt-info: #075cc7;
+  --vt-ok: #176b2c;
+  --vt-warn: #875a00;
+  --vt-danger: #b4232d;
+  --vt-muted: #4b5563;
+  --vt-on-accent: #ffffff;
+  --vt-focus: #075cc7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --vt-bg: #202124;
+    --vt-fg: #f1f3f4;
+    --vt-accent: #9bc3ff;
+    --vt-info: #a8c7fa;
+    --vt-ok: #9de5a8;
+    --vt-warn: #ffd776;
+    --vt-danger: #ffb4ab;
+    --vt-muted: #c5cbd5;
+    --vt-on-accent: #202124;
+    --vt-focus: #b8ceff;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -41,8 +59,8 @@ body {
   color: var(--vt-fg);
   cursor: pointer;
 }
-.vt-btn:focus-visible { outline: 2px solid var(--vt-accent); outline-offset: 2px; }
-.vt-btn-primary { background: var(--vt-accent); border-color: var(--vt-accent); color: #fff; }
+.vt-btn:focus-visible { outline: 2px solid var(--vt-focus); outline-offset: 2px; }
+.vt-btn-primary { background: var(--vt-accent); border-color: var(--vt-accent); color: var(--vt-on-accent); }
 
 .vt-badge {
   display: inline-block;

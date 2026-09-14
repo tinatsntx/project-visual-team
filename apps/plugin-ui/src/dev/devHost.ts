@@ -19,6 +19,7 @@ import type {
 import type { ReplayFixture } from "@visual-team/test-fixtures";
 import teamFixture from "../../../../packages/test-fixtures/fixtures/team-with-permission.json";
 import soloFixture from "../../../../packages/test-fixtures/fixtures/solo-posttooluse.json";
+import { syntheticCompletionDiagnostic } from "./diagnostics.js";
 
 /**
  * Simulated host for the dev harness (PROJECT_PLAN.md §7.4 approach 1).
@@ -101,6 +102,11 @@ class DevHost {
     // Listener must exist before the widget can announce itself.
     this.iframe.src = "./widget.html";
     setInterval(() => this.tick(), EVENT_STEP_MS);
+    document.querySelectorAll<HTMLButtonElement>("[data-host-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        this.setDisplayMode(button.dataset.hostMode, "host-initiated control");
+      });
+    });
     log(
       `fixture "${fixture.name}" — task ${this.record.snapshot.id}, ` +
         `${this.queue.length} codex events queued, mode=${displayMode}`,
@@ -136,12 +142,9 @@ class DevHost {
         break;
       case "ui/request-display-mode": {
         const mode = (msg.params as { mode?: string } | undefined)?.mode ?? "inline";
-        log(`← ui/request-display-mode "${mode}" — resizing + reloading widget`);
-        this.displayMode = mode;
-        document.body.dataset.mode = mode;
+        log(`← ui/request-display-mode "${mode}" — host accepted without reloading widget`);
+        this.setDisplayMode(mode, "widget request");
         this.respond(msg.id, { mode });
-        // Reload so the widget re-reads displayMode from ui/initialize.
-        setTimeout(() => this.iframe.contentWindow?.location.reload(), 50);
         break;
       }
       default:
@@ -155,6 +158,28 @@ class DevHost {
 
   private error(id: number, code: number, message: string): void {
     this.post({ jsonrpc: "2.0", id, error: { code, message } });
+  }
+
+  /**
+   * Test the documented host-global update path in the already-mounted iframe.
+   * Deliberately do not reload: a reload would hide React subscription bugs.
+   */
+  private setDisplayMode(mode: string | undefined, source: string): void {
+    if (mode !== "inline" && mode !== "fullscreen" && mode !== "pip") {
+      log(`host mode "${String(mode)}" ignored — unsupported`);
+      return;
+    }
+    this.displayMode = mode;
+    document.body.dataset.mode = mode;
+    const child = this.iframe.contentWindow;
+    if (child) {
+      child.dispatchEvent(
+        new CustomEvent("openai:set_globals", {
+          detail: { globals: { displayMode: mode } },
+        }),
+      );
+    }
+    log(`→ openai:set_globals displayMode="${mode}" (${source}; iframe retained)`);
   }
 
   /** Delivers the same render-result contract used by the registered MCP tool. */
@@ -240,9 +265,10 @@ class DevHost {
     };
   }
 
-  private injectVisualEvent(event: VisualEvent): void {
+  private injectVisualEvent(event: VisualEvent) {
     const result = applyEvent(this.record, event);
     if (!result.ok) log(`event ${event.kind} rejected: ${result.error ?? "unknown"}`);
+    return result;
   }
 
   /** Feed the next queued codex event through the real mapper, then autofinish. */
@@ -256,15 +282,15 @@ class DevHost {
     if (this.finished) return;
     this.finished = true;
     setTimeout(() => {
-      this.injectVisualEvent({
+      const result = this.injectVisualEvent({
         id: "evt_dev_finish",
         taskId: this.record.snapshot.id,
         at: nowIso(),
-        provenance: "observed",
+        provenance: "reported",
         kind: "task_finished",
-        label: "Task finished.",
+        label: "Synthetic harness completion.",
       });
-      log(`codex → task_finished (observed) — terminal state; widget stops polling`);
+      log(syntheticCompletionDiagnostic(result));
     }, AUTOFINISH_DELAY_MS);
   }
 }

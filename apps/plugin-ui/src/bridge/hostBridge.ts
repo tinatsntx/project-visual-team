@@ -42,7 +42,7 @@ declare global {
       displayMode?: string;
       callTool?: (name: string, args: Record<string, unknown>) => Promise<ToolResultMessage>;
       sendFollowUpMessage?: (args: { prompt: string }) => Promise<void>;
-      requestDisplayMode?: (args: { mode: string }) => Promise<{ mode: string }>;
+      requestDisplayMode?: (args: { mode: string }) => Promise<unknown>;
       setWidgetState?: (state: unknown) => Promise<void>;
     };
     __VISUAL_TEAM_DEV__?: {
@@ -54,12 +54,86 @@ declare global {
 
 type NotificationHandler = (method: string, params: unknown) => void;
 
-class HostBridge {
+export type DisplayMode = "inline" | "fullscreen" | "pip";
+
+const DISPLAY_MODES = new Set<DisplayMode>(["inline", "fullscreen", "pip"]);
+const SET_GLOBALS_EVENT_TYPE = "openai:set_globals";
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function asDisplayMode(value: unknown): DisplayMode | null {
+  return typeof value === "string" && DISPLAY_MODES.has(value as DisplayMode)
+    ? (value as DisplayMode)
+    : null;
+}
+
+/**
+ * React-facing state for a host-owned global. It changes only when the host
+ * provides a supported actual mode: initialize context, a set-globals event,
+ * or the result of a successful display-mode request.
+ */
+export class DisplayModeStore {
+  private mode: DisplayMode = "inline";
+  private readonly listeners = new Set<() => void>();
+
+  current(): DisplayMode {
+    return this.mode;
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  apply(value: unknown): boolean {
+    const mode = asDisplayMode(value);
+    if (!mode || mode === this.mode) return false;
+    this.mode = mode;
+    for (const listener of this.listeners) listener();
+    return true;
+  }
+
+  applyInitializeResult(result: unknown): boolean {
+    return this.apply(asRecord(asRecord(result)?.hostContext)?.displayMode);
+  }
+
+  applyHostGlobals(detail: unknown): boolean {
+    return this.apply(asRecord(asRecord(detail)?.globals)?.displayMode);
+  }
+
+  applyRequestResponse(result: unknown): boolean {
+    const response = asRecord(result);
+    return this.apply(
+      response?.displayMode ?? response?.mode ?? asRecord(response?.hostContext)?.displayMode,
+    );
+  }
+}
+
+/**
+ * A mode request is advisory. Do not optimistically change layout: only a
+ * valid host response (or its updated global) can update the store.
+ */
+export async function applyDisplayModeRequest(
+  request: () => Promise<unknown>,
+  store: DisplayModeStore,
+  readHostMode?: () => unknown,
+): Promise<boolean> {
+  try {
+    const response = await request();
+    return store.applyRequestResponse(response) || store.apply(readHostMode?.());
+  } catch {
+    return false;
+  }
+}
+
+export class HostBridge {
   private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
   private handlers = new Set<NotificationHandler>();
   private nextId = 1;
   private started = false;
-  private displayMode: string | null = null;
+  private readonly displayModes = new DisplayModeStore();
   private latestToolResult: ToolResultMessage | null = null;
 
   /** Dev harness support: dev.html injects window.__VISUAL_TEAM_DEV__. */
@@ -98,6 +172,14 @@ class HostBridge {
   start(): void {
     if (this.started || typeof window === "undefined") return;
     this.started = true;
+    this.displayModes.apply(this.devData?.displayMode ?? window.openai?.displayMode);
+    window.addEventListener(
+      SET_GLOBALS_EVENT_TYPE,
+      (event) => {
+        this.displayModes.applyHostGlobals((event as CustomEvent<unknown>).detail);
+      },
+      { passive: true },
+    );
     window.addEventListener("message", (event) => {
       if (event.source !== window.parent) return;
       const msg = event.data as JsonRpcResponse | JsonRpcNotification;
@@ -124,8 +206,7 @@ class HostBridge {
       clientInfo: { name: "visual-team-ui", version: "0.1.0" },
       capabilities: {},
     }).then((result) => {
-      const hostContext = (result as { hostContext?: { displayMode?: string } } | undefined)?.hostContext;
-      if (hostContext?.displayMode) this.displayMode = hostContext.displayMode;
+      this.displayModes.applyInitializeResult(result);
     }).catch(() => undefined);
   }
 
@@ -162,16 +243,26 @@ class HostBridge {
     return result as ToolResultMessage;
   }
 
-  async requestDisplayMode(mode: "inline" | "fullscreen" | "pip"): Promise<void> {
+  async requestDisplayMode(mode: DisplayMode): Promise<boolean> {
     if (window.openai?.requestDisplayMode) {
-      await window.openai.requestDisplayMode({ mode });
-      return;
+      return applyDisplayModeRequest(
+        () => window.openai!.requestDisplayMode!({ mode }),
+        this.displayModes,
+        () => window.openai?.displayMode,
+      );
     }
-    await this.request("ui/request-display-mode", { mode }).catch(() => undefined);
+    return applyDisplayModeRequest(
+      () => this.request("ui/request-display-mode", { mode }),
+      this.displayModes,
+    );
   }
 
-  currentDisplayMode(): string {
-    return this.devData?.displayMode ?? window.openai?.displayMode ?? this.displayMode ?? "inline";
+  currentDisplayMode(): DisplayMode {
+    return this.displayModes.current();
+  }
+
+  subscribeDisplayMode(listener: () => void): () => void {
+    return this.displayModes.subscribe(listener);
   }
 }
 
