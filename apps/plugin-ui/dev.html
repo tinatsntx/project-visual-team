@@ -55,7 +55,7 @@
 
     Params: ?mode=inline|fullscreen|pip  ?fixture=team-with-permission|solo-posttooluse
             ?delivery=initialized|immediate|split|globals|never
-            ?read=ok|reject|drop   ?capability=with|none
+            ?read=ok|reject|drop   ?capability=with|none   ?ask=reject
     delivery=initialized (default) follows spec order: the tool result is sent
     only after ui/notifications/initialized. "immediate" sends it with the
     initialize response, "split" sends public output first and private
@@ -63,10 +63,15 @@
     host globals, "never" sends nothing (bounded wait then unavailable).
     read=reject returns the real generic unknown-task error; read=drop never
     answers. capability=none strips the private metadata entirely.
+    ask=reject answers the widget's ui/message re-render request with an
+    error so its static guidance is visible.
     The widget polls get_visual_task through the bridge while the task is
     non-terminal — watch the log below for live bridge traffic. The host-mode
     buttons exercise host-initiated display changes without reloading the
-    iframe, so terminal-task mode behavior stays visible.
+    iframe, so terminal-task mode behavior stays visible. The read-mode
+    buttons switch get_visual_task behavior in the same mounted widget —
+    e.g. start ?read=reject, wait for the stale banner, click "ok", then
+    Try again inside the widget to see stale → live recovery.
   -->
   <header>
     <strong>Visual Team — simulated host</strong>
@@ -89,6 +94,11 @@
       <a href="?read=reject">read rejects</a>
       <a href="?read=drop">read drops</a>
       <a href="?capability=none">no capability</a>
+      <a href="?ask=reject">ask rejects</a>
+      <span class="lbl">read mode, no reload</span>
+      <button type="button" data-read-mode="ok">ok</button>
+      <button type="button" data-read-mode="reject">reject</button>
+      <button type="button" data-read-mode="drop">drop</button>
     </nav>
   </header>
   <main><div id="stage"><iframe id="widget" title="Visual Team widget"></iframe></div></main>

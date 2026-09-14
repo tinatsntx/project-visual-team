@@ -140,11 +140,23 @@ export class TaskDataStore {
    * capability binds to the task in the same envelope, or to the currently
    * shown task when it arrives alone, or is held for the next task when no
    * task exists yet — so output and metadata may arrive in either order.
-   * A new task invalidates any capability bound to a different task.
+   * A new task invalidates any capability bound to a different task and
+   * resets task-scoped data (events, refresh health) so nothing from the
+   * previous task leaks into the new view.
+   *
+   * `options.confirm` distinguishes a fresh confirmation (a live host
+   * delivery or a successful read — the default) from replaying a cached
+   * envelope: a replay only advances `lastUpdatedAt` when it actually carries
+   * data the store has not applied, so a failed retry cannot falsely claim
+   * the data was just confirmed.
    */
-  applyToolResult(result: ToolResultMessage | null | undefined): void {
+  applyToolResult(
+    result: ToolResultMessage | null | undefined,
+    options?: { confirm?: boolean },
+  ): void {
     if (!result || result.isError) return;
     const parts = readResult(result);
+    const confirm = options?.confirm !== false;
 
     // A strictly older snapshot for the shown task (e.g. a replayed render
     // envelope after fresher reads) must not overwrite newer data. A different
@@ -154,22 +166,36 @@ export class TaskDataStore {
       this.task !== null &&
       parts.task.id === this.taskId &&
       parts.task.updatedAt < this.task.updatedAt;
+    const taskChanged =
+      parts.task !== null &&
+      (parts.task.id !== this.taskId ||
+        this.task === null ||
+        parts.task.updatedAt !== this.task.updatedAt ||
+        parts.task.eventCount !== this.task.eventCount);
+    // Events are append-only: same length and same tail id means the same list.
+    const eventsChanged =
+      parts.recentEvents !== null &&
+      (parts.recentEvents.length !== this.recentEvents.length ||
+        parts.recentEvents.at(-1)?.id !== this.recentEvents.at(-1)?.id);
+    const appliedData =
+      !staleSameTask && (parts.task !== null || parts.recentEvents !== null);
 
     if (parts.task) {
       if (parts.task.id !== this.taskId) {
         this.capability = null;
         this.capabilityTaskId = null;
+        // A new task never inherits the previous task's event list.
+        this.recentEvents = [];
+        // Refresh health is task-scoped: the new task recomputes it in sync().
+        this.refresh = "off";
       }
       this.taskId = parts.task.id;
-      if (!staleSameTask) {
-        this.task = parts.task;
-        this.lastUpdatedAt = this.nowIso();
-      }
+      if (!staleSameTask) this.task = parts.task;
     } else if (parts.taskId && parts.taskId !== this.taskId && !this.task) {
       this.taskId = parts.taskId;
     }
-    if (parts.recentEvents && !staleSameTask) {
-      this.recentEvents = parts.recentEvents;
+    if (parts.recentEvents && !staleSameTask) this.recentEvents = parts.recentEvents;
+    if (appliedData && (confirm || taskChanged || eventsChanged)) {
       this.lastUpdatedAt = this.nowIso();
     }
     if (parts.uiAvailable !== undefined) {
@@ -215,10 +241,15 @@ export class TaskDataStore {
     this.emit();
   }
 
-  /** User-initiated recovery: recheck host data, then read if credentialed. */
+  /**
+   * User-initiated recovery: recheck host data, then read if credentialed.
+   * The recheck replays a cached envelope, so it is applied without claiming
+   * a fresh confirmation; only the read — or genuinely new data — can advance
+   * the confirmed timestamp.
+   */
   retry(): void {
     const fresh = this.deps.recheck?.() ?? null;
-    if (fresh) this.applyToolResult(fresh);
+    if (fresh) this.applyToolResult(fresh, { confirm: false });
     if (this.canPoll()) void this.performRead();
     else this.emit();
   }
@@ -285,8 +316,11 @@ export class TaskDataStore {
       if (result.isError) {
         // Generic rejections (unknown task/invalid capability) mean "couldn't
         // refresh", never "task expired" — keep the last confirmed data stale.
-        this.refresh = "stale";
-        this.emit();
+        // A task that went terminal since the read started stays "off".
+        if (this.task && !TERMINAL.has(this.task.state)) {
+          this.refresh = "stale";
+          this.emit();
+        }
       } else {
         this.applyToolResult(result);
         if (this.canPoll() && this.refresh !== "live") {
@@ -295,7 +329,12 @@ export class TaskDataStore {
         }
       }
     } catch {
-      if (seq === this.readSeq && this.taskId === taskId) {
+      if (
+        seq === this.readSeq &&
+        this.taskId === taskId &&
+        this.task !== null &&
+        !TERMINAL.has(this.task.state)
+      ) {
         this.refresh = "stale";
         this.emit();
       }

@@ -11,7 +11,16 @@ import { hostBridge } from "../bridge/hostBridge.js";
  * Needs you, Results, Evidence. The host's composer stays the conversational
  * control surface — none is recreated here.
  */
-export function FullscreenView({ task, recentEvents }: { task: TaskSnapshot; recentEvents: VisualEvent[] }) {
+export function FullscreenView({
+  task,
+  recentEvents,
+  stale = false,
+}: {
+  task: TaskSnapshot;
+  recentEvents: VisualEvent[];
+  /** Stale/unavailable refresh: last-known data renders without motion. */
+  stale?: boolean;
+}) {
   const reduced = useReducedMotion();
   const needsUser = task.needsUser;
   const done = task.state === "COMPLETED" || task.state === "FAILED";
@@ -37,7 +46,7 @@ export function FullscreenView({ task, recentEvents }: { task: TaskSnapshot; rec
         <ul className="vt-roster">
           {task.workers.map((w) => (
             <li key={w.id} className="vt-roster-item">
-              <RobotAvatar role={w.role} state={w.state} label={w.label} animated={!reduced} />
+              <RobotAvatar role={w.role} state={w.state} label={w.label} animated={!reduced && !stale} />
               <div>
                 <strong>{w.label}</strong> <span className="vt-muted">{w.role}</span>
                 <p className="vt-muted">{workerLine(w)}</p>

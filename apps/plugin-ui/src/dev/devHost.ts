@@ -57,6 +57,8 @@ interface DevHostOptions {
   delivery: DeliveryMode;
   read: ReadMode;
   withCapability: boolean;
+  /** Reject the widget's documented re-render request (ui/message). */
+  askReject: boolean;
 }
 
 function nowIso(): string {
@@ -100,14 +102,16 @@ class DevHost {
   private readonly iframe: HTMLIFrameElement;
   private readonly queue: Array<NonNullable<ReplayFixture["steps"][number]["event"]>>;
   private readonly delivery: DeliveryMode;
-  private readonly readMode: ReadMode;
+  /** Mutable so the harness can switch read behavior in the same iframe. */
+  private readMode: ReadMode;
   private readonly withCapability: boolean;
+  private readonly askReject: boolean;
   private displayMode: string;
   private polls = 0;
   private finished = false;
 
   constructor(options: DevHostOptions) {
-    const { fixture, displayMode, delivery, read, withCapability } = options;
+    const { fixture, displayMode, delivery, read, withCapability, askReject } = options;
     const start = fixture.steps.find((s) => s.kind === "start");
     if (!start?.input) throw new Error(`fixture ${fixture.name} has no start step`);
     this.record = createTaskRecord(start.input as StartVisualTaskInput, {
@@ -122,6 +126,7 @@ class DevHost {
     this.delivery = delivery;
     this.readMode = read;
     this.withCapability = withCapability;
+    this.askReject = askReject;
     this.iframe = document.getElementById("widget") as HTMLIFrameElement;
     window.addEventListener("message", (e) => this.onMessage(e));
     // Listener must exist before the widget can announce itself.
@@ -130,6 +135,17 @@ class DevHost {
     document.querySelectorAll<HTMLButtonElement>("[data-host-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         this.setDisplayMode(button.dataset.hostMode, "host-initiated control");
+      });
+    });
+    // Runtime read-behavior switch: flip reject/drop to ok without recreating
+    // the iframe, so a stale banner can recover to live in the same view.
+    document.querySelectorAll<HTMLButtonElement>("[data-read-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const mode = button.dataset.readMode;
+        if (mode === "ok" || mode === "reject" || mode === "drop") {
+          this.readMode = mode;
+          log(`read mode → ${mode} (runtime switch, iframe retained)`);
+        }
       });
     });
     log(
@@ -178,8 +194,13 @@ class DevHost {
         break;
       }
       case "ui/message":
-        log(`← ui/message — widget asked the host to take a message`);
-        this.respond(msg.id, {});
+        if (this.askReject) {
+          log(`← ui/message — REJECTED (ask=reject); widget must show static guidance`);
+          this.respond(msg.id, { isError: true });
+        } else {
+          log(`← ui/message — widget asked the host to take a message`);
+          this.respond(msg.id, {});
+        }
         break;
       case "ui/request-display-mode": {
         const mode = (msg.params as { mode?: string } | undefined)?.mode ?? "inline";
@@ -422,4 +443,5 @@ new DevHost({
   delivery: (DELIVERIES.has(deliveryParam) ? deliveryParam : "initialized") as DeliveryMode,
   read: (READS.has(readParam) ? readParam : "ok") as ReadMode,
   withCapability: params.get("capability") !== "none",
+  askReject: params.get("ask") === "reject",
 });

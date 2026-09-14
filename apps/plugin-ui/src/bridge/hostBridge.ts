@@ -128,11 +128,22 @@ export async function applyDisplayModeRequest(
   }
 }
 
+/** Task identity carried by a tool result or a structuredContent block. */
+function resultTaskId(result: unknown): string | null {
+  const sc = asRecord(result);
+  const task = asRecord(sc?.task);
+  const id = task?.id ?? sc?.taskId;
+  return typeof id === "string" ? id : null;
+}
+
 /**
  * Merge the host's `window.openai` compatibility globals (or the partial
  * `openai:set_globals` payload) into one tool-result envelope. The private
  * `_meta` only ever travels inside the metadata envelope; public output may
- * arrive on `toolOutput` alone.
+ * arrive on `toolOutput` alone. The two globals are not assumed to belong to
+ * one render: when the public output carries a task identity the envelope
+ * cannot match, the envelope — including its capability — is dropped rather
+ * than borrowed for another task.
  */
 export function toolResultFromGlobals(globals: {
   toolOutput?: unknown;
@@ -141,14 +152,41 @@ export function toolResultFromGlobals(globals: {
   const metadata = asRecord(globals.toolResponseMetadata) as ToolResponseMetadata | null;
   const envelope = asRecord(metadata?.mcp_tool_result) ?? asRecord(metadata?.call_tool_result);
   const output = asRecord(globals.toolOutput);
-  if (envelope) {
+  if (envelope && output) {
+    const envelopeId = envelope.structuredContent ? resultTaskId(envelope.structuredContent) : null;
+    const outputId = resultTaskId(output);
+    if (outputId && envelopeId !== outputId) return { structuredContent: output };
     return {
       ...(envelope as ToolResultMessage),
       ...(envelope.structuredContent || !output ? {} : { structuredContent: output }),
     };
   }
+  if (envelope) return envelope as ToolResultMessage;
   if (output) return { structuredContent: output };
   return null;
+}
+
+/**
+ * Bounded, task-correlated bootstrap for deliveries that arrive before React
+ * subscribes: pieces of the same render merge, an envelope carrying a new
+ * task identity replaces the buffer, and an error result stands alone.
+ */
+function mergeBootstrapResult(
+  current: ToolResultMessage | null,
+  incoming: ToolResultMessage,
+): ToolResultMessage {
+  if (!current || current.isError || incoming.isError) return incoming;
+  const incomingId = resultTaskId(incoming.structuredContent);
+  const currentId = resultTaskId(current.structuredContent);
+  if (incomingId && currentId && incomingId !== currentId) return incoming;
+  const merged: ToolResultMessage = {};
+  const content = incoming.content ?? current.content;
+  const structuredContent = incoming.structuredContent ?? current.structuredContent;
+  const meta = incoming._meta ?? current._meta;
+  if (content !== undefined) merged.content = content;
+  if (structuredContent !== undefined) merged.structuredContent = structuredContent;
+  if (meta !== undefined) merged._meta = meta;
+  return merged;
 }
 
 export class HostBridge {
@@ -167,16 +205,23 @@ export class HostBridge {
 
   /**
    * Best currently available tool result, from whichever supported channel
-   * delivered it: a captured tool-result notification, or the host globals.
+   * delivered it: the task-correlated bootstrap buffer, or the host globals.
    * Safe to call after subscribing — covers the gap before the subscription.
    */
   currentToolResult(): ToolResultMessage | null {
     const dev = this.devData;
     if (dev) return dev.toolResult;
-    return this.latestToolResult ?? toolResultFromGlobals({
+    const fromGlobals = toolResultFromGlobals({
       toolOutput: window.openai?.toolOutput,
       toolResponseMetadata: window.openai?.toolResponseMetadata,
     });
+    // Delivered envelopes are newer than whatever the globals still carry;
+    // merge only when identities agree so a stale global cannot roll back the
+    // bootstrap to a previous task.
+    if (this.latestToolResult && fromGlobals) {
+      return mergeBootstrapResult(fromGlobals, this.latestToolResult);
+    }
+    return this.latestToolResult ?? fromGlobals;
   }
 
   /** Envelopes from any supported channel, newest first per channel. */
@@ -186,7 +231,7 @@ export class HostBridge {
   }
 
   private deliverToolResult(result: ToolResultMessage): void {
-    this.latestToolResult = result;
+    this.latestToolResult = mergeBootstrapResult(this.latestToolResult, result);
     for (const handler of this.toolResultHandlers) handler(result);
   }
 
@@ -267,9 +312,10 @@ export class HostBridge {
     window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (this.pending.delete(id)) reject(new Error(`bridge timeout: ${method}`));
       }, deadlineMs);
+      (timer as { unref?: () => void }).unref?.();
     });
   }
 
@@ -306,11 +352,11 @@ export class HostBridge {
     }
     if (window.parent === window) return false;
     try {
-      await this.request("ui/message", {
+      const response = await this.request("ui/message", {
         role: "user",
         content: [{ type: "text", text }],
       });
-      return true;
+      return asRecord(response)?.isError !== true;
     } catch {
       return false;
     }

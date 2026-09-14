@@ -1,10 +1,24 @@
 import { useState } from "react";
 
+export type AskState = "idle" | "sent" | "failed";
+
+/** Post-ask copy: sent acknowledges; a rejected request falls back to guidance. */
+export function askStateMessage(state: AskState): string | null {
+  switch (state) {
+    case "sent":
+      return "Asked ChatGPT to render the board again.";
+    case "failed":
+      return "Ask ChatGPT to render the board again to restore this view.";
+    default:
+      return null;
+  }
+}
+
 /**
  * Refresh-health banner (brief 004): truthful about stale or unavailable
  * updates without claiming task expiry. A stale view keeps the last confirmed
- * data and says when it was confirmed; an unavailable view offers a bounded
- * retry and, when the host supports it, a documented re-render request.
+ * data and says when it was confirmed; either state offers a bounded retry
+ * and, when the host supports it, a documented re-render request.
  */
 export function RefreshNotice({
   kind,
@@ -17,7 +31,7 @@ export function RefreshNotice({
   onRetry: () => void;
   onAskHost?: () => Promise<boolean>;
 }) {
-  const [askState, setAskState] = useState<"idle" | "sent" | "failed">("idle");
+  const [askState, setAskState] = useState<AskState>("idle");
 
   const line =
     kind === "stale"
@@ -38,16 +52,13 @@ export function RefreshNotice({
         <button type="button" className="vt-btn" onClick={onRetry}>
           Try again
         </button>
-        {kind === "unavailable" && onAskHost && askState === "idle" && (
+        {onAskHost && askState === "idle" && (
           <button type="button" className="vt-btn" onClick={ask}>
             Ask ChatGPT to render it again
           </button>
         )}
       </div>
-      {askState === "sent" && <p className="vt-muted">Asked ChatGPT to render the board again.</p>}
-      {askState === "failed" && (
-        <p className="vt-muted">Ask ChatGPT to render the board again to restore this view.</p>
-      )}
+      {askStateMessage(askState) && <p className="vt-muted">{askStateMessage(askState)}</p>}
     </div>
   );
 }

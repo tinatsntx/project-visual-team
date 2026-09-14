@@ -10,14 +10,14 @@ import { useReducedMotion } from "../accessibility/useReducedMotion.js";
  */
 export const PIP_FEATURE_ENABLED = false;
 
-export function PipView({ task }: { task: TaskSnapshot }) {
+export function PipView({ task, stale = false }: { task: TaskSnapshot; stale?: boolean }) {
   const reduced = useReducedMotion();
   return (
     <div className="vt-pip" aria-label={`Team status: ${task.title}`}>
       <ul>
         {task.workers.slice(0, 3).map((w) => (
           <li key={w.id}>
-            <RobotAvatar role={w.role} state={w.state} label={w.label} size={22} animated={!reduced} />
+            <RobotAvatar role={w.role} state={w.state} label={w.label} size={22} animated={!reduced && !stale} />
             <span className="vt-pip-line">
               {w.label} — {WORKER_STATE_TEXT[w.state]}
             </span>

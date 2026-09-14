@@ -61,29 +61,31 @@ export function App() {
 
   if (!uiAvailable) return <LimitedView task={task} />;
 
-  const notice =
-    refresh === "stale" || refresh === "unavailable" ? (
-      <RefreshNotice
-        kind={refresh}
-        lastUpdatedAt={lastUpdatedAt}
-        onRetry={retry}
-        onAskHost={askHostToRender}
-      />
-    ) : null;
+  // While refresh health is stale/unavailable, last-known data must not
+  // animate as if it were current activity.
+  const stale = refresh === "stale" || refresh === "unavailable";
+  const notice = stale ? (
+    <RefreshNotice
+      kind={refresh as "stale" | "unavailable"}
+      lastUpdatedAt={lastUpdatedAt}
+      onRetry={retry}
+      onAskHost={askHostToRender}
+    />
+  ) : null;
 
   if (mode === "fullscreen") {
     return (
       <>
         {notice}
-        <FullscreenView task={task} recentEvents={recentEvents} />
+        <FullscreenView task={task} recentEvents={recentEvents} stale={stale} />
       </>
     );
   }
-  if (mode === "pip" && PIP_FEATURE_ENABLED) return <PipView task={task} />;
+  if (mode === "pip" && PIP_FEATURE_ENABLED) return <PipView task={task} stale={stale} />;
   return (
     <>
       {notice}
-      <InlineView task={task} recentEvents={recentEvents} />
+      <InlineView task={task} recentEvents={recentEvents} stale={stale} />
     </>
   );
 }

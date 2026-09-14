@@ -38,10 +38,11 @@ export function useVisualTask(): TaskViewModel {
   useEffect(() => {
     hostBridge.start();
     // Subscribe before reading current state so no delivery can land in the
-    // gap between the subscription and the initial read.
+    // gap between the subscription and the initial read. The cached bootstrap
+    // is a replay, not a fresh confirmation.
     const unsubscribe = hostBridge.onToolResult((result) => taskDataStore.applyToolResult(result));
     taskDataStore.start();
-    taskDataStore.applyToolResult(hostBridge.currentToolResult());
+    taskDataStore.applyToolResult(hostBridge.currentToolResult(), { confirm: false });
     return unsubscribe;
   }, []);
 

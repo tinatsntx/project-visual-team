@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { TaskSnapshot, TaskState, VisualEvent } from "@visual-team/contracts";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { TaskSnapshot, TaskState, VisualEvent, WorkerSnapshot } from "@visual-team/contracts";
 import { TASK_CAPABILITY_META_KEY } from "@visual-team/contracts/meta";
-import { toolResultFromGlobals, type ToolResultMessage } from "../src/bridge/hostBridge.ts";
+import {
+  HostBridge,
+  toolResultFromGlobals,
+  type ToolResultMessage,
+} from "../src/bridge/hostBridge.ts";
 import { TaskDataStore } from "../src/bridge/taskData.ts";
+import { RefreshNotice, askStateMessage } from "../src/components/RefreshNotice.tsx";
+import { InlineView } from "../src/modes/InlineView.tsx";
 
 /**
  * Regression coverage for widget startup and read recovery (brief 004).
@@ -357,13 +365,14 @@ describe("task data store — startup and recovery", () => {
 });
 
 describe("host-global tool result merge", () => {
-  it("combines the private metadata envelope with public output", () => {
+  it("combines the private metadata envelope with public output for one task", () => {
     const task = makeTask("vt_g");
     const result = toolResultFromGlobals({
       toolOutput: { taskId: task.id, task },
       toolResponseMetadata: {
         mcp_tool_result: {
           content: [{ type: "text", text: "t" }],
+          structuredContent: { taskId: task.id, task },
           _meta: { [TASK_CAPABILITY_META_KEY]: "cap_g" },
         },
       },
@@ -373,13 +382,40 @@ describe("host-global tool result merge", () => {
     assert.equal((result.structuredContent as { taskId: string }).taskId, "vt_g");
   });
 
-  it("keeps envelope structuredContent over the separate output global", () => {
-    const task = makeTask("vt_g");
+  it("drops a stale metadata envelope when the public output names a different task", () => {
+    // A new public task B paired with the previously cached task A envelope:
+    // B wins and A's private metadata is never borrowed.
     const result = toolResultFromGlobals({
-      toolOutput: { taskId: "vt_other" },
-      toolResponseMetadata: { call_tool_result: { structuredContent: { task } } },
+      toolOutput: { taskId: "vt_b", task: makeTask("vt_b") },
+      toolResponseMetadata: {
+        mcp_tool_result: {
+          structuredContent: { taskId: "vt_a", task: makeTask("vt_a") },
+          _meta: { [TASK_CAPABILITY_META_KEY]: "cap_a" },
+        },
+      },
     });
-    assert.equal((result?.structuredContent as { task: TaskSnapshot }).task.id, "vt_g");
+    assert.ok(result);
+    assert.equal((result.structuredContent as { taskId: string }).taskId, "vt_b");
+    assert.equal(result._meta, undefined);
+  });
+
+  it("drops a meta-only envelope that cannot be correlated to the output's task", () => {
+    // Lacking identity, the envelope cannot be bound safely: the view shows
+    // limited refresh until an identifiable delivery can bind the credential.
+    const result = toolResultFromGlobals({
+      toolOutput: { taskId: "vt_b", task: makeTask("vt_b") },
+      toolResponseMetadata: { mcp_tool_result: { _meta: { [TASK_CAPABILITY_META_KEY]: "cap" } } },
+    });
+    assert.ok(result);
+    assert.equal((result.structuredContent as { taskId: string }).taskId, "vt_b");
+    assert.equal(result._meta, undefined);
+  });
+
+  it("returns a meta-only envelope when no public output exists to conflict with", () => {
+    const result = toolResultFromGlobals({
+      toolResponseMetadata: { mcp_tool_result: { _meta: { [TASK_CAPABILITY_META_KEY]: "cap" } } },
+    });
+    assert.equal(result?._meta?.[TASK_CAPABILITY_META_KEY], "cap");
   });
 
   it("returns public output alone and null when neither global exists", () => {
@@ -387,5 +423,436 @@ describe("host-global tool result merge", () => {
       structuredContent: { taskId: "vt_x" },
     });
     assert.equal(toolResultFromGlobals({}), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Brief-004 follow-up regressions (coordinator probe, converted to assertions)
+// ---------------------------------------------------------------------------
+
+const STUB_TIMERS = {
+  setTimeout: () => 1,
+  clearTimeout: () => {},
+  setInterval: () => 2,
+  clearInterval: () => {},
+};
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+describe("truthful confirmation time (follow-up)", () => {
+  it("a failed retry does not advance the last-confirmed timestamp", async () => {
+    let now = "2026-09-14T00:00:00.000Z";
+    const cached = renderResult(makeTask("vt_a"), "cap_a");
+    const store = new TaskDataStore({
+      timers: STUB_TIMERS,
+      nowIso: () => now,
+      recheck: () => cached,
+      callRead: async () => ({ isError: true }),
+    });
+    store.start();
+    store.applyToolResult(cached);
+    await flushMicrotasks(); // the initial read rejects → stale
+    const before = store.snapshot().lastUpdatedAt;
+    assert.equal(store.snapshot().refresh, "stale");
+
+    now = "2026-09-14T01:00:00.000Z";
+    store.retry();
+    await flushMicrotasks();
+    assert.equal(store.snapshot().lastUpdatedAt, before);
+    assert.equal(store.snapshot().refresh, "stale");
+    store.dispose();
+  });
+
+  it("a successful retry advances the timestamp and returns to live", async () => {
+    let now = "2026-09-14T00:00:00.000Z";
+    const cached = renderResult(makeTask("vt_a"), "cap_a");
+    const store = new TaskDataStore({
+      timers: STUB_TIMERS,
+      nowIso: () => now,
+      recheck: () => cached,
+      callRead: async (taskId) => ({
+        // A fresh read of unchanged data still confirms freshness.
+        structuredContent: { taskId, task: makeTask(taskId), recentEvents: [] },
+      }),
+    });
+    store.start();
+    store.applyToolResult(cached);
+    const before = store.snapshot().lastUpdatedAt;
+
+    now = "2026-09-14T01:00:00.000Z";
+    store.retry();
+    await flushMicrotasks();
+    assert.equal(store.snapshot().lastUpdatedAt, "2026-09-14T01:00:00.000Z");
+    assert.notEqual(store.snapshot().lastUpdatedAt, before);
+    assert.equal(store.snapshot().refresh, "live");
+    store.dispose();
+  });
+
+  it("a replayed cached envelope does not claim a fresh confirmation", () => {
+    const now = "2026-09-14T00:00:00.000Z";
+    const cached = renderResult(makeTask("vt_a"), "cap_a");
+    const store = new TaskDataStore({
+      timers: STUB_TIMERS,
+      nowIso: () => now,
+      callRead: async () => ({ isError: true }),
+    });
+    store.applyToolResult(cached);
+    const before = store.snapshot().lastUpdatedAt;
+    store.applyToolResult(cached, { confirm: false }); // same data, replay
+    assert.equal(store.snapshot().lastUpdatedAt, before);
+    store.dispose();
+  });
+});
+
+describe("terminal guards (follow-up)", () => {
+  it("a late isError cannot relabel a terminal task stale or restart polling", async () => {
+    let release: ((r: ToolResultMessage) => void) | undefined;
+    const calls: string[] = [];
+    const store = new TaskDataStore({
+      timers: STUB_TIMERS,
+      callRead: (taskId) => {
+        calls.push(taskId);
+        return new Promise<ToolResultMessage>((resolve) => {
+          release = resolve;
+        });
+      },
+    });
+    store.applyToolResult(renderResult(makeTask("vt_t"), "cap_t"));
+    await flushMicrotasks(); // read in flight while ACTIVE
+
+    store.applyToolResult(
+      renderResult(
+        { ...makeTask("vt_t"), state: "COMPLETED", updatedAt: "2026-09-14T00:01:00.000Z" },
+        "cap_t",
+      ),
+    );
+    assert.equal(store.snapshot().task?.state, "COMPLETED");
+    assert.equal(store.snapshot().refresh, "off");
+
+    release?.({ isError: true });
+    await flushMicrotasks();
+    assert.equal(store.snapshot().task?.state, "COMPLETED");
+    assert.equal(store.snapshot().refresh, "off");
+    assert.equal(calls.length, 1); // polling was not restarted
+    store.dispose();
+  });
+
+  it("a late rejected promise cannot relabel a terminal task stale", async () => {
+    let fail: ((e: Error) => void) | undefined;
+    const store = new TaskDataStore({
+      timers: STUB_TIMERS,
+      callRead: () =>
+        new Promise<ToolResultMessage>((_resolve, reject) => {
+          fail = reject;
+        }),
+    });
+    store.applyToolResult(renderResult(makeTask("vt_t"), "cap_t"));
+    await flushMicrotasks();
+
+    store.applyToolResult(
+      renderResult(
+        { ...makeTask("vt_t"), state: "FAILED", updatedAt: "2026-09-14T00:01:00.000Z" },
+        "cap_t",
+      ),
+    );
+    fail?.(new Error("bridge timeout"));
+    await flushMicrotasks();
+    assert.equal(store.snapshot().task?.state, "FAILED");
+    assert.equal(store.snapshot().refresh, "off");
+    store.dispose();
+  });
+});
+
+describe("task-switch scoping (follow-up)", () => {
+  it("clears the previous task's events and capability on a partial task B", () => {
+    const store = new TaskDataStore({ timers: STUB_TIMERS });
+    store.applyToolResult(
+      renderResult(makeTask("vt_a"), "cap_a"),
+    );
+    assert.equal(store.snapshot().recentEvents.length, 1);
+
+    // Partial task B data omits recentEvents — A's events must not carry over.
+    store.applyToolResult({ structuredContent: { task: makeTask("vt_b") } });
+    assert.equal(store.snapshot().taskId, "vt_b");
+    assert.equal(store.snapshot().task?.id, "vt_b");
+    assert.deepEqual(store.snapshot().recentEvents, []);
+    assert.equal(store.snapshot().hasCapability, false);
+    store.dispose();
+  });
+
+  it("keeps fresh task B data usable as its pieces arrive", () => {
+    const store = new TaskDataStore({ timers: STUB_TIMERS });
+    store.applyToolResult(renderResult(makeTask("vt_a"), "cap_a"));
+    store.applyToolResult({ structuredContent: { task: makeTask("vt_b") } });
+    store.applyToolResult({
+      structuredContent: { taskId: "vt_b", recentEvents: [{ ...EVENT, taskId: "vt_b", id: "evt_b" }] },
+      _meta: { [TASK_CAPABILITY_META_KEY]: "cap_b" },
+    });
+    assert.equal(store.snapshot().task?.id, "vt_b");
+    assert.equal(store.snapshot().recentEvents[0]?.taskId, "vt_b");
+    assert.equal(store.snapshot().hasCapability, true);
+    store.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HostBridge → TaskDataStore integration (synthetic host, stubbed window)
+// ---------------------------------------------------------------------------
+
+interface FakeHost {
+  win: {
+    parent: { postMessage: (msg: Record<string, unknown>) => void };
+    openai?: { toolOutput?: unknown; toolResponseMetadata?: unknown };
+  };
+  sent: Array<Record<string, unknown>>;
+  initialize: () => Promise<void>;
+  deliver: (params: unknown) => void;
+  setGlobals: (globals: Record<string, unknown>) => void;
+  respondTo: (method: string, result: unknown) => void;
+  restore: () => void;
+}
+
+function fakeHost(): FakeHost {
+  const listeners = new Map<string, (event: unknown) => void>();
+  const sent: Array<Record<string, unknown>> = [];
+  const parent = { postMessage: (msg: Record<string, unknown>) => sent.push(msg) };
+  const win = {
+    parent,
+    openai: undefined as FakeHost["win"]["openai"],
+    addEventListener: (name: string, handler: (event: unknown) => void) => {
+      listeners.set(name, handler);
+    },
+    matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
+  };
+  const previous = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: unknown }).window = win;
+  return {
+    win,
+    sent,
+    async initialize() {
+      const request = sent.find((m) => m.method === "ui/initialize");
+      assert.ok(request, "widget should send ui/initialize");
+      listeners.get("message")?.({
+        source: parent,
+        data: { jsonrpc: "2.0", id: request.id, result: { hostContext: { displayMode: "inline" } } },
+      });
+      await flushMicrotasks();
+      assert.ok(
+        sent.some((m) => m.method === "ui/notifications/initialized"),
+        "widget should announce initialized",
+      );
+    },
+    deliver(params: unknown) {
+      listeners.get("message")?.({
+        source: parent,
+        data: { jsonrpc: "2.0", method: "ui/notifications/tool-result", params },
+      });
+    },
+    setGlobals(globals: Record<string, unknown>) {
+      listeners.get("openai:set_globals")?.({ detail: { globals } });
+    },
+    respondTo(method: string, result: unknown) {
+      const request = sent.find((m) => m.method === method);
+      assert.ok(request, `expected a ${method} request`);
+      listeners.get("message")?.({
+        source: parent,
+        data: { jsonrpc: "2.0", id: request.id, result },
+      });
+    },
+    restore() {
+      if (previous === undefined) delete (globalThis as { window?: unknown }).window;
+      else (globalThis as { window?: unknown }).window = previous;
+    },
+  };
+}
+
+describe("host bridge → store bootstrap (synthetic)", () => {
+  it("retains meta-then-public split parts delivered before subscription", async () => {
+    const host = fakeHost();
+    try {
+      const bridge = new HostBridge();
+      bridge.start();
+      await host.initialize();
+
+      host.deliver({ _meta: { [TASK_CAPABILITY_META_KEY]: "cap_a" } });
+      host.deliver({ structuredContent: { taskId: "vt_a", task: makeTask("vt_a"), recentEvents: [] } });
+
+      const store = new TaskDataStore({ timers: STUB_TIMERS });
+      bridge.onToolResult((r) => store.applyToolResult(r));
+      store.applyToolResult(bridge.currentToolResult());
+      assert.equal(store.snapshot().phase, "ready");
+      assert.equal(store.snapshot().task?.id, "vt_a");
+      assert.equal(store.snapshot().hasCapability, true);
+      store.dispose();
+    } finally {
+      host.restore();
+    }
+  });
+
+  it("retains public-then-private split parts delivered before subscription", async () => {
+    const host = fakeHost();
+    try {
+      const bridge = new HostBridge();
+      bridge.start();
+      await host.initialize();
+
+      host.deliver({
+        structuredContent: { taskId: "vt_a", task: makeTask("vt_a"), recentEvents: [] },
+      });
+      host.setGlobals({
+        toolResponseMetadata: { mcp_tool_result: { _meta: { [TASK_CAPABILITY_META_KEY]: "cap_a" } } },
+      });
+
+      const store = new TaskDataStore({ timers: STUB_TIMERS });
+      bridge.onToolResult((r) => store.applyToolResult(r));
+      store.applyToolResult(bridge.currentToolResult());
+      assert.equal(store.snapshot().phase, "ready");
+      assert.equal(store.snapshot().task?.id, "vt_a");
+      assert.equal(store.snapshot().hasCapability, true);
+      store.dispose();
+    } finally {
+      host.restore();
+    }
+  });
+
+  it("retains both split orders after subscription as well", async () => {
+    const host = fakeHost();
+    try {
+      const bridge = new HostBridge();
+      bridge.start();
+      await host.initialize();
+      const store = new TaskDataStore({ timers: STUB_TIMERS });
+      bridge.onToolResult((r) => store.applyToolResult(r));
+      store.applyToolResult(bridge.currentToolResult());
+
+      // Public first, then private metadata.
+      host.deliver({
+        structuredContent: { taskId: "vt_a", task: makeTask("vt_a"), recentEvents: [] },
+      });
+      host.deliver({ _meta: { [TASK_CAPABILITY_META_KEY]: "cap_a" } });
+      assert.equal(store.snapshot().task?.id, "vt_a");
+      assert.equal(store.snapshot().hasCapability, true);
+      store.dispose();
+    } finally {
+      host.restore();
+    }
+  });
+
+  it("a partial task-B globals update cannot resurrect task A or borrow its capability", async () => {
+    const host = fakeHost();
+    try {
+      const bridge = new HostBridge();
+      bridge.start();
+      await host.initialize();
+      const store = new TaskDataStore({ timers: STUB_TIMERS });
+      bridge.onToolResult((r) => store.applyToolResult(r));
+      store.applyToolResult(bridge.currentToolResult());
+
+      host.deliver(renderResult(makeTask("vt_a"), "cap_a"));
+      assert.equal(store.snapshot().task?.id, "vt_a");
+      assert.equal(store.snapshot().hasCapability, true);
+
+      // Host updates toolOutput to task B while toolResponseMetadata still
+      // holds task A's envelope — a partial update across the task change.
+      host.win.openai = {
+        toolResponseMetadata: { mcp_tool_result: renderResult(makeTask("vt_a"), "cap_a") },
+      };
+      host.setGlobals({ toolOutput: { taskId: "vt_b", task: makeTask("vt_b") } });
+
+      const snap = store.snapshot();
+      assert.equal(snap.task?.id, "vt_b");
+      assert.equal(snap.hasCapability, false); // A's credential never binds to B
+      assert.deepEqual(snap.recentEvents, []); // A's events cleared
+      assert.equal(snap.refresh, "unavailable"); // limited refresh until B binds
+
+      // B's own envelope (with identity) can then bind its capability.
+      host.win.openai = {
+        toolOutput: { taskId: "vt_b", task: makeTask("vt_b") },
+      };
+      host.setGlobals({
+        toolResponseMetadata: { mcp_tool_result: renderResult(makeTask("vt_b"), "cap_b") },
+      });
+      assert.equal(store.snapshot().hasCapability, true);
+      store.dispose();
+    } finally {
+      host.restore();
+    }
+  });
+
+  it("askForRender resolves false when the host answers ui/message with isError", async () => {
+    const host = fakeHost();
+    try {
+      const bridge = new HostBridge();
+      bridge.start();
+      await host.initialize();
+      const pending = bridge.askForRender();
+      host.respondTo("ui/message", { isError: true });
+      assert.equal(await pending, false);
+    } finally {
+      host.restore();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Recovery controls in markup (synthetic, static render)
+// ---------------------------------------------------------------------------
+
+const WORKER: WorkerSnapshot = {
+  id: "w1",
+  role: "lead",
+  label: "Alex",
+  state: "WORKING",
+  stateProvenance: "observed",
+  isWriter: true,
+  updatedAt: "2026-09-14T00:00:00.000Z",
+};
+
+describe("recovery controls in markup", () => {
+  it("the stale banner offers the render-recovery action, not just unavailable", () => {
+    const stale = renderToStaticMarkup(
+      createElement(RefreshNotice, {
+        kind: "stale",
+        lastUpdatedAt: "2026-09-14T00:00:00.000Z",
+        onRetry: () => {},
+        onAskHost: async () => true,
+      }),
+    );
+    assert.match(stale, /Ask ChatGPT to render it again/);
+    const unavailable = renderToStaticMarkup(
+      createElement(RefreshNotice, {
+        kind: "unavailable",
+        lastUpdatedAt: null,
+        onRetry: () => {},
+        onAskHost: async () => true,
+      }),
+    );
+    assert.match(unavailable, /Ask ChatGPT to render it again/);
+  });
+
+  it("a rejected render-recovery request maps to static guidance", () => {
+    assert.equal(askStateMessage("failed"), "Ask ChatGPT to render the board again to restore this view.");
+    assert.equal(askStateMessage("sent"), "Asked ChatGPT to render the board again.");
+    assert.equal(askStateMessage("idle"), null);
+  });
+
+  it("a stale view does not animate a last-known WORKING worker", () => {
+    const task = { ...makeTask("vt_anim"), workers: [WORKER] };
+    const live = renderToStaticMarkup(
+      createElement(InlineView, { task, recentEvents: [], stale: false }),
+    );
+    assert.match(live, /vt-bob/); // control: live data animates
+    const stale = renderToStaticMarkup(
+      createElement(InlineView, { task, recentEvents: [], stale: true }),
+    );
+    assert.doesNotMatch(stale, /vt-bob/); // last-known data must not look active
+    const limited = renderToStaticMarkup(
+      createElement(InlineView, { task, recentEvents: [], stale: true }),
+    );
+    assert.doesNotMatch(limited, /vt-bob/);
   });
 });
