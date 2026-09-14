@@ -84,6 +84,20 @@ mode, `enableJsonResponse`):
 - `GET`/`DELETE /mcp` → 405 (stateless by design — SSE fallback untested,
   see refresh-method item 2).
 
+## Hook transport verification (2026-09-14)
+
+The real bundled hook (`plugin/hooks/record_codex_event.mjs`) was run
+against the live server with a simulated Codex stdin payload:
+
+- initialize → notifications/initialized → `tools/call record_codex_event`
+  over HTTP, exit 0. ✓
+- Event landed on the task (`activity · "Finished a step." ·
+  tool: apply_patch`) via `VISUAL_TEAM_TASK_ID` routing; untargeted hook
+  calls correlate to `mostRecentActive`. ✓
+- Payload filter kept only correlation fields — an extra
+  `sensitive_field` in the stdin JSON never reached the server. ✓
+- Not covered: Codex actually invoking the hook (platform matrix row).
+
 ## Hard GO criteria (plan §14)
 
 | # | Criterion | Result | Evidence |
