@@ -64,6 +64,26 @@ aria-labels, sr-only status) is intact.
 - Not covered locally: real host chrome, CSP enforcement, cross-origin
   isolation, hosted-tool blind spots — platform matrix only.
 
+## Server transport verification (2026-09-14)
+
+`apps/mcp-server` exercised over real Streamable HTTP (`POST /mcp`, stateless
+mode, `enableJsonResponse`):
+
+- `initialize` → protocol `2025-06-18`, tools+resources capabilities. ✓
+- `tools/list` → the four M0 tools; `render_visual_task` carries
+  `ui.resourceUri` + `openai/outputTemplate` (`ui://visual-team/task-v1.html`)
+  in descriptor `_meta`. ✓
+- `start_visual_task` → taskId, snapshot, UI-private `_meta.taskCapability`. ✓
+- `record_codex_event` (SubagentStart) → mapped + applied; specialist joined
+  as WORKING. ✓
+- `get_visual_task` → snapshot + bounded `recentEvents` with valid
+  capability; `isError` on a wrong capability. ✓
+- `resources/read` → `text/html;profile=mcp-app`, ~157 KB single-file HTML
+  with the JS bundle + CSS inlined, `_meta.ui.csp` =
+  `{connectDomains:[], resourceDomains:[]}` (bridge-only, plan §13.5). ✓
+- `GET`/`DELETE /mcp` → 405 (stateless by design — SSE fallback untested,
+  see refresh-method item 2).
+
 ## Hard GO criteria (plan §14)
 
 | # | Criterion | Result | Evidence |
