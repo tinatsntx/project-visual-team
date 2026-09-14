@@ -40,6 +40,24 @@ const FIXTURES: Record<string, ReplayFixture> = {
 
 const EVENT_STEP_MS = 3_000;
 const AUTOFINISH_DELAY_MS = 7_000;
+const SPLIT_META_DELAY_MS = 1_500;
+const GLOBALS_DELAY_MS = 1_200;
+
+/**
+ * Harness delivery controls (?delivery=, ?read=, ?capability=) reproduce the
+ * supported host orderings and failures the widget must survive. They are
+ * synthetic host behavior — never evidence of native delivery.
+ */
+type DeliveryMode = "initialized" | "immediate" | "split" | "globals" | "never";
+type ReadMode = "ok" | "reject" | "drop";
+
+interface DevHostOptions {
+  fixture: ReplayFixture;
+  displayMode: string;
+  delivery: DeliveryMode;
+  read: ReadMode;
+  withCapability: boolean;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -81,11 +99,15 @@ class DevHost {
   private readonly capability = createDevCapability();
   private readonly iframe: HTMLIFrameElement;
   private readonly queue: Array<NonNullable<ReplayFixture["steps"][number]["event"]>>;
+  private readonly delivery: DeliveryMode;
+  private readonly readMode: ReadMode;
+  private readonly withCapability: boolean;
   private displayMode: string;
   private polls = 0;
   private finished = false;
 
-  constructor(fixture: ReplayFixture, displayMode: string) {
+  constructor(options: DevHostOptions) {
+    const { fixture, displayMode, delivery, read, withCapability } = options;
     const start = fixture.steps.find((s) => s.kind === "start");
     if (!start?.input) throw new Error(`fixture ${fixture.name} has no start step`);
     this.record = createTaskRecord(start.input as StartVisualTaskInput, {
@@ -97,6 +119,9 @@ class DevHost {
       .map((s) => s.event)
       .filter((e): e is NonNullable<typeof e> => e !== undefined);
     this.displayMode = displayMode;
+    this.delivery = delivery;
+    this.readMode = read;
+    this.withCapability = withCapability;
     this.iframe = document.getElementById("widget") as HTMLIFrameElement;
     window.addEventListener("message", (e) => this.onMessage(e));
     // Listener must exist before the widget can announce itself.
@@ -109,7 +134,8 @@ class DevHost {
     });
     log(
       `fixture "${fixture.name}" — task ${this.record.snapshot.id}, ` +
-        `${this.queue.length} codex events queued, mode=${displayMode}`,
+        `${this.queue.length} codex events queued, mode=${displayMode}, ` +
+        `delivery=${delivery}, read=${read}, capability=${withCapability ? "with" : "none"}`,
     );
   }
 
@@ -126,6 +152,15 @@ class DevHost {
     const msg = e.data as JsonRpcRequest;
     if (!msg || msg.jsonrpc !== "2.0" || typeof msg.method !== "string") return;
 
+    if (typeof msg.id !== "number") {
+      // Notifications expect no response.
+      if (msg.method === "ui/notifications/initialized") {
+        log(`← ui/notifications/initialized — widget ready`);
+        this.onWidgetInitialized();
+      }
+      return;
+    }
+
     switch (msg.method) {
       case "ui/initialize":
         log(`← ui/initialize from widget`);
@@ -135,10 +170,16 @@ class DevHost {
           capabilities: {},
           hostContext: { displayMode: this.displayMode },
         });
-        this.deliverInitialToolResult();
+        if (this.delivery === "immediate") this.deliverInitialToolResult();
         break;
-      case "tools/call":
-        this.respond(msg.id, this.callTool(msg.params));
+      case "tools/call": {
+        const result = this.callTool(msg.params);
+        if (result !== undefined) this.respond(msg.id, result);
+        break;
+      }
+      case "ui/message":
+        log(`← ui/message — widget asked the host to take a message`);
+        this.respond(msg.id, {});
         break;
       case "ui/request-display-mode": {
         const mode = (msg.params as { mode?: string } | undefined)?.mode ?? "inline";
@@ -150,6 +191,11 @@ class DevHost {
       default:
         this.error(msg.id, -32601, `unknown method: ${msg.method}`);
     }
+  }
+
+  /** Spec order: data may flow only after the View reports itself ready. */
+  private onWidgetInitialized(): void {
+    if (this.delivery !== "immediate") this.deliverInitialToolResult();
   }
 
   private respond(id: number, result: unknown): void {
@@ -182,19 +228,65 @@ class DevHost {
     log(`→ openai:set_globals displayMode="${mode}" (${source}; iframe retained)`);
   }
 
-  /** Delivers the same render-result contract used by the registered MCP tool. */
-  private deliverInitialToolResult(): void {
-    this.post({
-      jsonrpc: "2.0",
-      method: "ui/notifications/tool-result",
-      params: createRenderVisualTaskResult({
-        text: summarize(this.snapshot),
-        task: this.snapshot,
-        recentEvents: this.record.events.slice(-20),
-        capability: this.capability,
-      }),
+  private postGlobals(globals: Record<string, unknown>): void {
+    this.iframe.contentWindow?.dispatchEvent(
+      new CustomEvent("openai:set_globals", { detail: { globals } }),
+    );
+  }
+
+  private fullResult() {
+    return createRenderVisualTaskResult({
+      text: summarize(this.snapshot),
+      task: this.snapshot,
+      recentEvents: this.record.events.slice(-20),
+      capability: this.capability,
     });
-    log(`→ ui/notifications/tool-result (snapshot + capability)`);
+  }
+
+  private postToolResult(params: unknown, note: string): void {
+    this.post({ jsonrpc: "2.0", method: "ui/notifications/tool-result", params });
+    log(`→ ui/notifications/tool-result (${note})`);
+  }
+
+  /**
+   * Delivers the same render-result contract used by the registered MCP tool,
+   * through the selected supported ordering/channel. The capability lives
+   * only in the private `_meta` envelope, as in production.
+   */
+  private deliverInitialToolResult(): void {
+    const full = this.fullResult();
+    const publicOnly = { content: full.content, structuredContent: full.structuredContent };
+    const metaEnvelope = { _meta: full._meta };
+    const result = this.withCapability ? full : publicOnly;
+
+    switch (this.delivery) {
+      case "never":
+        log(`delivery=never — no initial result sent; widget must reach its bounded wait`);
+        return;
+      case "globals":
+        setTimeout(() => {
+          this.postGlobals({
+            toolOutput: result.structuredContent,
+            toolResponseMetadata: { mcp_tool_result: result },
+          });
+          log(`→ openai:set_globals toolOutput+toolResponseMetadata (globals-only delivery)`);
+        }, GLOBALS_DELAY_MS);
+        return;
+      case "split":
+        this.postToolResult(publicOnly, "public output only; private metadata delayed");
+        if (this.withCapability) {
+          setTimeout(() => {
+            this.postGlobals({ toolResponseMetadata: { mcp_tool_result: metaEnvelope } });
+            log(`→ openai:set_globals toolResponseMetadata (private metadata, delayed)`);
+          }, SPLIT_META_DELAY_MS);
+        }
+        return;
+      default:
+        this.postToolResult(
+          result,
+          this.withCapability ? "snapshot + capability" : "snapshot only; no capability",
+        );
+    }
   }
 
   private callTool(params: Record<string, unknown> | undefined): unknown {
@@ -203,8 +295,19 @@ class DevHost {
     const meta = (params?._meta ?? {}) as Record<string, unknown>;
     switch (name) {
       case "get_visual_task": {
-        if (meta[TASK_CAPABILITY_META_KEY] !== this.capability || args.taskId !== this.record.snapshot.id) {
-          log(`← tools/call get_visual_task — REJECTED (bad capability/taskId)`);
+        if (this.readMode === "drop") {
+          log(`← tools/call get_visual_task — read=drop, no response (bridge deadline applies)`);
+          return undefined;
+        }
+        if (
+          this.readMode === "reject" ||
+          meta[TASK_CAPABILITY_META_KEY] !== this.capability ||
+          args.taskId !== this.record.snapshot.id
+        ) {
+          log(
+            `← tools/call get_visual_task — REJECTED ` +
+              `(generic unknown-task/invalid-capability error)`,
+          );
           return {
             content: [{ type: "text", text: "Unknown task or invalid capability." }],
             isError: true,
@@ -308,5 +411,15 @@ function applyAll(record: TaskRecord, events: VisualEvent[]): boolean {
 const params = new URLSearchParams(location.search);
 const fixture = FIXTURES[params.get("fixture") ?? ""] ?? FIXTURES["team-with-permission"]!;
 const mode = params.get("mode") ?? "inline";
+const DELIVERIES = new Set(["initialized", "immediate", "split", "globals", "never"]);
+const READS = new Set(["ok", "reject", "drop"]);
+const deliveryParam = params.get("delivery") ?? "initialized";
+const readParam = params.get("read") ?? "ok";
 document.body.dataset.mode = mode;
-new DevHost(fixture, mode);
+new DevHost({
+  fixture,
+  displayMode: mode,
+  delivery: (DELIVERIES.has(deliveryParam) ? deliveryParam : "initialized") as DeliveryMode,
+  read: (READS.has(readParam) ? readParam : "ok") as ReadMode,
+  withCapability: params.get("capability") !== "none",
+});

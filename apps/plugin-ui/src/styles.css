@@ -97,6 +97,14 @@ body {
 .vt-pip li { display: flex; gap: 6px; align-items: center; }
 .vt-pip-line { font-size: 0.8rem; white-space: nowrap; }
 
+.vt-notice {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vt-muted);
+  display: grid;
+  gap: 6px;
+}
+.vt-notice p { margin: 0; }
+
 .vt-evidence { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; font-size: 0.85rem; }
 .vt-evidence li { border-left: 2px solid var(--vt-muted); padding-left: 8px; }
 .vt-evidence-label { display: block; }
