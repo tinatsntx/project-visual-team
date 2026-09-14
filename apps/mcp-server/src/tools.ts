@@ -7,6 +7,10 @@ import {
   UI_TEMPLATE_URI,
   type TaskSnapshot,
 } from "@visual-team/contracts";
+import {
+  TASK_CAPABILITY_META_KEY,
+  createRenderVisualTaskResult,
+} from "@visual-team/contracts/meta";
 import { mapCodexEvent } from "@visual-team/codex-event-mapper";
 import { safeTokenEqual } from "./auth/tokens.js";
 import type { Clock, InMemoryTaskRepository } from "./repositories/memory.js";
@@ -68,7 +72,7 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
       return textResult(
         summarize(snapshot),
         { taskId: snapshot.id, task: snapshot },
-        { taskCapability: capability },
+        { [TASK_CAPABILITY_META_KEY]: capability },
       );
     },
   );
@@ -127,13 +131,14 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
     "get_visual_task",
     {
       description:
-        "Read the current visual task snapshot and a bounded list of recent events. Requires the task capability token.",
+        "Read the current visual task snapshot and a bounded list of recent events. The mounted UI authorizes this read with its private MCP request metadata.",
       inputSchema: GetVisualTaskInputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
-    async (args) => {
+    async (args, extra) => {
       const stored = repo.get(args.taskId);
-      if (!stored || !safeTokenEqual(stored.capability, args.capability)) {
+      const capability = extra._meta?.[TASK_CAPABILITY_META_KEY];
+      if (!stored || typeof capability !== "string" || !safeTokenEqual(stored.capability, capability)) {
         return {
           content: [{ type: "text" as const, text: "Unknown task or invalid capability." }],
           isError: true,
@@ -172,10 +177,13 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
           { taskId: args.taskId, uiAvailable: false },
         );
       }
-      return textResult(
-        summarize(repo.readSnapshot(stored)),
-        { taskId: args.taskId, uiAvailable: true },
-      );
+      const snapshot = repo.readSnapshot(stored);
+      return createRenderVisualTaskResult({
+        text: summarize(snapshot),
+        task: snapshot,
+        recentEvents: repo.recentEvents(stored, 20),
+        capability: stored.capability,
+      });
     },
   );
 

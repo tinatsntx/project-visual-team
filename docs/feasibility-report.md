@@ -33,7 +33,7 @@ Test in order and record which works per surface:
 **Method that worked:** _TBD_
 **Measured refresh latency:** _TBD_ (target: < 5 s)
 
-## Local harness verification (2026-09-14)
+## Local harness and render-contract verification (2026-09-14)
 
 `apps/plugin-ui/dev.html` is a simulated host: it embeds the real widget
 bundle in an iframe, answers `ui/initialize` + `tools/call` over postMessage,
@@ -41,28 +41,33 @@ and replays `packages/test-fixtures` through the real `mapCodexEvent` +
 `applyEvent` pipeline. These verify the widget-side mechanics only — the
 platform matrix above still needs real surfaces.
 
-Visually confirmed in the harness preview: inline and fullscreen modes both
-render, `team-with-permission` replays to its `expect` block exactly
-(`WAITING_FOR_USER`, lead `WAITING_FOR_APPROVAL`, specialist `COMPLETED`,
-`needsUser: true`), evidence entries show live timestamps and provenance
-labels, zero console errors, and the a11y tree (`role="alert"`, avatar
-aria-labels, sr-only status) is intact.
+The dev host now creates its initial `ui/notifications/tool-result` with the
+same `createRenderVisualTaskResult()` contract used by the registered
+`render_visual_task` handler: task snapshot + recent events in
+`structuredContent`, capability only in result `_meta`.
 
-- `ui/initialize` handshake + `ui/notifications/tool-result` deliver the
-  snapshot and the UI-private `_meta.taskCapability`. ✓
-- Approach 1 refresh: the widget polls `get_visual_task` via `tools/call`
-  every 4 s while non-terminal; host-side events appear on the next poll as
-  data-only updates — no reload, no re-render of the frame. ✓ (mechanism
-  verified; latency is localhost-trivial, not a platform measurement)
-- Capability guard: wrong/missing token returns an `isError` result. ✓
-- `needsUser` surfaces from `PermissionRequest`; an observed `task_finished`
-  reaches COMPLETED and polling stops at a terminal state. ✓
-- `ui/request-display-mode` round-trips; harness resizes + remounts the
-  widget per mode. PiP remains behind `PIP_FEATURE_ENABLED`. ✓
-- Headless text: `summarize()` output and the `uiAvailable: false` fallback
-  are covered by `apps/mcp-server` tool tests. ✓ (unit level)
-- Not covered locally: real host chrome, CSP enforcement, cross-origin
-  isolation, hosted-tool blind spots — platform matrix only.
+The previous harness iteration was visually confirmed in the preview (inline
++ fullscreen render, `team-with-permission` replay to its `expect` block,
+zero console errors, intact a11y tree). The rebuilt render-contract flow has
+not been visually re-confirmed — same widget render path, new initialization
+path.
+
+- The widget starts the bridge listener before React mounts, then initializes
+  from the cached notification or the documented `toolResponseMetadata` /
+  `toolOutput` globals. It therefore does not depend on a prior
+  `start_visual_task` result being injected into its iframe. ✓ (source and
+  bundle verified locally)
+- Approach 1 sends `get_visual_task` as `tools/call` with task ID/event limit
+  in ordinary arguments and `com.visual-team/task-capability` only in request
+  `_meta`. The 4 s interval remains active only for non-terminal snapshots;
+  a changed `tick` triggers that same read immediately. ✓ (source path and
+  transport contract verified locally)
+- This execution environment could not run the browser automation command
+  because its approval policy denied browser navigation. That is a local test
+  environment limitation, not evidence about ChatGPT/Codex rendering.
+- Not covered locally: actual host chrome, CSP enforcement, cross-origin
+  isolation, forwarding of custom `tools/call` request `_meta`, and
+  ChatGPT/Codex refresh latency. The platform matrix remains untested.
 
 ## Server transport verification (2026-09-14)
 
@@ -72,17 +77,40 @@ mode, `enableJsonResponse`):
 - `initialize` → protocol `2025-06-18`, tools+resources capabilities. ✓
 - `tools/list` → the four M0 tools; `render_visual_task` carries
   `ui.resourceUri` + `openai/outputTemplate` (`ui://visual-team/task-v1.html`)
-  in descriptor `_meta`. ✓
-- `start_visual_task` → taskId, snapshot, UI-private `_meta.taskCapability`. ✓
+  in descriptor `_meta`; `get_visual_task` has no capability field in its
+  public input schema. ✓
+- `start_visual_task` → taskId, snapshot, UI-private result
+  `_meta.com.visual-team/task-capability`. ✓
+- `render_visual_task` → taskId, current task snapshot, recent events, and
+  the same private result metadata; no capability value in `content` or
+  `structuredContent`. ✓
 - `record_codex_event` (SubagentStart) → mapped + applied; specialist joined
   as WORKING. ✓
-- `get_visual_task` → snapshot + bounded `recentEvents` with valid
-  capability; `isError` on a wrong capability. ✓
+- `get_visual_task` → snapshot + bounded `recentEvents` only when the valid
+  capability is supplied in request `_meta`; missing, wrong, and cross-task
+  values return `isError`; TTL sweep removes expired task records. ✓
 - `resources/read` → `text/html;profile=mcp-app`, ~157 KB single-file HTML
   with the JS bundle + CSS inlined, `_meta.ui.csp` =
   `{connectDomains:[], resourceDomains:[]}` (bridge-only, plan §13.5). ✓
 - `GET`/`DELETE /mcp` → 405 (stateless by design — SSE fallback untested,
   see refresh-method item 2).
+
+### Actual local start → render → refresh reproduction
+
+An ephemeral loopback server was started from the source server and called via
+Streamable HTTP. Only booleans/counts were printed; no capability value was
+logged.
+
+1. `start_visual_task` minted a private capability and task ID.
+2. `render_visual_task` returned the same task ID, lead `Alex`, a private
+   capability, and no capability in `content` or `structuredContent`.
+3. `record_codex_event` appended an observed `SubagentStart` event.
+4. `get_visual_task` with the capability in request `_meta` returned event
+   count `2` after the render result had count `1`, with two workers.
+
+This proves the local server/transport delivery and refresh authorization. It
+does **not** prove a real ChatGPT/Codex iframe mounts or that its host forwards
+custom request `_meta`; leave every platform-matrix cell unchecked.
 
 ## Hook transport verification (2026-09-14)
 

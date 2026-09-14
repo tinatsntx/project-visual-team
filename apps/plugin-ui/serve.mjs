@@ -5,6 +5,7 @@ import { extname, join, normalize } from "node:path";
 
 const root = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
+const port = Number(process.env.PORT ?? 8788);
 
 http.createServer(async (req, res) => {
   const path = normalize(join(root, decodeURIComponent(new URL(req.url, "http://x").pathname)));
@@ -18,4 +19,4 @@ http.createServer(async (req, res) => {
   } catch {
     res.writeHead(404); res.end("not found");
   }
-}).listen(8788, "127.0.0.1", () => console.log("serving http://127.0.0.1:8788/dev.html"));
+}).listen(port, "127.0.0.1", () => console.log(`serving http://127.0.0.1:${port}/dev.html`));

@@ -16,7 +16,9 @@ is the live gate document — fill in its platform matrix as surfaces are tested
   `visual-team` skill stub, assets). `plugin/.app.json` is an empty
   `{"apps": {}}` placeholder awaiting the ChatGPT app id.
 - `apps/mcp-server/` — stateless Streamable HTTP MCP service at `/mcp` with the
-  four M0 tools; in-memory repo with capability tokens + 2h TTL.
+  four M0 tools; in-memory repo with task-scoped capability tokens + 2h TTL.
+  `render_visual_task` now returns the task snapshot and recent events needed
+  by a fresh widget, while the read capability is private result `_meta`.
 - `apps/plugin-ui/` — React 18 widget (inline / fullscreen / PiP-flagged),
   bundled to a single ESM module that the server inlines into the MCP Apps
   HTML resource with a bridge-only CSP (`connectDomains: []`).
@@ -24,15 +26,19 @@ is the live gate document — fill in its platform matrix as surfaces are tested
   guards, Codex event mapper, replayable fixtures.
 - `apps/plugin-ui/dev.html` — **simulated host**: embeds the real widget in an
   iframe and answers the `ui/*` + `tools/call` bridge over postMessage while
-  replaying fixtures through the real mapper + reducer.
+  replaying fixtures through the real mapper + reducer. Its initial result now
+  uses the same shared result builder as `render_visual_task`.
 
 ## Verified (see feasibility report for detail)
 
-- 32/32 unit + fixture-replay tests; typecheck clean.
-- Dev harness: real bridge round-trips, live 4s `get_visual_task` polling,
-  needsUser surfacing, terminal-state stop, inline + fullscreen render.
-- Server over real HTTP: all four tools, capability guard, UI resource with
-  inlined bundle + CSP.
+- 34/34 tests, typecheck, and widget/dev-host builds pass locally.
+- Server transport regression starts an ephemeral real HTTP service and uses
+  the registered handlers for start → render → event → refresh. It proves the
+  render result has the task/lead worker, and validates missing, wrong, and
+  cross-task private metadata safely fail; a repository test covers expiry.
+- UI refresh uses the MCP Apps `tools/call` bridge with the capability only in
+  request `_meta`; the disconnected `tick` trigger now performs an immediate
+  read. A terminal snapshot stops polling.
 - Real bundled hook → real server: event lands, payload allowlist strips
   non-correlation fields, always exit 0.
 
@@ -88,14 +94,15 @@ npm start --workspace @visual-team/mcp-server        # http://localhost:8787/mcp
 - Metadata-only: no prompts, transcripts, commands, or code stored or
   transported (ADR-006). Hook stdin payload is allowlist-filtered.
 - Capability token travels in `_meta` only — never in `content`,
-  `structuredContent`, or logs.
+  `structuredContent`, ordinary arguments, URLs, or logs. The private key is
+  `com.visual-team/task-capability` on both result and subsequent request.
 - Missing evidence degrades to model-reported status, never fabricated.
 
 ## Commands
 
 ```powershell
 npm run typecheck    # strict TS across the monorepo
-npm test             # unit + contract + fixture-replay (32 tests)
+npm test             # unit + contract + transport regression (34 tests)
 npm run build        # widget bundle + dev-host bundle -> apps/plugin-ui/dist
 npm start --workspace @visual-team/mcp-server   # real server :8787
 npm run dev:serve --workspace @visual-team/plugin-ui  # harness :8788/dev.html
@@ -108,10 +115,27 @@ Harness params: `?mode=inline|fullscreen|pip`,
 
 - esbuild `--serve`/`--watch` exit when stdin closes → use
   `apps/plugin-ui/serve.mjs` (`npm run dev:serve`) for detached runs.
+- `apps/plugin-ui/serve.mjs` accepts `PORT` (defaults to `8788`) for an
+  isolated harness port.
 - Git Bash `/tmp` is not visible to Node's `fs` — use workspace-relative temp
   files in scripts.
 - No global git identity is configured; prior commits used inline
   `-c user.name/-c user.email`.
+
+## M0 render/metadata follow-up (local evidence only)
+
+- Official OpenAI bridge documentation says `toolResponseMetadata` preserves
+  the full MCP result envelope, including hidden result `_meta`; the widget
+  merges it with `toolOutput` at mount. It sends later reads using standard
+  `tools/call` request `_meta`, never `window.openai.callTool` arguments.
+- The local Streamable HTTP reproduction on an ephemeral port confirmed the
+  render result carries the correct snapshot and private capability, no
+  capability value appears in content/structured content, and a subsequent
+  metadata-authorized read observes the appended event (event count `1 → 2`).
+- Real ChatGPT/Codex testing is still required: confirm the production host
+  forwards custom `tools/call` request `_meta` unchanged and exposes the
+  render result through the documented bridge globals. If it does not, reads
+  fail safely; do not move the token into ordinary tool arguments.
 
 ## File map
 

@@ -204,7 +204,6 @@ export type RecordCodexEventInput = z.infer<typeof RecordCodexEventInputSchema>;
 
 export const GetVisualTaskInputSchema = z.object({
   taskId: z.string().min(1).max(128),
-  capability: z.string().min(1).max(256),
   eventLimit: z.number().int().min(0).max(50).default(20),
 });
 export type GetVisualTaskInput = z.infer<typeof GetVisualTaskInputSchema>;
@@ -224,3 +223,11 @@ export const UI_TEMPLATE_URI = "ui://visual-team/task-v1.html";
 
 /** MCP Apps UI resource MIME type (open standard profile). */
 export const UI_RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
+
+// Private-transport pieces live in `./meta.ts`, a zod-free leaf the widget
+// bundle can import without pulling in the schemas above.
+export {
+  TASK_CAPABILITY_META_KEY,
+  createRenderVisualTaskResult,
+} from "./meta.js";
+export type { VisualTaskToolResult } from "./meta.js";

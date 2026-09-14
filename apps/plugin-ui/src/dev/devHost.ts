@@ -5,6 +5,10 @@ import {
   type TaskRecord,
 } from "@visual-team/state-machine";
 import { mapCodexEvent } from "@visual-team/codex-event-mapper";
+import {
+  TASK_CAPABILITY_META_KEY,
+  createRenderVisualTaskResult,
+} from "@visual-team/contracts/meta";
 import type {
   CodexEventName,
   CodexHookPayload,
@@ -23,9 +27,9 @@ import soloFixture from "../../../../packages/test-fixtures/fixtures/solo-postto
  * bundle in an iframe — the same topology as production, where the host owns
  * the widget iframe. It answers `ui/initialize` and `tools/call` JSON-RPC
  * over window.postMessage, replays a repo fixture through the real
- * mapCodexEvent/applyEvent pipeline, and delivers the task capability
- * privately via `ui/notifications/tool-result` like a real host would.
- * Nothing here fakes state the reducer would not produce.
+ * mapCodexEvent/applyEvent pipeline, and delivers the same shared
+ * render-result contract as the registered MCP handler. Nothing here fakes
+ * state the reducer would not produce.
  */
 
 const FIXTURES: Record<string, ReplayFixture> = {
@@ -38,6 +42,12 @@ const AUTOFINISH_DELAY_MS = 7_000;
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function createDevCapability(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return `vtc_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
 function log(line: string): void {
@@ -67,7 +77,7 @@ interface JsonRpcRequest {
 
 class DevHost {
   private record: TaskRecord;
-  private readonly capability = "vtc_dev_harness";
+  private readonly capability = createDevCapability();
   private readonly iframe: HTMLIFrameElement;
   private readonly queue: Array<NonNullable<ReplayFixture["steps"][number]["event"]>>;
   private displayMode: string;
@@ -147,20 +157,17 @@ class DevHost {
     this.post({ jsonrpc: "2.0", id, error: { code, message } });
   }
 
-  /** Mirrors render/start delivery: snapshot in structuredContent, capability in _meta. */
+  /** Delivers the same render-result contract used by the registered MCP tool. */
   private deliverInitialToolResult(): void {
     this.post({
       jsonrpc: "2.0",
       method: "ui/notifications/tool-result",
-      params: {
-        content: [{ type: "text", text: summarize(this.snapshot) }],
-        structuredContent: {
-          taskId: this.record.snapshot.id,
-          task: this.snapshot,
-          uiAvailable: true,
-        },
-        _meta: { taskCapability: this.capability },
-      },
+      params: createRenderVisualTaskResult({
+        text: summarize(this.snapshot),
+        task: this.snapshot,
+        recentEvents: this.record.events.slice(-20),
+        capability: this.capability,
+      }),
     });
     log(`→ ui/notifications/tool-result (snapshot + capability)`);
   }
@@ -168,9 +175,10 @@ class DevHost {
   private callTool(params: Record<string, unknown> | undefined): unknown {
     const name = params?.name;
     const args = (params?.arguments ?? {}) as Record<string, unknown>;
+    const meta = (params?._meta ?? {}) as Record<string, unknown>;
     switch (name) {
       case "get_visual_task": {
-        if (args.capability !== this.capability || args.taskId !== this.record.snapshot.id) {
+        if (meta[TASK_CAPABILITY_META_KEY] !== this.capability || args.taskId !== this.record.snapshot.id) {
           log(`← tools/call get_visual_task — REJECTED (bad capability/taskId)`);
           return {
             content: [{ type: "text", text: "Unknown task or invalid capability." }],
@@ -192,10 +200,17 @@ class DevHost {
       case "record_codex_event":
         return this.recordCodexEvent(args);
       case "render_visual_task":
+        return createRenderVisualTaskResult({
+          text: summarize(this.snapshot),
+          task: this.snapshot,
+          recentEvents: this.record.events.slice(-20),
+          capability: this.capability,
+        });
       case "start_visual_task":
         return {
           content: [{ type: "text", text: summarize(this.snapshot) }],
-          structuredContent: { taskId: this.record.snapshot.id, uiAvailable: true },
+          structuredContent: { taskId: this.record.snapshot.id, task: this.snapshot },
+          _meta: { [TASK_CAPABILITY_META_KEY]: this.capability },
         };
       default:
         log(`← tools/call ${String(name)} — unknown tool`);

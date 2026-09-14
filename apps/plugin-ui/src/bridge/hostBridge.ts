@@ -13,6 +13,11 @@ export interface ToolResultMessage {
   isError?: boolean;
 }
 
+interface ToolResponseMetadata {
+  mcp_tool_result?: ToolResultMessage;
+  call_tool_result?: ToolResultMessage;
+}
+
 interface JsonRpcResponse {
   jsonrpc: "2.0";
   id: number;
@@ -30,7 +35,10 @@ declare global {
   interface Window {
     openai?: {
       toolInput?: unknown;
-      toolOutput?: ToolResultMessage;
+      /** Model-visible structured content, without private MCP result metadata. */
+      toolOutput?: Record<string, unknown>;
+      /** Widget-only MCP result envelope, including the result `_meta`. */
+      toolResponseMetadata?: ToolResponseMetadata;
       displayMode?: string;
       callTool?: (name: string, args: Record<string, unknown>) => Promise<ToolResultMessage>;
       sendFollowUpMessage?: (args: { prompt: string }) => Promise<void>;
@@ -52,10 +60,39 @@ class HostBridge {
   private nextId = 1;
   private started = false;
   private displayMode: string | null = null;
+  private latestToolResult: ToolResultMessage | null = null;
 
   /** Dev harness support: dev.html injects window.__VISUAL_TEAM_DEV__. */
   get devData(): { toolResult: ToolResultMessage; displayMode: string } | null {
     return typeof window !== "undefined" ? window.__VISUAL_TEAM_DEV__ ?? null : null;
+  }
+
+  /**
+   * Return the result that caused this widget to mount. ChatGPT exposes the
+   * model-visible structured content and the private result envelope on
+   * separate bridge globals, so merge them before React initializes.
+   */
+  initialToolResult(): ToolResultMessage | null {
+    const dev = this.devData;
+    if (dev) return dev.toolResult;
+
+    const metadata = window.openai?.toolResponseMetadata;
+    const fromMetadata = metadata?.mcp_tool_result ?? metadata?.call_tool_result;
+    const structuredContent = window.openai?.toolOutput;
+    if (fromMetadata) {
+      return {
+        ...fromMetadata,
+        ...(fromMetadata.structuredContent ? {} : { structuredContent }),
+      };
+    }
+    if (this.latestToolResult) {
+      return {
+        ...this.latestToolResult,
+        ...(this.latestToolResult.structuredContent ? {} : { structuredContent }),
+      };
+    }
+    if (structuredContent) return { structuredContent };
+    return null;
   }
 
   start(): void {
@@ -75,6 +112,9 @@ class HostBridge {
         return;
       }
       if ("method" in msg) {
+        if (msg.method === "ui/notifications/tool-result") {
+          this.latestToolResult = msg.params as ToolResultMessage;
+        }
         for (const h of this.handlers) h(msg.method, msg.params);
       }
     });
@@ -108,10 +148,17 @@ class HostBridge {
     });
   }
 
-  /** Call an MCP tool through the host (`tools/call`), with window.openai fallback. */
-  async callTool(name: string, args: Record<string, unknown>): Promise<ToolResultMessage> {
-    if (window.openai?.callTool) return window.openai.callTool(name, args);
-    const result = await this.request("tools/call", { name, arguments: args });
+  /** Call an MCP tool through the host with optional private request metadata. */
+  async callTool(
+    name: string,
+    args: Record<string, unknown>,
+    meta?: Record<string, unknown>,
+  ): Promise<ToolResultMessage> {
+    const result = await this.request("tools/call", {
+      name,
+      arguments: args,
+      ...(meta ? { _meta: meta } : {}),
+    });
     return result as ToolResultMessage;
   }
 

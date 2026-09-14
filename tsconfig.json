@@ -17,6 +17,7 @@
     "types": ["node"],
     "paths": {
       "@visual-team/contracts": ["./packages/contracts/src/index.ts"],
+      "@visual-team/contracts/meta": ["./packages/contracts/src/meta.ts"],
       "@visual-team/state-machine": ["./packages/state-machine/src/index.ts"],
       "@visual-team/codex-event-mapper": ["./packages/codex-event-mapper/src/index.ts"],
       "@visual-team/test-fixtures": ["./packages/test-fixtures/src/index.ts"]

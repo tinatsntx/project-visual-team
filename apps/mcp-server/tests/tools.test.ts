@@ -27,6 +27,18 @@ describe("InMemoryTaskRepository", () => {
     assert.equal(repo.verifyCapability(repo.get(b.record.snapshot.id)!, a.capability), false);
   });
 
+  it("expires a task and its capability with the repository TTL", () => {
+    let nowMs = Date.parse("2026-09-13T15:00:00.000Z");
+    const expiringClock: Clock = {
+      nowIso: () => new Date(nowMs).toISOString(),
+      nowMs: () => nowMs,
+    };
+    const repo = new InMemoryTaskRepository(expiringClock, 1_000);
+    const { record } = repo.createTask({ title: "a", summary: "s", mode: "solo", privacyMode: "standard" });
+    nowMs += 1_001;
+    assert.equal(repo.get(record.snapshot.id), undefined);
+  });
+
   it("attaches untargeted hook events to the most recent active task", () => {
     const repo = new InMemoryTaskRepository(clock);
     const { record } = repo.createTask({ title: "a", summary: "s", mode: "solo", privacyMode: "standard" });
