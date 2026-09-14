@@ -64,7 +64,23 @@ export function createLegacyManifest(portableManifest) {
     skills: "./skills/",
     mcpServers: "./.mcp.json",
     apps: "./.app.json",
+    hooks: "./hooks/hooks.json",
     interface: interfaceConfig,
+  };
+}
+
+/**
+ * Legacy .mcp.json uses the historical HTTP transport spelling, while the
+ * portable Agent Plugins source keeps its streamable-http declaration.
+ */
+export function createLegacyMcp(portableMcp) {
+  return {
+    mcpServers: Object.fromEntries(
+      Object.entries(portableMcp.mcpServers).map(([serverName, server]) => [
+        serverName,
+        server?.type === "streamable-http" ? { ...server, type: "http" } : server,
+      ]),
+    ),
   };
 }
 
@@ -81,6 +97,11 @@ function createNativeMarketplace() {
           source: "local",
           path: "./visual-team",
         },
+        policy: {
+          installation: "AVAILABLE",
+          authentication: "ON_INSTALL",
+        },
+        category: "Productivity",
       },
     ],
   };
@@ -103,14 +124,15 @@ export async function buildNativeCodexCompat() {
   await rm(outputDirectory, { recursive: true, force: true });
   await Promise.all([
     mkdir(resolve(nativePluginRoot, ".codex-plugin"), { recursive: true }),
-    mkdir(resolve(nativePluginRoot, "hooks"), { recursive: true }),
     mkdir(dirname(nativeMarketplaceManifest), { recursive: true }),
   ]);
 
   await Promise.all([
     cp(resolve(portablePluginRoot, ".app.json"), resolve(nativePluginRoot, ".app.json")),
+    cp(resolve(portablePluginRoot, "hooks"), resolve(nativePluginRoot, "hooks"), { recursive: true }),
+    // Keep a root copy for real-plugin conventions that drift from the pinned
+    // loaders. The manifest's hooks path remains the deterministic one.
     cp(resolve(portablePluginRoot, "hooks", "hooks.json"), resolve(nativePluginRoot, "hooks.json")),
-    cp(resolve(portablePluginRoot, "hooks", "record_codex_event.mjs"), resolve(nativePluginRoot, "hooks", "record_codex_event.mjs")),
     cp(resolve(portablePluginRoot, "skills"), resolve(nativePluginRoot, "skills"), { recursive: true }),
     cp(resolve(portablePluginRoot, "assets"), resolve(nativePluginRoot, "assets"), { recursive: true }),
   ]);
@@ -118,7 +140,7 @@ export async function buildNativeCodexCompat() {
   await Promise.all([
     writeJson(resolve(nativePluginRoot, ".codex-plugin", "plugin.json"), createLegacyManifest(portableManifest)),
     // The Legacy loader's MCP convention is .mcp.json rather than mcp.json.
-    writeJson(resolve(nativePluginRoot, ".mcp.json"), { mcpServers: portableMcp.mcpServers }),
+    writeJson(resolve(nativePluginRoot, ".mcp.json"), createLegacyMcp(portableMcp)),
     writeJson(nativeMarketplaceManifest, createNativeMarketplace()),
   ]);
 
