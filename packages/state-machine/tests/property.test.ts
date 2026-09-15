@@ -162,6 +162,23 @@ function checkInvariants(
   } else {
     assert.equal(s.needsUserProvenance, undefined, "stale needsUser provenance");
   }
+  // Pending-need attribution: the flag and the need map never drift, derived
+  // evidence never owns a need, and every waiting worker carries its ask.
+  const needs = s.pendingUserNeeds ?? {};
+  assert.equal(s.needsUser, Object.keys(needs).length > 0, "needsUser/pendingUserNeeds drift");
+  for (const provenance of Object.values(needs)) {
+    assert.notEqual(provenance, "derived", "derived provenance recorded a pending need");
+  }
+  for (const w of s.workers) {
+    if (w.state === "WAITING_FOR_APPROVAL") {
+      assert.ok(needs[`worker:${w.id}`], `waiting worker ${w.id} lacks an attributed need`);
+    }
+  }
+  // A waiting task must hold a live need — the reverse (needs without WFU)
+  // is legitimate while the task is still PLANNING or BLOCKED.
+  if (s.state === "WAITING_FOR_USER") {
+    assert.ok(s.needsUser, "waiting task holds no pending need");
+  }
   // Terminal freeze: an event can only be applied to a terminal task via a bug.
   assert.equal(
     TERMINAL_TASK_STATES.has(before.snapshotState as Parameters<typeof TERMINAL_TASK_STATES.has>[0]),

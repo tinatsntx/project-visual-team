@@ -182,6 +182,15 @@ export const TaskSnapshotSchema = z.object({
   /** True while an unresolved permission request or question is pending. */
   needsUser: z.boolean(),
   needsUserProvenance: EvidenceLevelSchema.optional(),
+  /**
+   * Attribution for the pending needs behind `needsUser`: each key is a
+   * distinct unresolved ask — `worker:<internal id>` for a worker-attributed
+   * permission request, `task` for a task-level reported wait — mapped to the
+   * provenance of the evidence that created it. A need clears only on real
+   * evidence resolving that ask (or turn end / task finalization); unrelated
+   * activity and derived events cannot dismiss it.
+   */
+  pendingUserNeeds: z.record(z.string(), EvidenceLevelSchema).optional(),
   eventCount: z.number().int().nonnegative(),
 });
 export type TaskSnapshot = z.infer<typeof TaskSnapshotSchema>;

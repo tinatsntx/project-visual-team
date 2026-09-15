@@ -1,24 +1,29 @@
 # Milestone 1 core state engine — acceptance evidence
 
-**Coordinator review, 2026-09-15: acceptance held for three bounded cases.**
-Reviewed candidate `a4ffe13e8055496f284b14a52c17713412b08107`. Independently
-verified typecheck, 131/131 tests, build, compatibility, original M0 probe, and
-committed-diff whitespace. New fixed probe `evals/m1-coordinator-probe.mts`
-exits 1: hook-ID collision targets the wrong worker; reported wait omits the
-pending need; unrelated lead work clears an unresolved specialist ask after
-derived idle. Details: `docs/swe-2-brief-006-follow-up.md`.
-The implementation's four-criterion table below describes its existing
-passing tests, not final coordinator acceptance. M0 stays complete. Candidate
-is not pushed/deployed. Consumer workflow brief 007 is prepared for next.
+**Coordinator follow-up, 2026-09-15: the three held cases are fixed.**
+Review of `a4ffe13` reproduced three targeting/wait defects via the fixed
+probe `evals/m1-coordinator-probe.mts` (docs/swe-2-brief-006-follow-up.md).
+This follow-up diff resolves all three; the probe now exits 0 with every
+case `pass:true` — hook-ID collision routes to the specialist, a reported
+wait exposes `needsUser`/`reported` provenance, and unrelated lead activity
+cannot resolve another worker's pending ask. M0 stays complete; the
+candidate remains unpushed/undeployed pending coordinator re-review.
+Consumer workflow brief 007 is prepared for next.
 
 Brief: `docs/swe-2-brief-006.md`. Scope: finish the existing engine — property
 coverage, provenance verification on every mutation path, invalid-target
 safety, replay fixtures — with no new storage or workflow features.
 
-Verification on this diff: `npm run typecheck` clean; `npm test` 131/131;
+Verification on this diff: `npm run typecheck` clean; `npm test` 145/145;
 `npm run build` produces widget + dev-host bundles and the verbatim-embed
 check passes; `node --import tsx evals/m0-enablement-coordinator-probe.mts`
-exits 0; `git diff --check` clean.
+and `node --import tsx evals/m1-coordinator-probe.mts` both exit 0;
+`git diff --check` clean. A follow-up adversarial review then found and this
+diff also fixes: `specialist_finished` now reconciles the wait state after
+resolving a need (no resting `WAITING_FOR_USER` with an empty need map), and
+need resolution requires real evidence — an `IDLE`/`BLOCKED` no-op on a
+derived-idled worker cannot dismiss its ask; the property oracle asserts
+`WAITING_FOR_USER ⟹ needsUser` over the whole corpus.
 
 ## Four exit criteria → evidence
 
@@ -53,30 +58,49 @@ exits 0; `git diff --check` clean.
    longer contain a mid-flight or never-started "assigned" worker.
 5. **Permission reachability and retention.** `WAITING_FOR_APPROVAL` is
    reachable from any non-terminal worker state, and `permission_request` no
-   longer drops the pending-need flag when the resolved worker cannot move
+   longer drops the pending need when the resolved worker cannot move
    (e.g. already terminal) — the approval claim is real regardless of worker
-   attribution. `worker_transition` to `WAITING_FOR_APPROVAL` sets the same
-   flag; any worker leaving `WAITING_FOR_APPROVAL` settles it.
-6. **Wait-state reconciliation.** `needsUser` tracks a live pending decision:
-   it is cleared (with its provenance) on `turn_finished`, `interrupted`,
-   task finalization, or a `worker_transition` out of `WAITING_FOR_APPROVAL`,
-   and `WAITING_FOR_USER` ↔ `ACTIVE` reconciles with the flag on every path.
-   Two deliberate asymmetries: a `derived` event may idle a worker but never
-   *dismisses* a pending ask (inferred evidence can't resolve a real
-   decision), and the reconcile's `WAITING_FOR_USER` stamp carries the
-   pending need's original provenance — a `derived` transition can never put
-   its provenance on that claim. `interrupted` idles `REVIEWING` workers
-   like `turn_finished`, and `IDLE → COMPLETED` is legal so a real
-   `SubagentStop` isn't dropped when a `Stop` raced first.
+   attribution. `worker_transition` to `WAITING_FOR_APPROVAL` records the
+   same attributed need.
+6. **Attributed pending needs.** `needsUser` is no longer a bare flag: the
+   snapshot carries `pendingUserNeeds`, a map from need key to the
+   provenance of the evidence that created it — `worker:<internal id>` for
+   an attributed approval, `task` for a task-level reported wait (so a
+   `report_workflow_step` `waiting_for_user` genuinely exposes the need).
+   `needsUser`/`needsUserProvenance` summarize the earliest live need. A
+   worker's need resolves only on evidence that its own wait ended — the
+   holder's non-derived exit from `WAITING_FOR_APPROVAL`, its finish, or
+   non-derived evidence it is now `WORKING`/`REVIEWING`/terminal (an
+   `IDLE`/`BLOCKED` no-op on a derived-idled worker says nothing about the
+   ask and cannot resolve it); a `task` need
+   resolves on a non-derived `task_transition` out of `WAITING_FOR_USER` or
+   non-derived evidence of work resuming (`worker_transition` to `WORKING`);
+   `turn_finished`/`interrupted` clear all needs; terminal finalization
+   clears them. Unrelated activity on another worker cannot resolve an ask
+   it did not address, and `derived` events can never dismiss a real ask —
+   they may idle a worker, but the need keeps its attribution and resolves
+   when that worker's real evidence arrives. `WAITING_FOR_USER` ↔ `ACTIVE`
+   reconciles with the need map on every wait-affecting path, and the
+   reconcile's `WAITING_FOR_USER` stamp carries the pending need's own
+   provenance — a `derived` transition can never put its provenance on that
+   claim. `interrupted` idles `REVIEWING` workers like `turn_finished`, and
+   `IDLE → COMPLETED` is legal so a real `SubagentStop` isn't dropped when
+   a `Stop` raced first.
 7. **`worker_assigned` handled explicitly** (journals + attributes when the
    id resolves) and unknown future kinds now reject via `default` instead of
    being silently accepted as activity.
 8. **Namespace separation.** Joined specialists get role-based internal ids;
-   hook correlation ids live only in `externalId` (external-first lookup for
-   `specialist_finished`, external-only for join dedup), and an empty-string
+   hook correlation ids live only in `externalId`, and an empty-string
    `workerId` is normalized to absent instead of minting an unresolvable
    phantom. `defaultWorker` prefers a non-terminal writer so fallback events
-   never target a finished worker while others still run.
+   never target a finished worker while others still run. Worker resolution
+   is namespace-aware on every targeting path (`worker_transition`,
+   `permission_request`, `specialist_finished`, `activity`,
+   `worker_assigned`): hook-correlated events (`observed`/`derived`) carry
+   native agent ids so `externalId` wins; model reports (`reported`) name
+   roster ids so the internal id wins. A collision like
+   `SubagentStart(agent_id="lead")` can therefore never route a permission
+   or transition to the internal lead.
 
 ## New evidence artifacts
 
@@ -118,7 +142,14 @@ exits 0; `git diff --check` clean.
 - **`needsUser` may outlive a `WAITING_FOR_APPROVAL` worker**: when a
   permission request lands on a terminal worker, or a `derived` event idles
   the waiting worker, the flag stays — the pending decision is real even if
-  its attribution isn't. It clears on the next non-derived resolution.
+  its holder isn't visibly waiting. Attribution survives in
+  `pendingUserNeeds`; it clears on the next non-derived resolution of that
+  holder, a turn boundary, or finalization.
+- **A task-level reported wait resolves on real resumption evidence**: a
+  non-derived `worker_transition` to `WORKING` or a non-derived
+  `task_transition` out of `WAITING_FOR_USER` clears the `task` need.
+  Observed work contradicting a "waiting" claim is treated as resolution;
+  `activity` events alone never resolve needs.
 - **The oracle asserts documented invariants, not the transition table** —
   legality is defined by the tables; the corpus independently asserts
   provenance, freeze, dedup, roster, and record-intactness rules plus

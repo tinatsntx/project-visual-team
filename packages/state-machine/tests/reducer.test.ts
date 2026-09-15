@@ -518,3 +518,156 @@ describe("pending-need consistency", () => {
     assert.equal(after?.state, "COMPLETED");
   });
 });
+
+describe("worker-id namespaces", () => {
+  function makeColliding() {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "lead", detail: "agent_type: review" }));
+    return rec; // specialist: internal id "reviewer", externalId "lead"
+  }
+
+  it("a hook event colliding with a roster id reaches the specialist, not the lead", () => {
+    const rec = makeColliding();
+    const r = applyEvent(rec, ev({ id: "e2", kind: "permission_request", workerId: "lead" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "lead")?.state, "ASSIGNED");
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "reviewer")?.state, "WAITING_FOR_APPROVAL");
+    assert.equal(rec.snapshot.needsUser, true);
+  });
+
+  it("a hook worker_transition colliding with a roster id reaches the specialist", () => {
+    const rec = makeColliding();
+    const r = applyEvent(rec, ev({ id: "e2", kind: "worker_transition", workerId: "lead", to: "IDLE" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "lead")?.state, "ASSIGNED");
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "reviewer")?.state, "IDLE");
+  });
+
+  it("hook activity attributes to the external id under collision", () => {
+    const rec = makeColliding();
+    const r = applyEvent(rec, ev({ id: "e2", kind: "activity", workerId: "lead" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "reviewer")?.lastEventId, "e2");
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "lead")?.lastEventId, undefined);
+  });
+
+  it("a reported event naming a roster id reaches the internal worker under collision", () => {
+    const rec = makeColliding();
+    const r = applyEvent(rec, ev({ id: "e2", kind: "worker_transition", workerId: "lead", to: "WORKING", provenance: "reported" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "lead")?.lastEventId, "e2");
+    assert.equal(rec.snapshot.workers.find((w) => w.id === "reviewer")?.lastEventId, "e1");
+  });
+
+  it("non-colliding external ids and absent ids still resolve", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-x" }));
+    const r = applyEvent(rec, ev({ id: "e2", kind: "worker_transition", workerId: "agent-x", to: "IDLE" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.workers.find((w) => w.externalId === "agent-x")?.state, "IDLE");
+    const fallback = applyEvent(rec, ev({ id: "e3", kind: "worker_transition", to: "WORKING" }));
+    assert.equal(fallback.ok, true);
+    assert.equal(rec.snapshot.workers[0]?.state, "WORKING"); // lead
+  });
+});
+
+describe("attributed pending needs", () => {
+  it("a reported task-level wait records a pending need with reported provenance", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "worker_transition", workerId: "lead", to: "WORKING" }));
+    const r = applyEvent(rec, ev({ id: "e2", kind: "task_transition", to: "WAITING_FOR_USER", provenance: "reported" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.state, "WAITING_FOR_USER");
+    assert.equal(rec.snapshot.needsUser, true);
+    assert.equal(rec.snapshot.needsUserProvenance, "reported");
+    assert.deepEqual(rec.snapshot.pendingUserNeeds, { task: "reported" });
+  });
+
+  it("a reported resume resolves the reported wait", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "worker_transition", workerId: "lead", to: "WORKING" }));
+    applyEvent(rec, ev({ id: "e2", kind: "task_transition", to: "WAITING_FOR_USER", provenance: "reported" }));
+    const r = applyEvent(rec, ev({ id: "e3", kind: "worker_transition", workerId: "lead", to: "WORKING", provenance: "reported" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.needsUser, false);
+    assert.equal(rec.snapshot.needsUserProvenance, undefined);
+    assert.equal(rec.snapshot.pendingUserNeeds, undefined);
+    assert.equal(rec.snapshot.state, "ACTIVE");
+  });
+
+  it("unrelated work cannot resolve another worker's pending ask", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-a" }));
+    applyEvent(rec, ev({ id: "e2", kind: "worker_transition", workerId: "lead", to: "WORKING" }));
+    applyEvent(rec, ev({ id: "e3", kind: "permission_request", workerId: "agent-a" }));
+    const agent = () => rec.snapshot.workers.find((w) => w.externalId === "agent-a");
+    assert.equal(agent()?.state, "WAITING_FOR_APPROVAL");
+    assert.equal(rec.snapshot.state, "WAITING_FOR_USER");
+    // Inferred idle may move the worker; it cannot dismiss the real ask.
+    applyEvent(rec, ev({ id: "e4", kind: "worker_transition", workerId: "agent-a", to: "IDLE", provenance: "derived" }));
+    assert.equal(agent()?.state, "IDLE");
+    assert.equal(rec.snapshot.needsUser, true);
+    // Unrelated observed work on the lead does not resolve the specialist's ask.
+    applyEvent(rec, ev({ id: "e5", kind: "worker_transition", workerId: "lead", to: "WORKING" }));
+    assert.equal(rec.snapshot.needsUser, true);
+    assert.equal(rec.snapshot.needsUserProvenance, "observed");
+    assert.equal(rec.snapshot.state, "WAITING_FOR_USER");
+    // Real evidence of the ask-holder resuming resolves exactly that ask.
+    applyEvent(rec, ev({ id: "e6", kind: "worker_transition", workerId: "agent-a", to: "WORKING" }));
+    assert.equal(rec.snapshot.needsUser, false);
+    assert.equal(rec.snapshot.pendingUserNeeds, undefined);
+    assert.equal(rec.snapshot.state, "ACTIVE");
+  });
+
+  it("independent needs keep their own provenance", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-a" }));
+    applyEvent(rec, ev({ id: "e2", kind: "specialist_joined", workerId: "agent-b", detail: "agent_type: review" }));
+    applyEvent(rec, ev({ id: "e3", kind: "permission_request", workerId: "agent-a" })); // observed
+    applyEvent(rec, ev({ id: "e4", kind: "permission_request", workerId: "agent-b", provenance: "reported" }));
+    assert.equal(rec.snapshot.needsUserProvenance, "observed"); // earliest live need
+    // Resolving the first ask surfaces the second's provenance.
+    applyEvent(rec, ev({ id: "e5", kind: "worker_transition", workerId: "agent-a", to: "WORKING" }));
+    assert.equal(rec.snapshot.needsUser, true);
+    assert.equal(rec.snapshot.needsUserProvenance, "reported");
+  });
+
+  it("a specialist finishing while its derived-idled ask is pending resolves the wait", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-1" }));
+    applyEvent(rec, ev({ id: "e2", kind: "permission_request", workerId: "agent-1" }));
+    applyEvent(rec, ev({ id: "e3", kind: "worker_transition", workerId: "agent-1", to: "IDLE", provenance: "derived" }));
+    assert.equal(rec.snapshot.needsUser, true);
+    assert.equal(rec.snapshot.state, "WAITING_FOR_USER");
+    const r = applyEvent(rec, ev({ id: "e4", kind: "specialist_finished", workerId: "agent-1" }));
+    assert.equal(r.ok, true);
+    assert.equal(rec.snapshot.needsUser, false);
+    assert.equal(rec.snapshot.pendingUserNeeds, undefined);
+    // The emptied wait must reconcile — no resting WAITING_USER + no-need state.
+    assert.equal(rec.snapshot.state, "ACTIVE");
+  });
+
+  it("an idle no-op does not resolve a pending ask", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "worker_transition", workerId: "lead", to: "WORKING" }));
+    applyEvent(rec, ev({ id: "e2", kind: "permission_request", workerId: "lead" }));
+    applyEvent(rec, ev({ id: "e3", kind: "worker_transition", workerId: "lead", to: "IDLE", provenance: "derived" }));
+    // An observed IDLE no-op says the worker is still idle — not that the ask resolved.
+    applyEvent(rec, ev({ id: "e4", kind: "worker_transition", workerId: "lead", to: "IDLE" }));
+    assert.equal(rec.snapshot.needsUser, true);
+    // Real resumption evidence resolves it.
+    applyEvent(rec, ev({ id: "e5", kind: "worker_transition", workerId: "lead", to: "WORKING" }));
+    assert.equal(rec.snapshot.needsUser, false);
+  });
+
+  it("turn end resolves every pending ask at once", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-a" }));
+    applyEvent(rec, ev({ id: "e2", kind: "permission_request", workerId: "agent-a" }));
+    applyEvent(rec, ev({ id: "e3", kind: "permission_request", workerId: "lead" }));
+    assert.deepEqual(Object.keys(rec.snapshot.pendingUserNeeds ?? {}).length, 2);
+    applyEvent(rec, ev({ id: "e4", kind: "turn_finished" }));
+    assert.equal(rec.snapshot.needsUser, false);
+    assert.equal(rec.snapshot.pendingUserNeeds, undefined);
+  });
+});

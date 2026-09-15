@@ -24,6 +24,12 @@ import {
  * - An event's explicit workerId is a correlation claim that must resolve to
  *   a roster worker; only a genuinely absent workerId falls back to the
  *   writer. Events naming a different task are rejected by `applyEvent`.
+ *   Resolution is namespace-aware: hook-correlated events (observed/derived)
+ *   carry native agent ids, so externalId wins; model reports name roster
+ *   ids, so the internal id wins.
+ * - Pending user needs are attributed, never a bare flag: each need is keyed
+ *   to the worker (or the task) whose evidence created it, and only real
+ *   evidence resolving that specific ask — or a turn boundary — clears it.
  * - Events are deduplicated by `event.id` at the record level, so replays are
  *   idempotent.
  * - At most one writer and at most MAX_VISIBLE_WORKERS visible bots.
@@ -208,24 +214,23 @@ function provenancePermitsTransition(
   }
 }
 
-function findWorker(snapshot: TaskSnapshot, workerId: string | undefined): WorkerSnapshot | undefined {
-  if (!workerId) return undefined;
-  return (
-    snapshot.workers.find((w) => w.id === workerId) ??
-    snapshot.workers.find((w) => w.externalId === workerId)
-  );
-}
-
-/** Specialist-correlated lookup: external ids win over internal role ids. */
-function findWorkerByExternal(
+/**
+ * Worker-id resolution is namespace-aware: hook-correlated events
+ * (observed/derived) carry native agent ids — externalId wins; model reports
+ * name roster ids — the internal id wins. A collision between the two
+ * namespaces routes to the namespace the evidence actually speaks.
+ */
+function findWorker(
   snapshot: TaskSnapshot,
   workerId: string | undefined,
+  provenance: EvidenceLevel,
 ): WorkerSnapshot | undefined {
   if (!workerId) return undefined;
-  return (
-    snapshot.workers.find((w) => w.externalId === workerId) ??
-    snapshot.workers.find((w) => w.id === workerId)
-  );
+  const byId = (w: WorkerSnapshot) => w.id === workerId;
+  const byExternal = (w: WorkerSnapshot) => w.externalId === workerId;
+  return provenance === "reported"
+    ? snapshot.workers.find(byId) ?? snapshot.workers.find(byExternal)
+    : snapshot.workers.find(byExternal) ?? snapshot.workers.find(byId);
 }
 
 /** Single active writer, falling back to the lead (plan §5.2: one writer). */
@@ -237,11 +242,50 @@ function defaultWorker(snapshot: TaskSnapshot): WorkerSnapshot | undefined {
   );
 }
 
-/** needsUser means a decision is pending; clear it when nobody is waiting. */
-function settleNeedsUser(snapshot: TaskSnapshot): void {
-  if (snapshot.workers.some((w) => w.state === "WAITING_FOR_APPROVAL")) return;
-  snapshot.needsUser = false;
-  delete snapshot.needsUserProvenance;
+/**
+ * Pending needs carry attribution so unrelated activity can never resolve an
+ * ask it did not address. Keys are `worker:<internal id>` for an attributed
+ * permission request and "task" for a task-level reported wait; the value is
+ * the provenance of the evidence that created the need (never derived —
+ * every need-creating path is provenance-gated). `needsUser` and
+ * `needsUserProvenance` summarize the earliest live need.
+ */
+const TASK_NEED_KEY = "task";
+const workerNeedKey = (workerId: string) => `worker:${workerId}`;
+
+function syncNeedsUser(snapshot: TaskSnapshot): void {
+  const first = snapshot.pendingUserNeeds
+    ? Object.values(snapshot.pendingUserNeeds)[0]
+    : undefined;
+  if (first === undefined) {
+    snapshot.needsUser = false;
+    delete snapshot.needsUserProvenance;
+    delete snapshot.pendingUserNeeds;
+  } else {
+    snapshot.needsUser = true;
+    snapshot.needsUserProvenance = first;
+  }
+}
+
+function addNeed(snapshot: TaskSnapshot, key: string, provenance: EvidenceLevel): void {
+  const needs = { ...(snapshot.pendingUserNeeds ?? {}) };
+  if (!(key in needs)) needs[key] = provenance;
+  snapshot.pendingUserNeeds = needs;
+  syncNeedsUser(snapshot);
+}
+
+function resolveNeed(snapshot: TaskSnapshot, key: string): void {
+  if (!snapshot.pendingUserNeeds || !(key in snapshot.pendingUserNeeds)) return;
+  const needs = { ...snapshot.pendingUserNeeds };
+  delete needs[key];
+  if (Object.keys(needs).length === 0) delete snapshot.pendingUserNeeds;
+  else snapshot.pendingUserNeeds = needs;
+  syncNeedsUser(snapshot);
+}
+
+function clearNeeds(snapshot: TaskSnapshot): void {
+  delete snapshot.pendingUserNeeds;
+  syncNeedsUser(snapshot);
 }
 
 /**
@@ -268,8 +312,7 @@ function reconcileWaitState(snapshot: TaskSnapshot, event: VisualEvent): void {
  * state, otherwise via CANCELED (reachable from every non-terminal state).
  */
 function finalizeTerminal(snapshot: TaskSnapshot, target: TaskState, event: VisualEvent): void {
-  snapshot.needsUser = false;
-  delete snapshot.needsUserProvenance;
+  clearNeeds(snapshot);
   for (const worker of snapshot.workers) {
     if (TERMINAL_WORKER_STATES.has(worker.state)) continue;
     if (transitionWorker(worker, target as WorkerState, event) !== null) {
@@ -287,9 +330,10 @@ function finalizeTerminal(snapshot: TaskSnapshot, target: TaskState, event: Visu
 function targetWorker(
   snapshot: TaskSnapshot,
   workerId: string | undefined,
+  provenance: EvidenceLevel,
 ): WorkerSnapshot | undefined | "unknown" {
   if (workerId === undefined) return defaultWorker(snapshot);
-  return findWorker(snapshot, workerId) ?? "unknown";
+  return findWorker(snapshot, workerId, provenance) ?? "unknown";
 }
 
 function transitionWorker(
@@ -326,6 +370,9 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
   const snapshot: TaskSnapshot = {
     ...snapshotIn,
     workers: snapshotIn.workers.map((w) => ({ ...w })),
+    ...(snapshotIn.pendingUserNeeds
+      ? { pendingUserNeeds: { ...snapshotIn.pendingUserNeeds } }
+      : {}),
   };
 
   const provenanceError = provenancePermitsTransition(event.provenance, event.kind, event.to);
@@ -350,28 +397,54 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
 
     case "task_transition": {
       if (!event.to) return { ok: false, snapshot: snapshotIn, error: "task_transition missing target" };
+      const wasWaiting = snapshot.state === "WAITING_FOR_USER";
       const err = transitionTask(snapshot, event.to as TaskState, event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
       // A transition landing terminal carries finish semantics too.
       if (TERMINAL_TASK_STATES.has(snapshot.state)) {
         finalizeTerminal(snapshot, snapshot.state, event);
+      } else {
+        // Entering the wait state is itself evidence of a pending need;
+        // leaving it on real evidence resolves the task-level ask. Worker
+        // asks keep their own attribution and are untouched here.
+        if (event.to === "WAITING_FOR_USER") {
+          addNeed(snapshot, TASK_NEED_KEY, event.provenance);
+        } else if (wasWaiting && event.provenance !== "derived") {
+          resolveNeed(snapshot, TASK_NEED_KEY);
+        }
+        reconcileWaitState(snapshot, event);
       }
       break;
     }
 
     case "worker_transition": {
-      const resolved = targetWorker(snapshot, event.workerId);
+      const resolved = targetWorker(snapshot, event.workerId, event.provenance);
       if (resolved === "unknown") {
         return { ok: false, snapshot: snapshotIn, error: `unknown worker ${event.workerId}` };
       }
       if (!resolved) return { ok: false, snapshot: snapshotIn, error: "no worker to transition" };
       if (!event.to) return { ok: false, snapshot: snapshotIn, error: "worker_transition missing target" };
+      const wasWaiting = resolved.state === "WAITING_FOR_APPROVAL";
       const err = transitionWorker(resolved, event.to as WorkerState, event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
-      // An explicit wait-for-approval claim is a pending user decision.
       if (event.to === "WAITING_FOR_APPROVAL") {
-        snapshot.needsUser = true;
-        snapshot.needsUserProvenance = event.provenance;
+        // An explicit wait-for-approval claim is a pending user decision.
+        addNeed(snapshot, workerNeedKey(resolved.id), event.provenance);
+      } else if (event.provenance !== "derived") {
+        // Resolution evidence: the ask-holder verifiably left waiting, or is
+        // now demonstrably working/reviewing/finished — e.g. a real WORKING
+        // claim after a derived event idled it. An IDLE/BLOCKED no-op says
+        // nothing about the ask and cannot resolve it. Derived evidence may
+        // idle a worker but never dismisses a real ask.
+        if (
+          wasWaiting ||
+          event.to === "WORKING" ||
+          event.to === "REVIEWING" ||
+          TERMINAL_WORKER_STATES.has(event.to as WorkerState)
+        ) {
+          resolveNeed(snapshot, workerNeedKey(resolved.id));
+        }
+        if (event.to === "WORKING") resolveNeed(snapshot, TASK_NEED_KEY);
       }
       // Real work activity wakes the task out of PLANNING/WAITING when truthful.
       if (
@@ -380,16 +453,13 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       ) {
         transitionTask(snapshot, "ACTIVE", event);
       }
-      // A worker leaving WAITING_FOR_APPROVAL resolved its pending decision.
-      // Derived evidence may idle a worker but never dismiss a real ask.
-      if (event.provenance !== "derived") settleNeedsUser(snapshot);
       reconcileWaitState(snapshot, event);
       break;
     }
 
     case "activity": {
       // Observed work that does not change state; proves the task is alive.
-      const worker = findWorker(snapshot, event.workerId);
+      const worker = findWorker(snapshot, event.workerId, event.provenance);
       if (worker) {
         worker.lastEventId = event.id;
         worker.updatedAt = event.at;
@@ -425,7 +495,7 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
     }
 
     case "specialist_finished": {
-      const worker = findWorkerByExternal(snapshot, event.workerId);
+      const worker = findWorker(snapshot, event.workerId, event.provenance);
       if (!worker) {
         // An explicit finish claim must name a real worker; an absent id is
         // journaled without completing anyone.
@@ -437,26 +507,33 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       // A delegated turn finished — never assume overall task completion.
       const err = transitionWorker(worker, "COMPLETED", event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
+      // A finished worker can no longer be waiting — its ask is resolved.
+      resolveNeed(snapshot, workerNeedKey(worker.id));
+      reconcileWaitState(snapshot, event);
       break;
     }
 
     case "permission_request": {
-      const resolved = targetWorker(snapshot, event.workerId);
+      const resolved = targetWorker(snapshot, event.workerId, event.provenance);
       if (resolved === "unknown") {
         return { ok: false, snapshot: snapshotIn, error: `unknown worker ${event.workerId}` };
       }
       // A pending approval is real even when the named worker cannot be
-      // moved (e.g. already terminal): flag the need, attribute when possible.
-      if (resolved) transitionWorker(resolved, "WAITING_FOR_APPROVAL", event);
+      // moved (e.g. already terminal): record the need, attributed to the
+      // worker when one resolves, else to the task.
+      if (resolved) {
+        transitionWorker(resolved, "WAITING_FOR_APPROVAL", event);
+        addNeed(snapshot, workerNeedKey(resolved.id), event.provenance);
+      } else {
+        addNeed(snapshot, TASK_NEED_KEY, event.provenance);
+      }
       if (snapshot.state === "ACTIVE") transitionTask(snapshot, "WAITING_FOR_USER", event);
-      snapshot.needsUser = true;
-      snapshot.needsUserProvenance = event.provenance;
       break;
     }
 
     case "worker_assigned": {
       // Assignment notice: attribute to the worker when the id resolves.
-      const worker = findWorker(snapshot, event.workerId);
+      const worker = findWorker(snapshot, event.workerId, event.provenance);
       if (worker) {
         worker.lastEventId = event.id;
         worker.updatedAt = event.at;
@@ -470,8 +547,9 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
           transitionWorker(worker, "IDLE", event);
         }
       }
-      // The turn ended: any approval it carried was resolved or dismissed.
-      if (event.provenance !== "derived") settleNeedsUser(snapshot);
+      // The turn ended: every ask it carried was resolved or dismissed.
+      // Derived evidence may idle workers but never resolves a real ask.
+      if (event.provenance !== "derived") clearNeeds(snapshot);
       reconcileWaitState(snapshot, event);
       break;
     }
@@ -483,7 +561,7 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
         }
       }
       // Task keeps its state; resumable. A dismissed prompt is answered.
-      if (event.provenance !== "derived") settleNeedsUser(snapshot);
+      if (event.provenance !== "derived") clearNeeds(snapshot);
       reconcileWaitState(snapshot, event);
       break;
     }

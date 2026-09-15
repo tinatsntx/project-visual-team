@@ -46,6 +46,22 @@ describe("reported workflow boundaries", () => {
     assert.equal(stored.record.snapshot.workers[0]?.state, "WORKING");
   });
 
+  it("a reported wait exposes the pending need and a reported resume resolves it", () => {
+    const repo = new InMemoryTaskRepository(clock);
+    const stored = startSolo(repo);
+    const taskId = stored.record.snapshot.id;
+    repo.apply(stored, report(taskId, "implementing", "e1"));
+    assert.equal(repo.apply(stored, report(taskId, "waiting_for_user", "e2")).ok, true);
+    assert.equal(stored.record.snapshot.state, "WAITING_FOR_USER");
+    assert.equal(stored.record.snapshot.needsUser, true);
+    assert.equal(stored.record.snapshot.needsUserProvenance, "reported");
+
+    assert.equal(repo.apply(stored, report(taskId, "testing", "e3")).ok, true);
+    assert.equal(stored.record.snapshot.state, "ACTIVE");
+    assert.equal(stored.record.snapshot.needsUser, false);
+    assert.equal(stored.record.snapshot.needsUserProvenance, undefined);
+  });
+
   it("reaches a truthful terminal state and rejects later reports", () => {
     const repo = new InMemoryTaskRepository(clock);
     const stored = startSolo(repo);

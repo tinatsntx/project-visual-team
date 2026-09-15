@@ -123,6 +123,35 @@ describe("InMemoryTaskRepository", () => {
     assert.equal(stored.record.seenEventIds.has("evt_never"), false);
   });
 
+  it("a hook agent_id colliding with a roster id resolves the specialist, not the lead", () => {
+    const repo = new InMemoryTaskRepository(clock);
+    const { record } = repo.createTask({ title: "a", summary: "s", mode: "solo", privacyMode: "standard" });
+    const stored = repo.get(record.snapshot.id);
+    assert.ok(stored);
+    const join = mapCodexEvent({
+      taskId: record.snapshot.id,
+      name: "SubagentStart",
+      at: clock.nowIso(),
+      eventId: "evt_join",
+      payload: { agent_id: "lead", agent_type: "review" },
+    });
+    assert.ok(join.ok);
+    repo.apply(stored, ...join.events);
+    const ask = mapCodexEvent({
+      taskId: record.snapshot.id,
+      name: "PermissionRequest",
+      at: clock.nowIso(),
+      eventId: "evt_ask",
+      payload: { agent_id: "lead" },
+    });
+    assert.ok(ask.ok);
+    repo.apply(stored, ...ask.events);
+    const workers = stored.record.snapshot.workers;
+    assert.equal(workers.find((w) => w.id === "lead" && !w.externalId)?.state, "ASSIGNED");
+    assert.equal(workers.find((w) => w.externalId === "lead")?.state, "WAITING_FOR_APPROVAL");
+    assert.equal(stored.record.snapshot.needsUser, true);
+  });
+
   it("readSnapshot refreshes derived flags without mutating the stored record", () => {
     let nowMs = Date.parse("2026-09-13T15:00:00.000Z");
     const driftClock: Clock = {

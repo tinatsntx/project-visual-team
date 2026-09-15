@@ -31,17 +31,19 @@ is accepted, published, and deployed: clean-checkout verification and literal
 resource embedding pass. M0 enablement and its two reviewed fixes are
 accepted at `4fb3548`; no new coding blocker was found in that review.
 M0 is closed for the tested path. SWE-2 brief 006 is implemented locally:
-the engine now rejects cross-task events and explicit-unresolvable worker
+the engine rejects cross-task events and explicit-unresolvable worker
 targets, closes derived-provenance holes on indirect kinds, validates
-finish targets, and gains seeded property + ordered replay evidence.
-Coordinator verified 131/131 tests, typecheck, build, native compatibility,
-and the original M0 probe. Candidate `a4ffe13` has three reproduced gaps:
-colliding hook IDs target the lead, reported wait leaves needsUser false,
-and unrelated work clears a specialist's ask after derived idle. The fixed
-`evals/m1-coordinator-probe.mts` exits 1. Next:
-`docs/swe-2-brief-006-follow-up.md`. M0 remains closed; no browser gate reopened.
+finish targets, and gains seeded property + ordered replay evidence. The
+coordinator's three reproduced follow-up gaps are fixed in this working
+tree: worker resolution is now namespace-aware (hook agent_ids match
+externalId first; reported ids match internal roster ids first), a reported
+`waiting_for_user` records an attributed pending need, and pending needs
+are attributed per ask-holder (`pendingUserNeeds`) so unrelated activity
+can never resolve another worker's ask. `evals/m1-coordinator-probe.mts`
+exits 0 — all three cases pass — and 143/143 tests, typecheck, build, and
+both probes are green. M0 remains closed; no browser gate reopened.
 Milestone 2 consumer workflow is prepared in `docs/swe-2-brief-007.md` for
-after those fixes pass. Evidence: `docs/m1-core-engine-acceptance.md`.
+after those fixes pass review. Evidence: `docs/m1-core-engine-acceptance.md`.
 
 ## Current state
 
