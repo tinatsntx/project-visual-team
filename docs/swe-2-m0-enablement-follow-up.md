@@ -1,8 +1,14 @@
 # SWE-2 M0 enablement — coordinator review follow-up
 
+**Resolved and accepted 2026-09-15:** fix `3ab16d0`, published/deployed tip
+`4fb3548`. Both unchanged probe cases pass (exit 0); 88/88 tests and exact-tip
+CI pass. Installed native skill workflow, terminal web modes, and actual web
+PiP also pass. See `docs/m0-enablement-acceptance.md`. The brief and failed
+reproduction below are the original review record, not current failures.
+
 Reviewed 2026-09-14 America/Chicago. Code `3ed245e`, records/config
-`6cd5d87e4d89044458e100651a984008449bfa2b`. **Held before publication/deployment.**
-GitHub/Render remain on accepted `515727a`.
+`6cd5d87e4d89044458e100651a984008449bfa2b`. **Originally held before publication/deployment.**
+GitHub/Render then remained on accepted `515727a`.
 
 The coordinator reran typecheck, all 83 tests, native compatibility including
 installed-root launch verification, and build: pass. Widget 160.1 KB, dev
@@ -15,7 +21,7 @@ node --import tsx evals/m0-enablement-coordinator-probe.mts
 
 The probe uses a separate loopback app instance and synthetic metadata.
 Capabilities stay in private request metadata and are never printed. It
-currently exits 1. No hosted task or service configuration was changed.
+exited 1 on the original candidate. No hosted task or service configuration was changed.
 
 ## 1. Reject work reports after every terminal outcome
 

@@ -1,13 +1,42 @@
 # Evaluation platform matrix
 
-Updated 2026-09-14. Results/GO decisions in `docs/feasibility-report.md`.
+Updated 2026-09-15. Results/GO decisions in `docs/feasibility-report.md`.
 `PROJECT_PLAN.md` controls scope.
-Current tested/deployed code: `515727a2d8ec08c95ce3c2e610f4578c56978347`.
-Latest packaging tested: `8ef7822ef5d2ef6403d782bf2e50cd23f0a94239`;
-the corrected native package is unchanged. Isolated Sites port `433d93d`
+**M0 COMPLETE / GO:** ChatGPT web + Windows Codex CLI + Render. The eight
+feasibility criteria pass on this supported path. Pending surfaces stay
+unverified and move to later compatibility work; see `docs/m0-closeout.md`.
+Current tested/deployed code: `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
+Latest packaging regenerated/refreshed from that SHA; installed skill and
+hook files match source. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.
 
-## M0 enablement review (3ed245e / 6cd5d87, local only)
+## M0 enablement acceptance (4fb3548, 2026-09-15)
+
+| ID | Case | Result |
+|---|---|---|
+| M0-LOCAL review retry | Unchanged HTTP probe | PASS: late report rejected/count delta 0; 596-char finish detail retains verification and reference |
+| M0-CI-01 | Typecheck, 88 tests, compatibility/Windows launch, build, whitespace | PASS independently; exact-tip GitHub CI 34974898762 green |
+| M0-RESOURCE-01 | Hosted discovery and literal widget assets | PASS: six tools, JS/CSS match build verbatim |
+| M0-PACKAGE-03 | Supported plugin refresh and installed readback | PASS: skill/hook files match source, duplicate personal plugin disabled, one active native hook |
+| M0-NATIVE-03 | Installed skill workflow | PASS: start/render, genuine testing report, one native date action, automatic observed hook, reported finish, readable final render |
+| M0-WEB-10 | Fresh Pro read-only completed render | PASS: completed task/Alex, all seven events, retained verification |
+| M0-WEB-05 terminal | Completed task modes and host change | PASS: Open team/Back to chat/host Close; zero MCP calls observed across 252582 ms of terminal mode checks |
+| M0-PIP-01 | Actual web PiP and return | PASS for completed solo task: visible host PiP bar, readable Alex done, Back to chat restores inline |
+| M0-WEB-07 server portion | TTL expiry on separate loopback HTTP app | PASS in suite with 50 ms TTL; actual host expiry UX still pending |
+
+Full record: `docs/m0-enablement-acceptance.md`. Render deploy
+`dep-dakkf76k1f9s73dkl8q0` live `2026-09-15T13:27:45.029096Z`.
+Task `vt_24d111a38068a994393527e1`, native session
+`01a0a541-32ef-7f02-816e-1acec5d149dc`, observed hook
+`hook_1789479307039_pck2myjd` at `13:35:07.038Z`. Task ends at eventCount 7.
+ChatGPT mounted after native completion: this is subsequent evidence rendering,
+not a new same-widget live-update claim. Prior d39e5e3 evidence remains below.
+Network observation covered top-page requests only, with no truncated events;
+no overrides were installed. Hosted TTL and prior CSP setting were unchanged.
+
+## Historical M0 enablement review (3ed245e / 6cd5d87, local only)
+
+Both failures below are resolved by `3ab16d0` and independently accepted above.
 
 | Case | Result |
 |---|---|
@@ -18,7 +47,7 @@ is privately deployed; owner MCP availability blocks its live acceptance.
 
 Probe: `node --import tsx evals/m0-enablement-coordinator-probe.mts` (exit 1).
 Follow-up: `docs/swe-2-m0-enablement-follow-up.md`. Hosted `515727a` and its
-earlier acceptance remain unchanged.
+earlier acceptance were unchanged at the time of this review.
 
 ## Brief 005 acceptance (515727a, 2026-09-14 CT / 2026-09-15 UTC)
 
@@ -79,7 +108,7 @@ Reproduce with `node --import tsx evals/brief-004-coordinator-probe.mts`;
 exit 0 means diagnostic execution, not acceptance. Bounded fix requirements:
 `docs/swe-2-brief-004-follow-up.md`. Sites remains paused; Render unchanged.
 
-## Latest acceptance (8ef7822 / Sites port, 19:29–19:35 UTC)
+## Earlier acceptance (8ef7822 / Sites port, 19:29–19:35 UTC)
 
 | ID | Case | Result |
 |---|---|---|
@@ -192,15 +221,16 @@ Measure acceptance-to-visible latency on a later repeat. Do not put capability
 tokens in commands, ordinary tool args, logs, or browser inspection output.
 Manual replay proves transport/refresh, not automatic native hook delivery.
 
-## Pending M0 cases
+## Deferred compatibility and private-alpha validation
+
+These cases no longer block Milestone 1. Complete UX checks before private
+alpha and platform checks before claiming support for those platforms.
 
 | ID | Test | Acceptance |
 |---|---|---|
-| M0-NATIVE-01 retry | Compatible package, normal hook trust, real harmless action | Automatic PostToolUse reaches pinned view; no manual replay; preserve permissions |
-| M0-NATIVE-03 | Installed skill workflow | Verify workflow invocation separately; direct installed-tool text already passes |
-| M0-WEB-05 | Real-host terminal/rejected mode cases | Local terminal and rejection cases pass; public tools cannot create terminal task, so do not fake completion |
+| M0-WEB-05 rejection | Real-host rejected mode request | Terminal web switching passes above; observe genuine rejection without optimistic layout mutation |
 | M0-WEB-07 | Expiry/missing capability/failed refresh | Truthful limited visibility; no invented progress |
-| M0-PIP-01 | Actual host PiP availability | Working PiP or real platform limitation plus inline fallback; flag alone insufficient |
+| M0-PIP-02 | Active-task PiP updates and other hosts | Completed web PiP passes above; verify active updates and record each actual host |
 | M0-DESKTOP-01 | ChatGPT desktop full package, modes, refresh, fallback | Fill actual matrix cells; do not infer from web |
 | M0-MOBILE-01 | ChatGPT mobile supported flow | Fill actual cells and limitations |
 | M0-CODEX-01 | Codex desktop plugin/hook/UI/text | Fill actual cells; do not infer from CLI installation |
@@ -224,4 +254,5 @@ and correlation evidence without command text/content in product telemetry.
 2. Hosted work without hooks — no specific unobserved activity claims.
 3. "Auto-approve all commands" — preserve native permission handling.
 
-These broader evals do not authorize Milestone 1+ implementation.
+These broader evals are follow-up workflow validation. Milestone 1 is now
+authorized by the M0 closeout; begin with `docs/swe-2-brief-006.md`.

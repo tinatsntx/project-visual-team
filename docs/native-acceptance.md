@@ -1,10 +1,32 @@
 # Native plugin and hook acceptance — automatic delivery into ChatGPT passes
 
 Prepared by the coordinator, 2026-09-14, after accepting/deploying `31d4165`.
-Latest run: 2026-09-14, deployed `d39e5e3` with the already-corrected native
-package. A real native PostToolUse reaches the existing embedded ChatGPT widget.
-M0 criterion 6 passes on this tested native CLI -> ChatGPT web path; the full
-platform gate remains open.
+Latest run: 2026-09-15, deployed `4fb3548`, refreshed installed skill workflow
+and automatic hook pass. Earlier `d39e5e3` proves a real native PostToolUse
+reaches the existing embedded ChatGPT widget.
+M0 criterion 6 passes on this tested native CLI -> ChatGPT web path. M0 is
+now closed for that supported path; broader platform compatibility remains
+unverified. See `docs/m0-closeout.md`.
+
+## Installed skill workflow (4fb3548, 2026-09-15, 13:31–13:35 UTC)
+
+Supported refresh installs cache `visual-team-native/visual-team/0.1.0`;
+skill, hook declaration, and script match source. Personal duplicate remains
+disabled. Normal `/hooks` shows installed 1 / active 1, existing trust retained.
+Native session `01a0a541-32ef-7f02-816e-1acec5d149dc` runs the installed skill:
+start/render, reported testing, one native date action, truthful reported
+completion and readable render. Task `vt_24d111a38068a994393527e1` ends completed
+at eventCount 7; final verification is retained. Automatic observed Bash hook
+`hook_1789479307039_pck2myjd` arrives `2026-09-15T13:35:07.038Z`.
+
+Only this native process had the hosted endpoint override; correlation used
+the single fresh most-recent active task. The process exited normally. No
+manual hook or event injection, source edits, or trust bypass occurred.
+Fresh ChatGPT renders the completed task and these events afterward; terminal
+fullscreen/return/host Close and PiP/return pass. This run mounted the widget
+after completion and does not repeat the prior same-widget live-update proof.
+Exact deployment, checks, scope, and remaining cases:
+`docs/m0-enablement-acceptance.md`.
 
 ## Same-widget acceptance (d39e5e3, 23:41–23:49 UTC)
 
@@ -238,10 +260,10 @@ errors and correlation evidence; never capability tokens or raw hook stdin.
 Codex coordinates diagnosis and gives SWE-2 a bounded coding brief only if
 the evidence identifies a code issue.
 
-Criterion 6 remains OPEN: the latest corrected native hook reaches the
-backend automatically, but that event still needs direct observation in the
-same mounted widget. Prior manual probes do not fill this gap. Real ChatGPT terminal
-mode switching is separately pending: current tools expose no task_finished
-operation and Stop intentionally finishes only a turn.
+Historical gap above is resolved: criterion 6 passes on the d39e5e3 CLI/web
+path, and the refreshed installed skill workflow passes on 4fb3548. The
+deployed finish tool supports truthful task completion after real work;
+terminal ChatGPT web mode switching now passes. Stop still finishes only a
+turn. Remaining surfaces and real-host expiry/rejection cases stay open.
 
 Native trust requirement: [official hook documentation](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks).

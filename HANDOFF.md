@@ -1,14 +1,19 @@
 # Handoff — Project Visual Team
 
-**Updated:** 2026-09-14
+**Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 — platform feasibility. Real native PostToolUse now reaches
+**Milestone:** 0 COMPLETE; 1 — core state engine is next. Initial supported
+path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
 Controlled connection-failure recovery and fullscreen/return also pass.
 Brief 005 fixes clean-checkout CI and literal bundle embedding; both pass,
-including a fresh ChatGPT smoke test. Other surface/PiP gates remain open.
+including a fresh ChatGPT smoke test. M0 enablement is now accepted/deployed:
+native skill completion, terminal modes, and web PiP pass. Other surfaces,
+real expiry UX, and host rejection cases move to the compatibility/private-alpha
+backlog; they do not block Milestone 1. Decision: `docs/m0-closeout.md`.
 Sites migration remains paused by owner MCP availability. Full evidence:
-`docs/brief-004-acceptance.md` and `docs/brief-005-acceptance.md`.
+`docs/m0-enablement-acceptance.md`, `docs/brief-004-acceptance.md`, and
+`docs/brief-005-acceptance.md`.
 
 `PROJECT_PLAN.md` is the controlling specification.
 `docs/feasibility-report.md` is the live gate record.
@@ -22,33 +27,31 @@ evidence. Brief 002 is accepted on the tested paths below; brief 003's launch
 fix passes automatic delivery. Brief 004 follow-up `d39e5e3` passes the bounded
 real ChatGPT/native and connection-recovery acceptance. Brief 005 `515727a`
 is accepted, published, and deployed: clean-checkout verification and literal
-resource embedding pass. No new coding blocker was found in that review;
-continue the remaining platform acceptance. The earlier broad
-brief 004 hygiene batch and later milestones remain deferred while the view
-and platform gates remain open.
+resource embedding pass. M0 enablement and its two reviewed fixes are
+accepted at `4fb3548`; no new coding blocker was found in that review.
+M0 is closed for the tested path. Next SWE-2 work is
+`docs/swe-2-brief-006.md`: complete and verify the existing core state engine
+against Milestone 1's four exit criteria. Avoid rebuilding the working engine
+or reopening the M0 test matrix. Consumer workflow is Milestone 2 afterward.
 
 ## Current state
 
-- Verified GitHub main and Render deploy:
-  `515727a2d8ec08c95ce3c2e610f4578c56978347`.
-- Local HEAD `6cd5d87` includes M0-enablement code `3ed245e`: the plan §9.2/§9.5
-  reported tools (`report_workflow_step`, `finish_visual_task`), a
-  `VISUAL_TEAM_TTL_MS` override for expiry testing, and PiP enablement
-  (flag on plus a Pop out control). 83/83 tests, typecheck, build, and the
-  UI-resource verbatim check pass in coordinator verification. Review found
-  two real-HTTP blockers (a work report accepted after early task failure,
-  and silently discarded finish verification/artifact metadata); fix commit
-  `3ab16d0` freezes terminal tasks in the reducer and rejects oversized
-  finish detail rather than truncating. 88/88 tests and the coordinator
-  probe (exit 0) pass. See `docs/swe-2-m0-enablement-follow-up.md`. Awaiting
-  re-review; nothing pushed or deployed; the installed skill was not refreshed.
-- Coordinator independently verified typecheck, 74 tests, compatibility and
-  installed-root Windows checks, build, and whitespace checks. A full committed
-  source export with fresh dependencies and no generated UI passes tests
-  before build. Widget remains 159.9 KB.
-- GitHub CI run `34911908899` is green for this SHA. The missing-bundle test
-  failure and replacement-string corruption are resolved. Postbuild checks
-  and an independent hosted resource read confirm literal JS/CSS embedding.
+- Last verified product-code baseline on GitHub main and Render:
+  `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
+  Documentation-only closeout commits may follow; Render stays on this code.
+- M0-enablement code `3ed245e` plus fixes `3ab16d0` are accepted: reported
+  workflow/finish tools, testable TTL override, and PiP control. Terminal
+  tasks reject new events; oversized finish metadata rejects before mutation.
+  Accepted result/verification/reference metadata is retained intact.
+- Coordinator independently reran typecheck, 88/88 tests, compatibility and
+  installed-root Windows checks, build, committed-delta whitespace, and the
+  unchanged HTTP probe (exit 0). Widget 160.1 KB. GitHub CI `34974898762`
+  is green for the exact SHA; hosted JS/CSS match the build verbatim.
+- Refreshed installed skill workflow passes in native Codex: genuine testing
+  report, one native date read with automatic observed hook, reported finish,
+  and useful final text. Fresh ChatGPT renders the completed task and evidence;
+  terminal fullscreen/return/host Close and actual PiP/return pass. This run
+  mounted after native completion; earlier same-widget live evidence is below.
 - Fresh ChatGPT Pro read-only viewer, native event in the same widget, controlled
   failed-read retry/recovery, and fullscreen/return pass. No new precise latency
   measurement or full platform-matrix pass is claimed. See acceptance evidence.
@@ -69,15 +72,15 @@ and platform gates remain open.
   Full deployment IDs, availability decision, and remaining acceptance:
   `docs/sites-acceptance.md`.
 - npm workspaces, strict TypeScript, Node >= 20; Windows-first development.
-- Deployed `515727a` serves four MCP tools at `/mcp`; HEAD adds the two
+- Deployed `4fb3548` serves six MCP tools at `/mcp`, including the two
   reported-boundary tools. Stateless HTTP transport with an in-memory task
   repository, task-scoped read capabilities, and 2h task TTL (overridable
-  via `VISUAL_TEAM_TTL_MS` on HEAD).
+  via `VISUAL_TEAM_TTL_MS`; hosted default is unchanged).
 - Fresh `render_visual_task` returns snapshot and recent events plus the
   capability in private result `_meta`. Reads use private request `_meta`.
-- React widget: inline/fullscreen; the deployed build keeps PiP behind a
-  disabled feature flag while HEAD enables it with a Pop out request for
-  the platform probe. JS/CSS inlined in the resource; bridge-only declared
+- React widget: inline/fullscreen/PiP, with real terminal web mode tests
+  passing. Other hosts and active PiP updates remain untested. JS/CSS inlined
+  in the resource; bridge-only declared
   CSP has empty `connectDomains` and `resourceDomains`.
 - Simulated host `:8788/dev.html` uses the shared render-result builder and
   real mapper/reducer. It is not evidence of native platform support.
@@ -93,8 +96,8 @@ Render: [project-visual-team-mcp](https://dashboard.render.com/web/srv-dak13nmk1
 - Free Node service, Ohio; Node `24.12.0`, `NODE_ENV=production`.
 - Build: `npm ci --include=dev && npm run build && npm run typecheck && npm test`
 - Start: `npm start --workspace @visual-team/mcp-server`
-- Deploy `dep-dak8pcgu01pc73e87ipg` live at
-  `2026-09-15T00:10:05.868838Z`, server/UI SHA `515727a`.
+- Deploy `dep-dakkf76k1f9s73dkl8q0` live at
+  `2026-09-15T13:27:45.029096Z`, server/UI SHA `4fb3548`.
 - Auto-deploy off: coordinator reviews each result before deploying.
 - In-memory tasks disappear on restart. Use synthetic M0 data.
 
@@ -104,7 +107,12 @@ ChatGPT development app: **Visual Team M0**
 - Connector: `plugin_asdk_app_6aa8123840f081918b2cd299cb5ca93d`.
 - [App details](https://chatgpt.com/plugins/plugin_asdk_app_6aa8123840f081918b2cd299cb5ca93d).
 - [Start visual task — earlier QA conversation](https://chatgpt.com/c/6aa81bf1-cd7c-83ea-8ce8-86707bcf2061).
-- Latest smoke QA: [Show Embedded Board](https://chatgpt.com/c/6aa88d4c-6b14-83ea-9b56-f86e43d02b3b).
+- Latest QA: [Render visual task](https://chatgpt.com/c/6aa949a4-a5b4-83ea-9586-4835f4304167).
+  Fresh `4fb3548` completed-task render, correct seven events including
+  verification, fullscreen/return/host Close, and PiP/return pass. Task
+  `vt_24d111a38068a994393527e1`, created `2026-09-15T13:31:08.842Z`.
+  Server expiry passes locally; no hosted retention change.
+- Earlier smoke QA: [Show Embedded Board](https://chatgpt.com/c/6aa88d4c-6b14-83ea-9b56-f86e43d02b3b).
   Fresh `515727a` render initializes and shows the correct reported event;
   fullscreen/return pass. Task `vt_d19303607167b41f2d5d7c84` was created
   `2026-09-15T00:10:55.543Z`; recreate after expiry or service restart.
@@ -120,14 +128,18 @@ ChatGPT development app: **Visual Team M0**
 
 Local native package (latest acceptance):
 
-- `visual-team@visual-team-native` `0.1.0+codex.20260914192637` installed/enabled from generated
+- `visual-team@visual-team-native` `0.1.0` refreshed/installed/enabled from generated
   `dist/native-codex-compat`, with matching installed cache copies.
 - Marketplace manifest: `dist/native-codex-compat/.agents/plugins/marketplace.json`.
-- Cache: `C:/Users/mstin/.codex/plugins/cache/visual-team-native/visual-team/0.1.0+codex.20260914192637`.
+- Cache: `C:/Users/mstin/.codex/plugins/cache/visual-team-native/visual-team/0.1.0`.
 - Native 0.154.0-alpha.6.2 shows its skill, linked app, and one PostToolUse.
-- Normal review/trust of the corrected installed-root hook succeeded;
-  installed 1 / active 1. One real native action delivered an automatic event
-  at 19:34:36.48 UTC; task eventCount advanced 1 -> 2. Hook remains enabled.
+- Normal `/hooks` readback: installed 1 / active 1, prior trust retained.
+  Installed skill/declaration/script match source. Session
+  `01a0a541-32ef-7f02-816e-1acec5d149dc` used the installed skill to report
+  testing, perform one native date read, and truthfully finish. Automatic
+  hook `hook_1789479307039_pck2myjd` arrived at 13:35:07.038 UTC; reported
+  completion followed at 13:35:18.911 UTC. Final eventCount 7 stayed frozen.
+  Useful native text and subsequent ChatGPT evidence rendering pass.
 - Old `visual-team@personal` is now disabled to avoid duplicate registration.
 - Prior native QA task `vt_1981d9b116e79e0aecc38440`, created 23:41:13 UTC,
   was cleared by the brief 005 service deployment. Recorded acceptance:
@@ -203,20 +215,25 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-1. Brief 002 accepted on tested paths; remaining real-host terminal/rejected
-   mode cases are still pending. HEAD's reported tools give a truthful
-   terminal path once reviewed/deployed; `VISUAL_TEAM_TTL_MS` on the service
-   makes expiry testable. Stop finishes a turn, not a task — do not fake
-   completion to test it.
+**Current priority:** SWE-2 brief 006, Milestone 1 core state engine.
+The cases below are recorded compatibility/private-alpha follow-ups, not
+conditions for starting Milestone 1. Do not rerun accepted feasibility checks
+unless a changed path or new failure warrants it.
+
+1. Terminal mode switching and actual web PiP now pass. Real-host rejected
+   mode requests and expiry/missing-capability UX remain pending. Use a
+   separate local TTL test instance first; hosted retention stays two hours.
+   Stop finishes a turn, not a task. The deployed reported finish tool gives
+   a truthful terminal path after genuine work.
 2. Brief 005 is accepted: clean-checkout CI and literal hosted JS/CSS pass.
    Native installed-root launch and the bounded same-widget event/recovery flow
    also pass; continue remaining platform cases without reopening accepted
    work unless new evidence warrants it.
-3. CLI tool text passes. Test the skill workflow, real PiP support/limitation,
-   and remaining desktop/mobile rows. Do not substitute simulated results.
+3. Native installed skill workflow and CLI text pass. Test remaining
+   desktop/mobile rows and active PiP updates. Do not substitute simulations.
 
-Native follow-up instructions: `docs/native-acceptance.md`. Latest smoke task
-is `vt_d19303607167b41f2d5d7c84`; recreate after expiry or restart and explicitly
+Native follow-up instructions: `docs/native-acceptance.md`. Latest QA task
+is `vt_24d111a38068a994393527e1` (completed); create a fresh task for new work and explicitly
 pin any new native test process to its intended fresh QA task.
 
 For local serving:
@@ -292,5 +309,8 @@ Harness: `http://localhost:8788/dev.html`, parameters
 - `docs/swe-2-brief-003-follow-up.md`: current two-item acceptance follow-up.
 - `docs/brief-004-acceptance.md`: real native-event and connection-recovery proof.
 - `docs/brief-005-acceptance.md`: clean CI, literal hosted assets, fresh web smoke.
+- `docs/m0-enablement-acceptance.md`: accepted fixes, deployment, native skill, terminal/PiP web proof.
+- `docs/m0-closeout.md`: M0 GO decision, supported path, deferred validation ownership.
+- `docs/swe-2-brief-006.md`: next coding brief, Milestone 1 core state engine completion.
 - `docs/adr/`, architecture/privacy/security docs.
 - `packages/test-fixtures/fixtures/`: synthetic scenarios.

@@ -657,6 +657,24 @@ The MVP is not marketed for regulated data, PHI, classified information, or secr
 
 ## Milestone 0 — Platform feasibility proof
 
+### Closeout decision — 2026-09-15
+
+**COMPLETE / GO to Milestone 1** for the initial supported path: ChatGPT web
+on the tested Pro account, Windows Codex CLI with the installed native
+compatibility package, and Render hosting. All eight hard GO criteria below
+have evidence on that path. See `docs/m0-closeout.md` and
+`docs/feasibility-report.md`.
+
+Following the owner's direction to finish feasibility and move forward,
+untested desktop/mobile surfaces remain compatibility work before support is
+claimed for those surfaces. Real-host expiry/rejection UX and active PiP
+updates remain validation work before private alpha (Milestone 5). They do
+not block core-engine development. Pending matrix cells stay unverified;
+this closeout does not assert universal platform support or public readiness.
+The eight criteria and product invariants are unchanged. Reopen feasibility
+only if new evidence breaks a hard criterion on the supported path or triggers
+a pivot condition below.
+
 ### Build
 
 - Minimal MCP server.

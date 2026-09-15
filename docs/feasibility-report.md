@@ -1,28 +1,53 @@
 # Milestone 0 — Feasibility Report
 
-**Updated:** 2026-09-14
-**Status:** IN PROGRESS. ChatGPT web initialization, private bridge refresh,
+**Updated:** 2026-09-15
+**Status:** M0 COMPLETE / GO to Milestone 1 for ChatGPT web + Windows Codex
+CLI + Render. ChatGPT web initialization, private bridge refresh,
 same-widget automatic native event delivery, and controlled connection recovery
-pass with CSP enforcement on. The full gate is not met.
-**Current code tested/deployed:** `515727a2d8ec08c95ce3c2e610f4578c56978347`.
-**Latest packaging tested:** `8ef7822ef5d2ef6403d782bf2e50cd23f0a94239`;
-corrected native package retained. Automatic native event delivery into the
-existing ChatGPT widget now passes. Brief 005's CI/resource fixes are accepted.
+pass with CSP enforcement on. Native skill completion, terminal web modes,
+and actual web PiP also pass. All eight feasibility criteria pass on that
+supported path. Untested surfaces remain unverified; full compatibility is
+not claimed. Closeout and backlog ownership: `docs/m0-closeout.md`.
+**Current code tested/deployed:** `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
+**Latest packaging tested:** regenerated/refreshed from that SHA; installed
+skill, hook declaration, and script match source. The corrected installed-root
+hook is retained. Brief 005 and the M0 enablement fixes are accepted.
 **Sites experiment:** `433d93d`, privately deployed; MCP connection is blocked
 by owner account availability. The owner confirmed Pro; migration is paused.
 Codex writes plus ChatGPT read-only render/refresh now pass on this Pro account
 using Render. This does not enable Sites MCP. See `docs/sites-acceptance.md`.
-All eight GO criteria must hold before Milestone 1+.
+All eight GO criteria below hold for the initial supported path. Milestone 1
+can proceed; the broader matrix remains a compatibility record.
 
-## M0 enablement review (3ed245e / 6cd5d87, 2026-09-14 CT)
+## M0 enablement acceptance (4fb3548, 2026-09-15)
 
-**HELD before publication/deployment.** Coordinator independently passes
+Full record: `docs/m0-enablement-acceptance.md`. Fixes `3ab16d0` resolve both
+HTTP probe failures; the unchanged probe exits 0 with both cases passing.
+Independent typecheck, 88/88 tests, Windows compatibility, build, literal
+embedding, and committed-delta whitespace checks pass. Exact-tip CI
+[34974898762](https://github.com/tinatsntx/project-visual-team/actions/runs/34974898762)
+is green. Render deploy `dep-dakkf76k1f9s73dkl8q0` is live at
+`2026-09-15T13:27:45.029096Z`; six hosted tools and matching UI assets verified.
+
+Refreshed installed native skill starts/renders, reports a genuine testing
+boundary, performs one date read, receives automatic observed activity, and
+truthfully finishes with retained verification. Task
+`vt_24d111a38068a994393527e1` ends COMPLETED at eventCount 7. Native text is useful.
+Fresh ChatGPT Pro renders those seven events and completed state correctly.
+Terminal Open team/Back to chat/host Close and actual PiP/return all pass.
+The board mounted after completion; the earlier same-widget live-update
+proof below remains distinct. Local real-HTTP expiry passes; real host expiry
+UX, rejected mode requests, and remaining desktop/mobile surfaces stay open.
+
+## Historical M0 enablement review (3ed245e / 6cd5d87, 2026-09-14 CT)
+
+**Originally held; resolved by the acceptance above.** Coordinator independently passed
 typecheck, 83/83 tests, native compatibility, build and literal resource checks.
 Two additional loopback HTTP probes fail: a work report after failure from
 PLANNING changes the worker to WORKING while the task stays FAILED; a valid
 500-character finish summary silently discards verification and artifact data.
-The tested Render version remains `515727a`; no PiP/terminal/native skill
-acceptance is claimed for this local build. Focused follow-up and exact
+The tested Render version then remained `515727a`; no PiP/terminal/native skill
+acceptance was claimed for that local build. Focused follow-up and exact
 reproduction: `docs/swe-2-m0-enablement-follow-up.md` and
 `evals/m0-enablement-coordinator-probe.mts`.
 
@@ -106,13 +131,13 @@ the whole surface. A registered web MCP app is not a full portable-package test.
 
 | Surface | Plugin installs/invokes | Inline | Fullscreen | PiP | Live refresh | Automatic Codex event in view | Headless text |
 |---|---|---|---|---|---|---|---|
-| ChatGPT web | PARTIAL: dev MCP registered; Pro read-only viewer flow passes; full package pending | PASS on fresh 515727a render | PASS open/return on 515727a; earlier host Close pass | PENDING: flag disabled | PASS same-widget native update and controlled recovery on d39e5e3, CSP on; earlier timing samples below | PASS: real native event observed in existing view on d39e5e3 | Text returned; real-host no-UI fallback pending |
+| ChatGPT web | PARTIAL: dev MCP registered; Pro read-only viewer flow passes; full package pending | PASS fresh completed task on 4fb3548 | PASS terminal open/return/host Close on 4fb3548 | PASS completed solo task, actual host PiP/return on 4fb3548; active updates untested | PASS same-widget native update and controlled recovery on d39e5e3, CSP on; earlier timing samples below | PASS: real native event observed in existing view on d39e5e3; subsequent native evidence render on 4fb3548 | Text returned; real-host no-UI fallback pending |
 | ChatGPT desktop | PENDING | PENDING | PENDING | PENDING | PENDING | PENDING | PENDING |
 | ChatGPT mobile | PENDING | PENDING | PENDING | PENDING | PENDING | n/a | PENDING |
 | Codex desktop | PARTIAL: local package enabled; coordinator task invoked installed render MCP | PENDING | PENDING | PENDING | PENDING | PENDING: GUI runtime not tested | Tool returns readable text; GUI fallback pending |
-| Codex CLI | PARTIAL: native compatibility package installs; skill/app/hook discovered; render invoked | n/a | n/a | n/a | n/a | PASS: one real native PostToolUse reached existing ChatGPT web widget | PASS for installed render result |
+| Codex CLI | PASS tested package: supported refresh, installed skill start/report/action/finish/render workflow and one active hook | n/a | n/a | n/a | n/a | PASS: one real native PostToolUse reached existing ChatGPT web widget; refreshed skill hook delivery also passes | PASS installed planning and completed render results |
 
-## Latest acceptance (8ef7822 / Sites port, 2026-09-14, 19:29–19:35 UTC)
+## Earlier acceptance (8ef7822 / Sites port, 2026-09-14, 19:29–19:35 UTC)
 
 Normal native review/trust and enablement of the refreshed installed-root
 PostToolUse succeeded. One real native date read in session
@@ -340,16 +365,21 @@ independent of mcp.json.
 
 | # | Criterion | Result | Evidence / next requirement |
 |---|---|---|---|
-| 1 | Plugin installs and invokes without editing source | PARTIAL | Native compat package discovers hook/app and invokes tools; corrected installed-root launch passes; broader package surfaces pending |
-| 2 | Inline UI renders reliably | PASS on tested web path | Fresh 515727a Pro render passes; same-widget connection recovery passed on d39e5e3; other surfaces pending |
-| 3 | Fullscreen works | PASS on tested web flow | Current open/back/host Close pass; terminal switching passes locally, real-host terminal pending |
-| 4 | PiP works, or platform limitation plus inline fallback | PENDING | Disabled flag is not a platform limitation |
+| 1 | Plugin installs and invokes without editing source | PASS on supported path | Supported native package refresh, installed skill/tool/hook readback and actual workflow pass on 4fb3548; no source edits needed for invocation; broader surfaces remain unverified |
+| 2 | Inline UI renders reliably | PASS on tested web path | Fresh completed 4fb3548 Pro render passes; same-widget connection recovery passed on d39e5e3; other surfaces pending |
+| 3 | Fullscreen works | PASS on tested web flow | Terminal open/back/host Close pass on 4fb3548 |
+| 4 | PiP works, or platform limitation plus inline fallback | PASS on tested web flow | Completed solo task in actual host PiP, usable return control and inline restoration; other hosts/active updates untested |
 | 5 | Refresh without recreating experience each event | PASS in tested web flow | Real native event appeared in same expanded panel; earlier three samples <5 s retained; no new precise timing measurement |
 | 6 | Real Codex lifecycle event reaches view | PASS for CLI -> ChatGPT web | Automatic event hook_1789429477625_rxkfy0eg observed in existing widget; no manual injection or second ChatGPT render |
-| 7 | Useful text without custom UI | PASS for native CLI case | Installed render returned truthful planning/assigned/solo summary in native test |
+| 7 | Useful text without custom UI | PASS for native CLI case | Installed render returned truthful planning and completed-task text during the genuine skill workflow |
 | 8 | No prompt/transcript/command/code needed for state | PASS for bounded cases | Allowlist tests and synthetic metadata-only flow; not a general security certification |
 
 ## Findings and decisions
+
+2026-09-15 closeout: M0 is complete for the supported path. Earlier references
+below to an open M0 gate describe the decision at the time of each test.
+Compatibility, expiry/rejection UX, and active PiP follow-ups are tracked for
+later validation, not new feasibility blockers. Start SWE-2 brief 006.
 
 The four confirmed findings listed below describe **0446a77** and are fixed
 in **31d4165** on the accepted paths above. They are retained as historical
@@ -365,8 +395,9 @@ evidence, not current defects.
   mode subscription. Terminal failure is an inference requiring regression.
 - Confirmed: harness claims completion when reducer rejects it.
 - Four bounded fixes: `docs/swe-2-brief-002.md`, now accepted as described above.
-- Native event into ChatGPT and connection-error recovery now pass. PiP,
-  remaining surfaces, actual expiry and real-host terminal cases remain open.
-  No App Server integration was needed. Brief 005 CI/resource fixes are accepted.
+- Native event into ChatGPT, connection-error recovery, native skill workflow,
+  terminal web modes, and completed-task web PiP now pass. Remaining surfaces,
+  actual expiry UX, rejected mode requests, and active PiP updates remain open.
+  No App Server integration was needed. Brief 005 and M0 fixes are accepted.
 - Free hosting, in-memory tasks, development No Auth registration: M0 testing,
   not public release readiness.
