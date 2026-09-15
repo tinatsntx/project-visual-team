@@ -3,7 +3,7 @@
   "mcpServers": {
     "visual-team": {
       "type": "streamable-http",
-      "url": "http://localhost:8787/mcp"
+      "url": "https://project-visual-team-mcp.onrender.com/mcp"
     }
   }
 }

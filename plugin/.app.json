@@ -1,3 +1,8 @@
 {
-  "apps": {}
+  "apps": {
+    "app-6aa8123840f081918b2cd299cb5ca93d": {
+      "id": "asdk_app_6aa8123840f081918b2cd299cb5ca93d",
+      "required": true
+    }
+  }
 }
