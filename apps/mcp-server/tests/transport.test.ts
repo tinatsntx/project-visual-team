@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { AddressInfo, Server } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import { TASK_CAPABILITY_META_KEY } from "@visual-team/contracts/meta";
 import { buildApp } from "../src/server.ts";
@@ -44,105 +47,162 @@ async function stopServer(server: Server): Promise<void> {
   await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
 }
 
+// render_visual_task only needs an existing file at bundlePath(); tests supply
+// their own fixture via VISUAL_TEAM_UI_BUNDLE so `npm test` does not depend on
+// a prior `npm run build` (clean-checkout CI runs tests first).
+function withBundleEnv(bundleFile: string, run: () => Promise<void>): Promise<void> {
+  const previous = process.env.VISUAL_TEAM_UI_BUNDLE;
+  process.env.VISUAL_TEAM_UI_BUNDLE = bundleFile;
+  return run().finally(() => {
+    if (previous === undefined) delete process.env.VISUAL_TEAM_UI_BUNDLE;
+    else process.env.VISUAL_TEAM_UI_BUNDLE = previous;
+  });
+}
+
 describe("registered Streamable HTTP tool transport", () => {
   it("delivers a render snapshot privately authorizes refreshes, and rejects invalid metadata", async () => {
-    const { server, baseUrl } = await startServer();
-    try {
-      await callMcp(baseUrl, "initialize", {
-        protocolVersion: "2025-06-18",
-        capabilities: {},
-        clientInfo: { name: "transport-regression", version: "1.0.0" },
-      });
+    const bundleDir = mkdtempSync(join(tmpdir(), "visual-team-ui-"));
+    const bundleFile = join(bundleDir, "visual-team.js");
+    writeFileSync(bundleFile, "globalThis.__visualTeamTestBundle = true;\n");
+    await withBundleEnv(bundleFile, async () => {
+      const { server, baseUrl } = await startServer();
+      try {
+        await callMcp(baseUrl, "initialize", {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "transport-regression", version: "1.0.0" },
+        });
 
-      const listed = (await callMcp(baseUrl, "tools/list", {})) as {
-        tools: Array<{ name: string; inputSchema: { properties?: Record<string, unknown> } }>;
-      };
-      const getTool = listed.tools.find((tool) => tool.name === "get_visual_task");
-      assert.ok(getTool);
-      assert.equal(getTool.inputSchema.properties?.capability, undefined);
+        const listed = (await callMcp(baseUrl, "tools/list", {})) as {
+          tools: Array<{ name: string; inputSchema: { properties?: Record<string, unknown> } }>;
+        };
+        const getTool = listed.tools.find((tool) => tool.name === "get_visual_task");
+        assert.ok(getTool);
+        assert.equal(getTool.inputSchema.properties?.capability, undefined);
 
-      const start = (await callMcp(baseUrl, "tools/call", {
-        name: "start_visual_task",
-        arguments: {
-          title: "Transport render regression",
-          summary: "Verify the mounted result can refresh safely.",
-          mode: "solo",
-          privacyMode: "standard",
-        },
-      })) as ToolResult;
-      const taskId = start.structuredContent?.taskId;
-      const capability = start._meta?.[TASK_CAPABILITY_META_KEY];
-      assert.equal(typeof taskId, "string");
-      assert.equal(typeof capability, "string");
-      assert.doesNotMatch(
-        JSON.stringify({ content: start.content, structuredContent: start.structuredContent }),
-        new RegExp(capability as string),
-      );
+        const start = (await callMcp(baseUrl, "tools/call", {
+          name: "start_visual_task",
+          arguments: {
+            title: "Transport render regression",
+            summary: "Verify the mounted result can refresh safely.",
+            mode: "solo",
+            privacyMode: "standard",
+          },
+        })) as ToolResult;
+        const taskId = start.structuredContent?.taskId;
+        const capability = start._meta?.[TASK_CAPABILITY_META_KEY];
+        assert.equal(typeof taskId, "string");
+        assert.equal(typeof capability, "string");
+        assert.doesNotMatch(
+          JSON.stringify({ content: start.content, structuredContent: start.structuredContent }),
+          new RegExp(capability as string),
+        );
 
-      const render = (await callMcp(baseUrl, "tools/call", {
-        name: "render_visual_task",
-        arguments: { taskId },
-      })) as ToolResult;
-      assert.equal(render.structuredContent?.task?.id, taskId);
-      assert.equal(render.structuredContent?.task?.title, "Transport render regression");
-      assert.equal(render.structuredContent?.task?.workers[0]?.role, "lead");
-      assert.equal(render.structuredContent?.uiAvailable, true);
-      assert.equal(render._meta?.[TASK_CAPABILITY_META_KEY], capability);
-      assert.doesNotMatch(
-        JSON.stringify({ content: render.content, structuredContent: render.structuredContent }),
-        new RegExp(capability as string),
-      );
+        const render = (await callMcp(baseUrl, "tools/call", {
+          name: "render_visual_task",
+          arguments: { taskId },
+        })) as ToolResult;
+        assert.equal(render.structuredContent?.task?.id, taskId);
+        assert.equal(render.structuredContent?.task?.title, "Transport render regression");
+        assert.equal(render.structuredContent?.task?.workers[0]?.role, "lead");
+        assert.equal(render.structuredContent?.uiAvailable, true);
+        assert.equal(render._meta?.[TASK_CAPABILITY_META_KEY], capability);
+        assert.doesNotMatch(
+          JSON.stringify({ content: render.content, structuredContent: render.structuredContent }),
+          new RegExp(capability as string),
+        );
 
-      const missing = (await callMcp(baseUrl, "tools/call", {
-        name: "get_visual_task",
-        arguments: { taskId },
-      })) as ToolResult;
-      assert.equal(missing.isError, true);
+        const missing = (await callMcp(baseUrl, "tools/call", {
+          name: "get_visual_task",
+          arguments: { taskId },
+        })) as ToolResult;
+        assert.equal(missing.isError, true);
 
-      const wrong = (await callMcp(baseUrl, "tools/call", {
-        name: "get_visual_task",
-        arguments: { taskId },
-        _meta: { [TASK_CAPABILITY_META_KEY]: "vtc_wrong" },
-      })) as ToolResult;
-      assert.equal(wrong.isError, true);
+        const wrong = (await callMcp(baseUrl, "tools/call", {
+          name: "get_visual_task",
+          arguments: { taskId },
+          _meta: { [TASK_CAPABILITY_META_KEY]: "vtc_wrong" },
+        })) as ToolResult;
+        assert.equal(wrong.isError, true);
 
-      const other = (await callMcp(baseUrl, "tools/call", {
-        name: "start_visual_task",
-        arguments: {
-          title: "Other task",
-          summary: "Prove task capabilities do not cross scopes.",
-          mode: "solo",
-          privacyMode: "standard",
-        },
-      })) as ToolResult;
-      const otherCapability = other._meta?.[TASK_CAPABILITY_META_KEY];
-      const crossTask = (await callMcp(baseUrl, "tools/call", {
-        name: "get_visual_task",
-        arguments: { taskId },
-        _meta: { [TASK_CAPABILITY_META_KEY]: otherCapability },
-      })) as ToolResult;
-      assert.equal(crossTask.isError, true);
+        const other = (await callMcp(baseUrl, "tools/call", {
+          name: "start_visual_task",
+          arguments: {
+            title: "Other task",
+            summary: "Prove task capabilities do not cross scopes.",
+            mode: "solo",
+            privacyMode: "standard",
+          },
+        })) as ToolResult;
+        const otherCapability = other._meta?.[TASK_CAPABILITY_META_KEY];
+        const crossTask = (await callMcp(baseUrl, "tools/call", {
+          name: "get_visual_task",
+          arguments: { taskId },
+          _meta: { [TASK_CAPABILITY_META_KEY]: otherCapability },
+        })) as ToolResult;
+        assert.equal(crossTask.isError, true);
 
-      await callMcp(baseUrl, "tools/call", {
-        name: "record_codex_event",
-        arguments: {
-          taskId,
-          name: "SubagentStart",
-          eventId: "evt_transport_refresh",
-          payload: { agent_id: "transport-helper", agent_type: "explorer" },
-        },
-      });
+        await callMcp(baseUrl, "tools/call", {
+          name: "record_codex_event",
+          arguments: {
+            taskId,
+            name: "SubagentStart",
+            eventId: "evt_transport_refresh",
+            payload: { agent_id: "transport-helper", agent_type: "explorer" },
+          },
+        });
 
-      const refreshed = (await callMcp(baseUrl, "tools/call", {
-        name: "get_visual_task",
-        arguments: { taskId, eventLimit: 20 },
-        _meta: { [TASK_CAPABILITY_META_KEY]: capability },
-      })) as ToolResult;
-      assert.equal(refreshed.isError, undefined);
-      assert.ok((refreshed.structuredContent?.task?.eventCount ?? 0) > (render.structuredContent?.task?.eventCount ?? 0));
-      assert.ok((refreshed.structuredContent?.recentEvents?.length ?? 0) > 0);
-    } finally {
-      await stopServer(server);
-    }
+        const refreshed = (await callMcp(baseUrl, "tools/call", {
+          name: "get_visual_task",
+          arguments: { taskId, eventLimit: 20 },
+          _meta: { [TASK_CAPABILITY_META_KEY]: capability },
+        })) as ToolResult;
+        assert.equal(refreshed.isError, undefined);
+        assert.ok((refreshed.structuredContent?.task?.eventCount ?? 0) > (render.structuredContent?.task?.eventCount ?? 0));
+        assert.ok((refreshed.structuredContent?.recentEvents?.length ?? 0) > 0);
+      } finally {
+        await stopServer(server);
+      }
+    }).finally(() => rmSync(bundleDir, { recursive: true, force: true }));
+  });
+
+  it("returns the text-only fallback without private metadata when no UI bundle exists", async () => {
+    const bundleDir = mkdtempSync(join(tmpdir(), "visual-team-no-ui-"));
+    const missingBundle = join(bundleDir, "visual-team.js");
+    await withBundleEnv(missingBundle, async () => {
+      const { server, baseUrl } = await startServer();
+      try {
+        const start = (await callMcp(baseUrl, "tools/call", {
+          name: "start_visual_task",
+          arguments: {
+            title: "No-bundle fallback",
+            summary: "Render degrades to text when the widget bundle is absent.",
+            mode: "solo",
+            privacyMode: "standard",
+          },
+        })) as ToolResult;
+        const taskId = start.structuredContent?.taskId;
+        const capability = start._meta?.[TASK_CAPABILITY_META_KEY];
+        assert.equal(typeof taskId, "string");
+        assert.equal(typeof capability, "string");
+
+        const render = (await callMcp(baseUrl, "tools/call", {
+          name: "render_visual_task",
+          arguments: { taskId },
+        })) as ToolResult;
+        assert.equal(render.isError, undefined);
+        assert.equal(render.structuredContent?.taskId, taskId);
+        assert.equal(render.structuredContent?.uiAvailable, false);
+        assert.equal(render.structuredContent?.task, undefined);
+        assert.equal(render._meta?.[TASK_CAPABILITY_META_KEY], undefined);
+        assert.match(render.content?.[0]?.text ?? "", /UI bundle not built/);
+        assert.doesNotMatch(
+          JSON.stringify({ content: render.content, structuredContent: render.structuredContent }),
+          new RegExp(capability as string),
+        );
+      } finally {
+        await stopServer(server);
+      }
+    }).finally(() => rmSync(bundleDir, { recursive: true, force: true }));
   });
 });

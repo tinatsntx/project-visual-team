@@ -58,7 +58,9 @@ export function uiResourceContents(): {
   return {
     uri: UI_TEMPLATE_URI,
     mimeType: UI_RESOURCE_MIME_TYPE,
-    text: HTML_SHELL.replace("%%CSS%%", css).replace("%%BUNDLE%%", js),
+    // Function replacers insert literally: string replacements would interpret
+    // $$, $&, $`, $' and $n sequences inside the bundle and stylesheet.
+    text: HTML_SHELL.replace("%%CSS%%", () => css).replace("%%BUNDLE%%", () => js),
     _meta: {
       ui: {
         prefersBorder: true,
