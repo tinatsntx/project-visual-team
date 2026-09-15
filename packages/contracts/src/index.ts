@@ -116,6 +116,13 @@ export const VisualEventKindSchema = z.enum([
 ]);
 export type VisualEventKind = z.infer<typeof VisualEventKindSchema>;
 
+/**
+ * Bound for `VisualEvent.detail`. Sized so a finish event can carry a
+ * 500-char result summary plus verification and artifact references whole;
+ * anything larger is rejected rather than truncated (plan §9.5, §13.1).
+ */
+export const EVENT_DETAIL_MAX_CHARS = 640;
+
 export const VisualEventSchema = z.object({
   /** Caller-supplied idempotency key. Duplicate ids must not alter state. */
   id: z.string().min(1).max(128),
@@ -131,7 +138,7 @@ export const VisualEventSchema = z.object({
   /** Short consumer-facing label, e.g. "Alex is checking the latest changes." */
   label: z.string().min(1).max(240),
   /** Optional technical detail shown in the evidence panel only. */
-  detail: z.string().max(500).optional(),
+  detail: z.string().max(EVENT_DETAIL_MAX_CHARS).optional(),
 });
 export type VisualEvent = z.infer<typeof VisualEventSchema>;
 

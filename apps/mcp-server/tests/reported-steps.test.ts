@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { InMemoryTaskRepository, type Clock } from "../src/repositories/memory.ts";
 import { mapTaskFinish, mapWorkflowPhase } from "../src/reported-steps.ts";
-import type { WorkflowPhase } from "@visual-team/contracts";
+import { EVENT_DETAIL_MAX_CHARS, type WorkflowPhase } from "@visual-team/contracts";
 
 const clock: Clock = {
   nowIso: () => "2026-09-14T00:00:00.000Z",
@@ -66,31 +66,66 @@ describe("reported workflow boundaries", () => {
   it("rejects reported completion from PLANNING but allows reported failure", () => {
     const repoA = new InMemoryTaskRepository(clock);
     const completing = startSolo(repoA);
-    const done = repoA.apply(
-      completing,
-      mapTaskFinish({
-        taskId: completing.record.snapshot.id,
-        outcome: "completed",
-        at: clock.nowIso(),
-        eventId: "f1",
-      }),
-    );
+    const completingFinish = mapTaskFinish({
+      taskId: completing.record.snapshot.id,
+      outcome: "completed",
+      at: clock.nowIso(),
+      eventId: "f1",
+    });
+    assert.ok(completingFinish.ok);
+    const done = repoA.apply(completing, completingFinish.event);
     assert.equal(done.ok, false);
     assert.equal(completing.record.snapshot.state, "PLANNING");
 
     const repoB = new InMemoryTaskRepository(clock);
     const failing = startSolo(repoB);
-    const failed = repoB.apply(
-      failing,
-      mapTaskFinish({
-        taskId: failing.record.snapshot.id,
-        outcome: "failed",
-        at: clock.nowIso(),
-        eventId: "f1",
-      }),
-    );
+    const failingFinish = mapTaskFinish({
+      taskId: failing.record.snapshot.id,
+      outcome: "failed",
+      at: clock.nowIso(),
+      eventId: "f1",
+    });
+    assert.ok(failingFinish.ok);
+    const failed = repoB.apply(failing, failingFinish.event);
     assert.equal(failed.ok, true);
     assert.equal(failing.record.snapshot.state, "FAILED");
+  });
+
+  it("rejects a work report after failure during planning, unchanged", () => {
+    const repo = new InMemoryTaskRepository(clock);
+    const stored = startSolo(repo);
+    const taskId = stored.record.snapshot.id;
+    const finish = mapTaskFinish({ taskId, outcome: "failed", at: clock.nowIso(), eventId: "f1" });
+    assert.ok(finish.ok);
+    assert.equal(repo.apply(stored, finish.event).ok, true);
+    assert.equal(stored.record.snapshot.state, "FAILED");
+    // Early failure leaves the worker ASSIGNED; the task is still frozen.
+    assert.equal(stored.record.snapshot.workers[0]?.state, "ASSIGNED");
+
+    const before = JSON.stringify(stored.record.snapshot);
+    const eventCount = stored.record.snapshot.eventCount;
+    const events = stored.record.events.length;
+    const late = repo.apply(stored, report(taskId, "implementing", "e1"));
+    assert.equal(late.ok, false);
+    assert.equal(JSON.stringify(stored.record.snapshot), before);
+    assert.equal(stored.record.snapshot.eventCount, eventCount);
+    assert.equal(stored.record.events.length, events);
+  });
+
+  it("rejects reports after failure that follows real work", () => {
+    const repo = new InMemoryTaskRepository(clock);
+    const stored = startSolo(repo);
+    const taskId = stored.record.snapshot.id;
+    repo.apply(stored, report(taskId, "implementing", "e1"));
+    const finish = mapTaskFinish({ taskId, outcome: "failed", at: clock.nowIso(), eventId: "f1" });
+    assert.ok(finish.ok);
+    assert.equal(repo.apply(stored, finish.event).ok, true);
+    assert.equal(stored.record.snapshot.state, "FAILED");
+
+    const late = repo.apply(stored, report(taskId, "testing", "e2"));
+    assert.equal(late.ok, false);
+    assert.equal(stored.record.snapshot.state, "FAILED");
+    assert.equal(stored.record.snapshot.workers[0]?.state, "FAILED");
   });
 
   it("rejects an unsupported reported transition", () => {
@@ -122,7 +157,7 @@ describe("reported workflow boundaries", () => {
     const taskId = stored.record.snapshot.id;
     repo.apply(stored, report(taskId, "implementing", "e1"));
 
-    const event = mapTaskFinish({
+    const mapped = mapTaskFinish({
       taskId,
       outcome: "completed",
       summary: "Smoke test passed",
@@ -131,11 +166,52 @@ describe("reported workflow boundaries", () => {
       at: clock.nowIso(),
       eventId: "f1",
     });
-    assert.equal(repo.apply(stored, event).ok, true);
-    assert.match(event.detail ?? "", /result: Smoke test passed; verification: passed; artifacts: PR #12/);
-    assert.ok((event.detail ?? "").length <= 500);
+    assert.ok(mapped.ok);
+    assert.equal(repo.apply(stored, mapped.event).ok, true);
+    assert.match(
+      mapped.event.detail ?? "",
+      /result: Smoke test passed; verification: passed; artifacts: PR #12/,
+    );
+    assert.ok((mapped.event.detail ?? "").length <= EVENT_DETAIL_MAX_CHARS);
 
     const bare = mapTaskFinish({ taskId, outcome: "completed", at: clock.nowIso(), eventId: "f2" });
-    assert.equal(bare.detail, undefined);
+    assert.ok(bare.ok);
+    assert.equal(bare.event.detail, undefined);
+  });
+
+  it("retains a maximum summary plus verification and a whole reference", () => {
+    const mapped = mapTaskFinish({
+      taskId: "vt_x",
+      outcome: "completed",
+      summary: "S".repeat(500),
+      verification: "failed",
+      artifacts: [{ label: "Synthetic reference", uri: "https://example.test/artifact/1" }],
+      at: clock.nowIso(),
+      eventId: "f1",
+    });
+    assert.ok(mapped.ok);
+    const detail = mapped.event.detail ?? "";
+    assert.ok(detail.length <= EVENT_DETAIL_MAX_CHARS);
+    assert.ok(detail.includes(`result: ${"S".repeat(500)}`));
+    assert.ok(detail.includes("verification: failed"));
+    assert.ok(detail.includes("https://example.test/artifact/1"));
+  });
+
+  it("rejects an oversized combined finish before any state change", () => {
+    const artifacts = Array.from({ length: 10 }, (_, i) => ({
+      label: `artifact-${i}-${"l".repeat(110)}`,
+      uri: `https://example.test/${"u".repeat(400)}`,
+    }));
+    const mapped = mapTaskFinish({
+      taskId: "vt_x",
+      outcome: "completed",
+      summary: "S".repeat(500),
+      verification: "not_run",
+      artifacts,
+      at: clock.nowIso(),
+      eventId: "f1",
+    });
+    assert.equal(mapped.ok, false);
+    assert.match(mapped.ok ? "" : mapped.reason, /detail bound/);
   });
 });

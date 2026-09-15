@@ -49,6 +49,13 @@ const WORKER_TRANSITIONS: Record<WorkerState, readonly WorkerState[]> = {
   CANCELED: [],
 };
 
+/** Terminal task states admit no further events — a terminal task is frozen. */
+export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set([
+  "COMPLETED",
+  "FAILED",
+  "CANCELED",
+]);
+
 /** States a `derived` event may never produce (plan §6 rules). */
 const DERIVED_FORBIDDEN_WORKER: readonly WorkerState[] = [
   "WAITING_FOR_APPROVAL",
@@ -222,6 +229,16 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
   const provenanceError = provenancePermitsTransition(event.provenance, event.kind, event.to);
   if (provenanceError) {
     return { ok: false, snapshot: snapshotIn, error: provenanceError };
+  }
+
+  // Terminal tasks are frozen: no event may alter state, roster, needsUser,
+  // or activity timestamps afterward. Replays still dedupe upstream.
+  if (TERMINAL_TASK_STATES.has(snapshot.state)) {
+    return {
+      ok: false,
+      snapshot: snapshotIn,
+      error: `task is ${snapshot.state.toLowerCase()} — no further events apply`,
+    };
   }
 
   switch (event.kind) {

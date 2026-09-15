@@ -1,4 +1,9 @@
-import type { FinishVisualTaskInput, VisualEvent, WorkflowPhase } from "@visual-team/contracts";
+import {
+  EVENT_DETAIL_MAX_CHARS,
+  type FinishVisualTaskInput,
+  type VisualEvent,
+  type WorkflowPhase,
+} from "@visual-team/contracts";
 
 /**
  * Model-reported workflow boundaries -> visual events (PROJECT_PLAN.md §9.2,
@@ -52,9 +57,16 @@ export function mapWorkflowPhase(input: ReportedBase & { phase: WorkflowPhase })
   }
 }
 
+export type MapFinishResult =
+  | { ok: true; event: VisualEvent }
+  | { ok: false; reason: string };
+
 export function mapTaskFinish(
   input: ReportedBase & Pick<FinishVisualTaskInput, "outcome" | "summary" | "verification" | "artifacts">,
-): VisualEvent {
+): MapFinishResult {
+  // Every accepted field is preserved whole: verification and artifact
+  // references are never truncated or split. A combined result that exceeds
+  // the detail bound is rejected before any state change.
   const detail = [
     input.summary ? `result: ${input.summary}` : null,
     input.verification ? `verification: ${input.verification}` : null,
@@ -63,16 +75,24 @@ export function mapTaskFinish(
       : null,
   ]
     .filter(Boolean)
-    .join("; ")
-    .slice(0, 500);
+    .join("; ");
+  if (detail.length > EVENT_DETAIL_MAX_CHARS) {
+    return {
+      ok: false,
+      reason: `finish metadata is ${detail.length} chars; the detail bound is ${EVENT_DETAIL_MAX_CHARS}`,
+    };
+  }
   return {
-    id: input.eventId,
-    taskId: input.taskId,
-    at: input.at,
-    provenance: "reported",
-    kind: "task_finished",
-    to: input.outcome === "failed" ? "FAILED" : "COMPLETED",
-    label: PHASE_LABEL[input.outcome],
-    ...(detail ? { detail } : {}),
+    ok: true,
+    event: {
+      id: input.eventId,
+      taskId: input.taskId,
+      at: input.at,
+      provenance: "reported",
+      kind: "task_finished",
+      to: input.outcome === "failed" ? "FAILED" : "COMPLETED",
+      label: PHASE_LABEL[input.outcome],
+      ...(detail ? { detail } : {}),
+    },
   };
 }

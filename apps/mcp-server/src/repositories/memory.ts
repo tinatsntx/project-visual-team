@@ -7,6 +7,7 @@ import {
   applyEvent,
   createTaskRecord,
   refreshDerivedFlags,
+  TERMINAL_TASK_STATES,
   type TaskRecord,
 } from "@visual-team/state-machine";
 
@@ -74,9 +75,7 @@ export class InMemoryTaskRepository {
     this.sweep();
     let best: StoredTask | undefined;
     for (const t of this.tasks.values()) {
-      if (t.record.snapshot.state === "COMPLETED" || t.record.snapshot.state === "FAILED" || t.record.snapshot.state === "CANCELED") {
-        continue;
-      }
+      if (TERMINAL_TASK_STATES.has(t.record.snapshot.state)) continue;
       if (!best || t.record.snapshot.lastActivityAt > best.record.snapshot.lastActivityAt) best = t;
     }
     return best;

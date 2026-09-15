@@ -225,7 +225,7 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
           reason: "rate_limited",
         });
       }
-      const event = mapTaskFinish({
+      const mapped = mapTaskFinish({
         taskId,
         outcome: args.outcome,
         ...(args.summary !== undefined ? { summary: args.summary } : {}),
@@ -234,7 +234,14 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
         at: args.at ?? clock.nowIso(),
         eventId: args.eventId ?? `evt_${taskId}_${stored.record.snapshot.eventCount + 1}_finish`,
       });
-      const applied = repo.apply(stored, event);
+      if (!mapped.ok) {
+        return textResult(`Report rejected safely: ${mapped.reason}`, {
+          applied: false,
+          taskId,
+          reason: mapped.reason,
+        });
+      }
+      const applied = repo.apply(stored, mapped.event);
       if (!applied.ok) {
         return textResult(`Report rejected safely: ${applied.error}`, {
           applied: false,
@@ -242,7 +249,7 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
           reason: applied.error,
         });
       }
-      return textResult(applied.changed ? `Recorded. ${event.label}` : "Duplicate event ignored.", {
+      return textResult(applied.changed ? `Recorded. ${mapped.event.label}` : "Duplicate event ignored.", {
         applied: applied.changed,
         taskId,
       });

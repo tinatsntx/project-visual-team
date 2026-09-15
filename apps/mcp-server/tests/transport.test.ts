@@ -282,6 +282,55 @@ describe("registered Streamable HTTP tool transport", () => {
     }
   });
 
+  it("rejects a work report after early failure over HTTP, snapshot unchanged", async () => {
+    const { server, baseUrl } = await startServer();
+    try {
+      const start = (await callMcp(baseUrl, "tools/call", {
+        name: "start_visual_task",
+        arguments: {
+          title: "Early failure regression",
+          summary: "Verify a report after failure cannot resume work.",
+          mode: "solo",
+          privacyMode: "standard",
+        },
+      })) as ToolResult;
+      const taskId = start.structuredContent?.taskId;
+      const capability = start._meta?.[TASK_CAPABILITY_META_KEY];
+
+      const finish = (await callMcp(baseUrl, "tools/call", {
+        name: "finish_visual_task",
+        arguments: { taskId, outcome: "failed" },
+      })) as ToolResult;
+      assert.equal(finish.structuredContent?.applied, true);
+
+      const before = (await callMcp(baseUrl, "tools/call", {
+        name: "get_visual_task",
+        arguments: { taskId },
+        _meta: { [TASK_CAPABILITY_META_KEY]: capability },
+      })) as ToolResult;
+      assert.equal(before.structuredContent?.task?.state, "FAILED");
+      assert.equal(before.structuredContent?.task?.stateProvenance, "reported");
+
+      const late = (await callMcp(baseUrl, "tools/call", {
+        name: "report_workflow_step",
+        arguments: { taskId, phase: "implementing" },
+      })) as ToolResult;
+      assert.equal(late.structuredContent?.applied, false);
+
+      const after = (await callMcp(baseUrl, "tools/call", {
+        name: "get_visual_task",
+        arguments: { taskId },
+        _meta: { [TASK_CAPABILITY_META_KEY]: capability },
+      })) as ToolResult;
+      assert.equal(
+        JSON.stringify(after.structuredContent?.task),
+        JSON.stringify(before.structuredContent?.task),
+      );
+    } finally {
+      await stopServer(server);
+    }
+  });
+
   it("expires tasks on the real HTTP path when VISUAL_TEAM_TTL_MS is set", async () => {
     const previous = process.env.VISUAL_TEAM_TTL_MS;
     process.env.VISUAL_TEAM_TTL_MS = "50";
