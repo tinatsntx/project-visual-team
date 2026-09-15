@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { RecordCodexEventInput } from "@visual-team/contracts";
+import type {
+  EvidenceLevel,
+  RecordCodexEventInput,
+  VisualEventKind,
+} from "@visual-team/contracts";
 
 /**
  * Replayable event fixtures (PROJECT_PLAN.md §14 Milestone 1). Replaying a
@@ -32,6 +36,48 @@ export interface ReplayFixture {
   };
 }
 
+/**
+ * Ordered visual-event sequences (Milestone 1 replay fixtures). The runner
+ * assigns the record's taskId and a monotonic `at` per step, so fixtures stay
+ * free of ids and timestamps that would rot.
+ *
+ * A truncated `recentEvents` tail is NOT a full replay source: the retained
+ * log is bounded, so replaying it later skips trimmed events. These fixtures
+ * carry the complete ordered input.
+ */
+export interface SequenceStep {
+  kind: "start" | "event" | "duplicate";
+  input?: FixtureStep["input"];
+  /** Literal event fields; `taskId` and `at` are injected by the runner. */
+  event?: {
+    id: string;
+    kind: VisualEventKind;
+    provenance?: EvidenceLevel;
+    workerId?: string;
+    to?: string;
+    label: string;
+    detail?: string;
+  };
+  /** Resend an earlier event verbatim — same id, exercised as a duplicate. */
+  of?: string;
+  /** Expected outcome: applied, rejected, or ignored as a duplicate. */
+  expect?: "applied" | "rejected" | "duplicate";
+}
+
+export interface SequenceFixture {
+  name: string;
+  description: string;
+  steps: SequenceStep[];
+  expect: {
+    taskState: string;
+    workerStates: Record<string, string>;
+    needsUser?: boolean;
+    eventCount?: number;
+    /** Expected retained log length (bounded at the engine's max). */
+    logLength?: number;
+  };
+}
+
 const here = dirname(fileURLToPath(import.meta.url));
 
 export function loadFixture(name: string): ReplayFixture {
@@ -39,4 +85,17 @@ export function loadFixture(name: string): ReplayFixture {
   return JSON.parse(raw) as ReplayFixture;
 }
 
+export function loadSequenceFixture(name: string): SequenceFixture {
+  const raw = readFileSync(join(here, "..", "fixtures", `${name}.json`), "utf8");
+  return JSON.parse(raw) as SequenceFixture;
+}
+
 export const FIXTURE_NAMES = ["solo-posttooluse", "team-with-permission"] as const;
+
+export const SEQUENCE_FIXTURE_NAMES = [
+  "seq-success",
+  "seq-early-failure",
+  "seq-permission-resume",
+  "seq-rejected-input",
+  "seq-duplicates",
+] as const;

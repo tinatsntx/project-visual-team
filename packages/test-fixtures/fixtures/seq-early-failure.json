@@ -1,0 +1,26 @@
+{
+  "name": "seq-early-failure",
+  "description": "Solo task fails during planning before any work. The never-started worker is canceled; late reports are rejected; a duplicate of the finish still dedupes after the task is terminal.",
+  "steps": [
+    { "kind": "start", "input": { "title": "Investigate flake", "summary": "Reproduce the failure", "mode": "solo" } },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "f1", "kind": "task_finished", "to": "FAILED", "provenance": "reported", "label": "Setup failed; cannot proceed.", "detail": "result: failed — could not reproduce" }
+    },
+    {
+      "kind": "event",
+      "expect": "rejected",
+      "event": { "id": "f2", "kind": "worker_transition", "workerId": "lead", "to": "WORKING", "provenance": "reported", "label": "Late work report." }
+    },
+    { "kind": "duplicate", "of": "f1", "expect": "duplicate" },
+    { "kind": "duplicate", "of": "f2", "expect": "rejected" }
+  ],
+  "expect": {
+    "taskState": "FAILED",
+    "workerStates": { "lead": "CANCELED" },
+    "needsUser": false,
+    "eventCount": 2,
+    "logLength": 2
+  }
+}

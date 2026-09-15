@@ -1,0 +1,35 @@
+{
+  "name": "seq-success",
+  "description": "Solo task: report work, observed activity, reported completion. Covers duplicate delivery of the finish event and a late event after the task is terminal.",
+  "steps": [
+    { "kind": "start", "input": { "title": "Ship the fix", "summary": "Patch and verify", "mode": "solo" } },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "s1", "kind": "worker_transition", "workerId": "lead", "to": "WORKING", "provenance": "reported", "label": "Alex starts working." }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "s2", "kind": "activity", "provenance": "observed", "label": "Observed tool activity.", "detail": "tool: shell" }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "s3", "kind": "task_finished", "to": "COMPLETED", "provenance": "reported", "label": "Task finished.", "detail": "result: verified" }
+    },
+    {
+      "kind": "event",
+      "expect": "rejected",
+      "event": { "id": "s4", "kind": "activity", "provenance": "observed", "label": "Late activity after completion." }
+    },
+    { "kind": "duplicate", "of": "s3", "expect": "duplicate" }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED" },
+    "needsUser": false,
+    "eventCount": 4,
+    "logLength": 4
+  }
+}

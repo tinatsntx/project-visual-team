@@ -1,0 +1,40 @@
+{
+  "name": "seq-permission-resume",
+  "description": "Observed permission request pauses work and flags needsUser; the turn ends (resolving the flag), work resumes, and the task completes. A duplicate permission event mid-sequence is a no-op.",
+  "steps": [
+    { "kind": "start", "input": { "title": "Apply migration", "summary": "Needs an elevated command", "mode": "solo" } },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "p1", "kind": "worker_transition", "workerId": "lead", "to": "WORKING", "provenance": "reported", "label": "Alex starts working." }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "p2", "kind": "permission_request", "provenance": "observed", "label": "Needs permission to continue.", "detail": "tool: shell" }
+    },
+    { "kind": "duplicate", "of": "p2", "expect": "duplicate" },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "p3", "kind": "turn_finished", "provenance": "observed", "label": "Turn ended." }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "p4", "kind": "worker_transition", "workerId": "lead", "to": "WORKING", "provenance": "reported", "label": "Alex resumes." }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "p5", "kind": "task_finished", "to": "COMPLETED", "provenance": "reported", "label": "Migration applied.", "detail": "result: verified" }
+    }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED" },
+    "needsUser": false,
+    "eventCount": 6,
+    "logLength": 6
+  }
+}

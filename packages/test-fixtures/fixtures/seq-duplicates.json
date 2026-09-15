@@ -1,0 +1,38 @@
+{
+  "name": "seq-duplicates",
+  "description": "Every event is delivered twice — interleaved, adjacent, and after the task goes terminal. The roster still ends with the lead and one completed specialist; duplicates never alter state.",
+  "steps": [
+    { "kind": "start", "input": { "title": "Review the patch", "summary": "Delegated review", "mode": "solo" } },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "d1", "kind": "worker_transition", "workerId": "lead", "to": "WORKING", "provenance": "observed", "label": "Alex starts working." }
+    },
+    { "kind": "duplicate", "of": "d1", "expect": "duplicate" },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "d2", "kind": "specialist_joined", "workerId": "agent-7", "provenance": "observed", "label": "A reviewer joined.", "detail": "agent_type: review" }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "d3", "kind": "specialist_finished", "workerId": "agent-7", "provenance": "observed", "label": "Reviewer finished its pass." }
+    },
+    { "kind": "duplicate", "of": "d2", "expect": "duplicate" },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "d4", "kind": "task_finished", "to": "COMPLETED", "provenance": "reported", "label": "Review complete.", "detail": "result: verified" }
+    },
+    { "kind": "duplicate", "of": "d4", "expect": "duplicate" },
+    { "kind": "duplicate", "of": "d1", "expect": "duplicate" }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED", "agent-7": "COMPLETED" },
+    "needsUser": false,
+    "eventCount": 5,
+    "logLength": 5
+  }
+}

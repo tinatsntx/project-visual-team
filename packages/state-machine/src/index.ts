@@ -15,11 +15,15 @@ import {
  * Deterministic task/worker reducers (PROJECT_PLAN.md §6, Milestone 1 seeds).
  *
  * Rules enforced here:
- * - `derived` provenance may never produce COMPLETED, FAILED,
- *   WAITING_FOR_APPROVAL, or REVIEWING states. Completion and approval require
- *   explicit events; staleness degrades to "No recent activity" only.
+ * - `derived` provenance may never produce COMPLETED, FAILED, CANCELED,
+ *   WAITING_FOR_APPROVAL, or REVIEWING states, claim a pending approval, or
+ *   grow the roster. Completion and approval require explicit events;
+ *   staleness degrades to "No recent activity" only.
  * - Transitions outside the tables below are rejected and leave the snapshot
  *   unchanged (fail-safe).
+ * - An event's explicit workerId is a correlation claim that must resolve to
+ *   a roster worker; only a genuinely absent workerId falls back to the
+ *   writer. Events naming a different task are rejected by `applyEvent`.
  * - Events are deduplicated by `event.id` at the record level, so replays are
  *   idempotent.
  * - At most one writer and at most MAX_VISIBLE_WORKERS visible bots.
@@ -37,13 +41,13 @@ const TASK_TRANSITIONS: Record<TaskState, readonly TaskState[]> = {
 };
 
 const WORKER_TRANSITIONS: Record<WorkerState, readonly WorkerState[]> = {
-  IDLE: ["ASSIGNED", "PLANNING", "WORKING", "CANCELED"],
-  ASSIGNED: ["PLANNING", "WORKING", "BLOCKED", "CANCELED"],
-  PLANNING: ["WORKING", "BLOCKED", "CANCELED"],
+  IDLE: ["ASSIGNED", "PLANNING", "WORKING", "WAITING_FOR_APPROVAL", "COMPLETED", "CANCELED"],
+  ASSIGNED: ["PLANNING", "WORKING", "WAITING_FOR_APPROVAL", "BLOCKED", "CANCELED"],
+  PLANNING: ["WORKING", "WAITING_FOR_APPROVAL", "BLOCKED", "CANCELED"],
   WORKING: ["WAITING_FOR_APPROVAL", "REVIEWING", "BLOCKED", "IDLE", "COMPLETED", "FAILED", "CANCELED"],
   WAITING_FOR_APPROVAL: ["WORKING", "IDLE", "FAILED", "CANCELED"],
-  BLOCKED: ["WORKING", "IDLE", "CANCELED"],
-  REVIEWING: ["WORKING", "IDLE", "COMPLETED", "FAILED", "CANCELED"],
+  BLOCKED: ["WORKING", "IDLE", "WAITING_FOR_APPROVAL", "CANCELED"],
+  REVIEWING: ["WORKING", "IDLE", "WAITING_FOR_APPROVAL", "COMPLETED", "FAILED", "CANCELED"],
   COMPLETED: [],
   FAILED: [],
   CANCELED: [],
@@ -56,14 +60,27 @@ export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set([
   "CANCELED",
 ]);
 
+/** Terminal worker states; every non-terminal state can reach CANCELED. */
+const TERMINAL_WORKER_STATES: ReadonlySet<WorkerState> = new Set([
+  "COMPLETED",
+  "FAILED",
+  "CANCELED",
+]);
+
 /** States a `derived` event may never produce (plan §6 rules). */
 const DERIVED_FORBIDDEN_WORKER: readonly WorkerState[] = [
   "WAITING_FOR_APPROVAL",
   "REVIEWING",
   "COMPLETED",
   "FAILED",
+  "CANCELED",
 ];
-const DERIVED_FORBIDDEN_TASK: readonly TaskState[] = ["COMPLETED", "FAILED", "WAITING_FOR_USER"];
+const DERIVED_FORBIDDEN_TASK: readonly TaskState[] = [
+  "COMPLETED",
+  "FAILED",
+  "CANCELED",
+  "WAITING_FOR_USER",
+];
 
 /** Default staleness window for the "No recent activity" display flag. */
 export const DEFAULT_STALE_AFTER_MS = 90_000;
@@ -158,23 +175,37 @@ function countPrior(roles: WorkerRole[], role: WorkerRole, before: number): numb
   return n;
 }
 
+/**
+ * Derived evidence is a display inference, never proof. It may not finish or
+ * fail a task/worker, claim an approval boundary, or fabricate roster
+ * membership — on any kind, including indirect ones (plan §6).
+ */
 function provenancePermitsTransition(
   provenance: EvidenceLevel,
   kind: VisualEvent["kind"],
   to: string | undefined,
 ): string | null {
-  if (provenance === "derived") {
-    if (kind === "task_finished") {
+  if (provenance !== "derived") return null;
+  switch (kind) {
+    case "task_finished":
       return "derived evidence cannot finish a task";
-    }
-    if (kind === "task_transition" && to && DERIVED_FORBIDDEN_TASK.includes(to as TaskState)) {
-      return `derived evidence cannot move a task to ${to}`;
-    }
-    if (kind === "worker_transition" && to && DERIVED_FORBIDDEN_WORKER.includes(to as WorkerState)) {
-      return `derived evidence cannot move a worker to ${to}`;
-    }
+    case "task_transition":
+      return to && DERIVED_FORBIDDEN_TASK.includes(to as TaskState)
+        ? `derived evidence cannot move a task to ${to}`
+        : null;
+    case "worker_transition":
+      return to && DERIVED_FORBIDDEN_WORKER.includes(to as WorkerState)
+        ? `derived evidence cannot move a worker to ${to}`
+        : null;
+    case "specialist_finished":
+      return "derived evidence cannot finish a worker";
+    case "permission_request":
+      return "derived evidence cannot claim a pending approval";
+    case "specialist_joined":
+      return "derived evidence cannot add a worker";
+    default:
+      return null;
   }
-  return null;
 }
 
 function findWorker(snapshot: TaskSnapshot, workerId: string | undefined): WorkerSnapshot | undefined {
@@ -185,9 +216,80 @@ function findWorker(snapshot: TaskSnapshot, workerId: string | undefined): Worke
   );
 }
 
+/** Specialist-correlated lookup: external ids win over internal role ids. */
+function findWorkerByExternal(
+  snapshot: TaskSnapshot,
+  workerId: string | undefined,
+): WorkerSnapshot | undefined {
+  if (!workerId) return undefined;
+  return (
+    snapshot.workers.find((w) => w.externalId === workerId) ??
+    snapshot.workers.find((w) => w.id === workerId)
+  );
+}
+
 /** Single active writer, falling back to the lead (plan §5.2: one writer). */
 function defaultWorker(snapshot: TaskSnapshot): WorkerSnapshot | undefined {
-  return snapshot.workers.find((w) => w.isWriter) ?? snapshot.workers[0];
+  return (
+    snapshot.workers.find((w) => w.isWriter && !TERMINAL_WORKER_STATES.has(w.state)) ??
+    snapshot.workers.find((w) => !TERMINAL_WORKER_STATES.has(w.state)) ??
+    snapshot.workers[0]
+  );
+}
+
+/** needsUser means a decision is pending; clear it when nobody is waiting. */
+function settleNeedsUser(snapshot: TaskSnapshot): void {
+  if (snapshot.workers.some((w) => w.state === "WAITING_FOR_APPROVAL")) return;
+  snapshot.needsUser = false;
+  delete snapshot.needsUserProvenance;
+}
+
+/**
+ * Keep the task-level wait state consistent with the pending-need flag.
+ * Entering WAITING_FOR_USER restates the evidence that created the need —
+ * never the current event's provenance, so a derived event cannot stamp a
+ * forbidden claim on the task.
+ */
+function reconcileWaitState(snapshot: TaskSnapshot, event: VisualEvent): void {
+  if (snapshot.state === "WAITING_FOR_USER" && !snapshot.needsUser) {
+    transitionTask(snapshot, "ACTIVE", event);
+  } else if (snapshot.state === "ACTIVE" && snapshot.needsUser) {
+    transitionTask(snapshot, "WAITING_FOR_USER", {
+      ...event,
+      provenance: snapshot.needsUserProvenance ?? event.provenance,
+    });
+  }
+}
+
+/**
+ * Terminal finish semantics shared by task_finished and a task_transition
+ * that lands on a terminal state: no pending user ask survives, and every
+ * non-terminal worker settles — directly when the target is legal from its
+ * state, otherwise via CANCELED (reachable from every non-terminal state).
+ */
+function finalizeTerminal(snapshot: TaskSnapshot, target: TaskState, event: VisualEvent): void {
+  snapshot.needsUser = false;
+  delete snapshot.needsUserProvenance;
+  for (const worker of snapshot.workers) {
+    if (TERMINAL_WORKER_STATES.has(worker.state)) continue;
+    if (transitionWorker(worker, target as WorkerState, event) !== null) {
+      transitionWorker(worker, "CANCELED", event);
+    }
+  }
+}
+
+/**
+ * Resolve the worker an event targets. A present workerId is an explicit
+ * correlation claim and must match a roster worker — an unmatched id returns
+ * "unknown" so callers reject instead of silently mutating the default
+ * worker. Only a genuinely absent workerId uses the writer fallback.
+ */
+function targetWorker(
+  snapshot: TaskSnapshot,
+  workerId: string | undefined,
+): WorkerSnapshot | undefined | "unknown" {
+  if (workerId === undefined) return defaultWorker(snapshot);
+  return findWorker(snapshot, workerId) ?? "unknown";
 }
 
 function transitionWorker(
@@ -250,15 +352,27 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       if (!event.to) return { ok: false, snapshot: snapshotIn, error: "task_transition missing target" };
       const err = transitionTask(snapshot, event.to as TaskState, event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
+      // A transition landing terminal carries finish semantics too.
+      if (TERMINAL_TASK_STATES.has(snapshot.state)) {
+        finalizeTerminal(snapshot, snapshot.state, event);
+      }
       break;
     }
 
     case "worker_transition": {
-      const worker = findWorker(snapshot, event.workerId) ?? defaultWorker(snapshot);
-      if (!worker) return { ok: false, snapshot: snapshotIn, error: "no worker to transition" };
+      const resolved = targetWorker(snapshot, event.workerId);
+      if (resolved === "unknown") {
+        return { ok: false, snapshot: snapshotIn, error: `unknown worker ${event.workerId}` };
+      }
+      if (!resolved) return { ok: false, snapshot: snapshotIn, error: "no worker to transition" };
       if (!event.to) return { ok: false, snapshot: snapshotIn, error: "worker_transition missing target" };
-      const err = transitionWorker(worker, event.to as WorkerState, event);
+      const err = transitionWorker(resolved, event.to as WorkerState, event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
+      // An explicit wait-for-approval claim is a pending user decision.
+      if (event.to === "WAITING_FOR_APPROVAL") {
+        snapshot.needsUser = true;
+        snapshot.needsUserProvenance = event.provenance;
+      }
       // Real work activity wakes the task out of PLANNING/WAITING when truthful.
       if (
         event.to === "WORKING" &&
@@ -266,6 +380,10 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       ) {
         transitionTask(snapshot, "ACTIVE", event);
       }
+      // A worker leaving WAITING_FOR_APPROVAL resolved its pending decision.
+      // Derived evidence may idle a worker but never dismiss a real ask.
+      if (event.provenance !== "derived") settleNeedsUser(snapshot);
+      reconcileWaitState(snapshot, event);
       break;
     }
 
@@ -280,13 +398,17 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
     }
 
     case "specialist_joined": {
-      const externalId = event.workerId;
-      const existing = findWorker(snapshot, externalId);
+      const externalId = event.workerId || undefined; // "" is absent, not an id
+      const existing = externalId
+        ? snapshot.workers.find((w) => w.externalId === externalId)
+        : undefined;
       if (existing) break; // already on roster
       if (snapshot.workers.length >= MAX_VISIBLE_WORKERS) break; // tracked as activity only
       const role = guessRole(event.detail);
       const worker: WorkerSnapshot = {
-        id: externalId ?? workerIdFor(role, snapshot.workers.filter((w) => w.role === role).length),
+        // Internal ids stay role-based so a hook correlation id can never
+        // collide with — or shadow — a roster member's id.
+        id: workerIdFor(role, snapshot.workers.filter((w) => w.role === role).length),
         role,
         label: ROLE_LABELS[role],
         state: "WORKING",
@@ -298,28 +420,47 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       };
       snapshot.workers.push(worker);
       if (snapshot.state === "PLANNING") transitionTask(snapshot, "ACTIVE", event);
+      reconcileWaitState(snapshot, event);
       break;
     }
 
     case "specialist_finished": {
-      const worker = findWorker(snapshot, event.workerId);
-      if (worker) {
-        // A delegated turn finished — never assume overall task completion.
-        const err = transitionWorker(worker, "COMPLETED", event);
-        if (err) return { ok: false, snapshot: snapshotIn, error: err };
+      const worker = findWorkerByExternal(snapshot, event.workerId);
+      if (!worker) {
+        // An explicit finish claim must name a real worker; an absent id is
+        // journaled without completing anyone.
+        if (event.workerId !== undefined) {
+          return { ok: false, snapshot: snapshotIn, error: `unknown worker ${event.workerId}` };
+        }
+        break;
       }
+      // A delegated turn finished — never assume overall task completion.
+      const err = transitionWorker(worker, "COMPLETED", event);
+      if (err) return { ok: false, snapshot: snapshotIn, error: err };
       break;
     }
 
     case "permission_request": {
-      const worker = findWorker(snapshot, event.workerId) ?? defaultWorker(snapshot);
-      if (worker) {
-        const err = transitionWorker(worker, "WAITING_FOR_APPROVAL", event);
-        if (err) return { ok: false, snapshot: snapshotIn, error: err };
+      const resolved = targetWorker(snapshot, event.workerId);
+      if (resolved === "unknown") {
+        return { ok: false, snapshot: snapshotIn, error: `unknown worker ${event.workerId}` };
       }
+      // A pending approval is real even when the named worker cannot be
+      // moved (e.g. already terminal): flag the need, attribute when possible.
+      if (resolved) transitionWorker(resolved, "WAITING_FOR_APPROVAL", event);
       if (snapshot.state === "ACTIVE") transitionTask(snapshot, "WAITING_FOR_USER", event);
       snapshot.needsUser = true;
       snapshot.needsUserProvenance = event.provenance;
+      break;
+    }
+
+    case "worker_assigned": {
+      // Assignment notice: attribute to the worker when the id resolves.
+      const worker = findWorker(snapshot, event.workerId);
+      if (worker) {
+        worker.lastEventId = event.id;
+        worker.updatedAt = event.at;
+      }
       break;
     }
 
@@ -329,33 +470,39 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
           transitionWorker(worker, "IDLE", event);
         }
       }
-      snapshot.needsUser = false;
+      // The turn ended: any approval it carried was resolved or dismissed.
+      if (event.provenance !== "derived") settleNeedsUser(snapshot);
+      reconcileWaitState(snapshot, event);
       break;
     }
 
     case "interrupted": {
       for (const worker of snapshot.workers) {
-        if (worker.state === "WORKING" || worker.state === "WAITING_FOR_APPROVAL") {
+        if (worker.state === "WORKING" || worker.state === "WAITING_FOR_APPROVAL" || worker.state === "REVIEWING") {
           transitionWorker(worker, "IDLE", event);
         }
       }
-      // Task keeps its state; resumable. needsUser stays as-is.
+      // Task keeps its state; resumable. A dismissed prompt is answered.
+      if (event.provenance !== "derived") settleNeedsUser(snapshot);
+      reconcileWaitState(snapshot, event);
       break;
     }
 
     case "task_finished": {
-      // Explicit completion only — the sole path to COMPLETED.
-      const target = event.to === "FAILED" ? "FAILED" : "COMPLETED";
+      // Explicit completion/failure only. A missing target defaults to
+      // COMPLETED; anything else is invalid.
+      const target = event.to === undefined ? "COMPLETED" : event.to;
+      if (target !== "COMPLETED" && target !== "FAILED") {
+        return { ok: false, snapshot: snapshotIn, error: `task_finished cannot target ${target}` };
+      }
       const err = transitionTask(snapshot, target, event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
-      snapshot.needsUser = false;
-      for (const worker of snapshot.workers) {
-        if (worker.state !== "COMPLETED" && worker.state !== "FAILED" && worker.state !== "CANCELED") {
-          transitionWorker(worker, target === "COMPLETED" ? "COMPLETED" : "FAILED", event);
-        }
-      }
+      finalizeTerminal(snapshot, target, event);
       break;
     }
+
+    default:
+      return { ok: false, snapshot: snapshotIn, error: `unsupported event kind ${event.kind}` };
   }
 
   snapshot.updatedAt = event.at;
@@ -377,6 +524,13 @@ function guessRole(detail: string | undefined): WorkerRole {
  * appends to the bounded log. Replayed or duplicate events are no-ops.
  */
 export function applyEvent(record: TaskRecord, event: VisualEvent): ReduceResult {
+  if (event.taskId !== record.snapshot.id) {
+    return {
+      ok: false,
+      snapshot: record.snapshot,
+      error: `event targets task ${event.taskId}, not ${record.snapshot.id}`,
+    };
+  }
   if (record.seenEventIds.has(event.id)) {
     return { ok: true, snapshot: record.snapshot, changed: false };
   }

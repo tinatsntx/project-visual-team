@@ -1,0 +1,39 @@
+{
+  "name": "seq-rejected-input",
+  "description": "Interleaved invalid input — an unknown worker id, a derived completion claim, and a wrong-kind transition target — is rejected without disturbing the surrounding valid events.",
+  "steps": [
+    { "kind": "start", "input": { "title": "Tidy docs", "summary": "Fix README links", "mode": "solo" } },
+    {
+      "kind": "event",
+      "expect": "rejected",
+      "event": { "id": "r1", "kind": "worker_transition", "workerId": "ghost", "to": "WORKING", "provenance": "observed", "label": "Work claim for a worker that does not exist." }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "r2", "kind": "worker_transition", "workerId": "lead", "to": "WORKING", "provenance": "reported", "label": "Alex starts working." }
+    },
+    {
+      "kind": "event",
+      "expect": "rejected",
+      "event": { "id": "r3", "kind": "task_finished", "to": "COMPLETED", "provenance": "derived", "label": "Inferred completion attempt." }
+    },
+    {
+      "kind": "event",
+      "expect": "rejected",
+      "event": { "id": "r4", "kind": "task_transition", "to": "IDLE", "provenance": "observed", "label": "Worker state sent as a task target." }
+    },
+    {
+      "kind": "event",
+      "expect": "applied",
+      "event": { "id": "r5", "kind": "task_finished", "to": "COMPLETED", "provenance": "reported", "label": "Docs tidied.", "detail": "result: verified" }
+    }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED" },
+    "needsUser": false,
+    "eventCount": 3,
+    "logLength": 3
+  }
+}

@@ -2,7 +2,8 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 COMPLETE; 1 — core state engine is next. Initial supported
+**Milestone:** 0 COMPLETE; 1 — core state engine implemented locally, pending
+coordinator review. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
 Controlled connection-failure recovery and fullscreen/return also pass.
@@ -29,10 +30,13 @@ real ChatGPT/native and connection-recovery acceptance. Brief 005 `515727a`
 is accepted, published, and deployed: clean-checkout verification and literal
 resource embedding pass. M0 enablement and its two reviewed fixes are
 accepted at `4fb3548`; no new coding blocker was found in that review.
-M0 is closed for the tested path. Next SWE-2 work is
-`docs/swe-2-brief-006.md`: complete and verify the existing core state engine
-against Milestone 1's four exit criteria. Avoid rebuilding the working engine
-or reopening the M0 test matrix. Consumer workflow is Milestone 2 afterward.
+M0 is closed for the tested path. SWE-2 brief 006 is implemented locally:
+the engine now rejects cross-task events and explicit-unresolvable worker
+targets, closes derived-provenance holes on indirect kinds, validates
+finish targets, and gains seeded property + ordered replay evidence.
+120/120 tests, typecheck, build, and the coordinator probe pass.
+Evidence: `docs/m1-core-engine-acceptance.md`. Consumer workflow is
+Milestone 2 afterward.
 
 ## Current state
 
@@ -215,10 +219,11 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** SWE-2 brief 006, Milestone 1 core state engine.
-The cases below are recorded compatibility/private-alpha follow-ups, not
-conditions for starting Milestone 1. Do not rerun accepted feasibility checks
-unless a changed path or new failure warrants it.
+**Current priority:** coordinator review of the brief 006 diff, then the
+consumer workflow (Milestone 2). The cases below are recorded
+compatibility/private-alpha follow-ups, not Milestone 1 conditions. Do not
+rerun accepted feasibility checks unless a changed path or new failure
+warrants it.
 
 1. Terminal mode switching and actual web PiP now pass. Real-host rejected
    mode requests and expiry/missing-capability UX remain pending. Use a
@@ -311,6 +316,7 @@ Harness: `http://localhost:8788/dev.html`, parameters
 - `docs/brief-005-acceptance.md`: clean CI, literal hosted assets, fresh web smoke.
 - `docs/m0-enablement-acceptance.md`: accepted fixes, deployment, native skill, terminal/PiP web proof.
 - `docs/m0-closeout.md`: M0 GO decision, supported path, deferred validation ownership.
-- `docs/swe-2-brief-006.md`: next coding brief, Milestone 1 core state engine completion.
+- `docs/swe-2-brief-006.md`: Milestone 1 core state engine completion brief.
+- `docs/m1-core-engine-acceptance.md`: four-criteria evidence mapping and corrections.
 - `docs/adr/`, architecture/privacy/security docs.
 - `packages/test-fixtures/fixtures/`: synthetic scenarios.

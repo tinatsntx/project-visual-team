@@ -32,7 +32,7 @@ describe("replayable fixtures", () => {
       }
       assert.equal(rec.snapshot.state, fixture.expect.taskState);
       for (const [wid, st] of Object.entries(fixture.expect.workerStates)) {
-        const w = rec.snapshot.workers.find((x) => x.id === wid);
+        const w = rec.snapshot.workers.find((x) => x.id === wid || x.externalId === wid);
         assert.ok(w, `worker ${wid} should exist`);
         assert.equal(w.state, st, `worker ${wid}`);
       }

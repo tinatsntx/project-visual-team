@@ -99,8 +99,8 @@ describe("reported workflow boundaries", () => {
     assert.ok(finish.ok);
     assert.equal(repo.apply(stored, finish.event).ok, true);
     assert.equal(stored.record.snapshot.state, "FAILED");
-    // Early failure leaves the worker ASSIGNED; the task is still frozen.
-    assert.equal(stored.record.snapshot.workers[0]?.state, "ASSIGNED");
+    // Early failure cancels the never-started worker; the task is frozen.
+    assert.equal(stored.record.snapshot.workers[0]?.state, "CANCELED");
 
     const before = JSON.stringify(stored.record.snapshot);
     const eventCount = stored.record.snapshot.eventCount;
