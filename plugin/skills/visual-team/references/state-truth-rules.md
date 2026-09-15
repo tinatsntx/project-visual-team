@@ -2,10 +2,11 @@
 
 Every meaningful state must be backed by:
 
-- a real Codex hook event (`observed`);
-- a real MCP tool call (`observed`);
-- an explicit workflow transition reported by the host model (`reported`);
-- a direct user action.
+- hook-delivered `record_codex_event` data (`observed`);
+- your own `report_workflow_step`/`finish_visual_task` calls (`reported` —
+  calling a tool never upgrades a claim to observed);
+- a direct user action;
+- or `derived` display inference, which carries the limits below.
 
 Additional rules:
 
@@ -19,3 +20,23 @@ Additional rules:
 - If a hook is missing or unsupported, degrade to model-reported status — do
   not fabricate detail. Hosted tools (e.g. web search) may be invisible to
   hooks; say "limited activity visibility" rather than guessing.
+
+## Permissions and waits
+
+- Permission prompts stay in the native approval flow. The board shows a
+  pending need; it never answers one, and neither do you.
+- When real work resumes after a wait, report the resumed phase — the board
+  clears the need on that real evidence, never on inference.
+- Interrupted work is unfinished work. Resume the same task where possible;
+  never restart a fresh task to hide an interruption, and never mark
+  interrupted work complete.
+
+## Rejections are not failures to route around
+
+- A rejected report or event is a safe no-op — the board did not change.
+  Read the reason and correct the work if needed; never fabricate events to
+  force a transition.
+- Never manufacture `record_codex_event` calls to repair missing hooks or
+  simulate activity the host did not produce.
+- A rejected state report is not success. If `applied` is false, say what
+  actually happened instead of reporting the intended state anyway.

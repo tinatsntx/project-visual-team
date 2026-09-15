@@ -1,7 +1,8 @@
-# Host-specific agent hints for OpenAI surfaces. Kept minimal for the
-# Milestone 0 skeleton; the full routing workflow lands in Milestone 2.
+# Host-specific agent hints for OpenAI surfaces.
 name: visual-team
 surface: openai
 notes:
   - Use the visual-team MCP server bundled with this plugin.
   - Codex lifecycle hooks are optional; missing hooks degrade to reported status.
+  - Default to solo; delegate only when the host can actually run parallel work.
+  - Permission prompts stay in the native approval flow — never auto-answer them.

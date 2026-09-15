@@ -2,7 +2,8 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 and 1 COMPLETE; next is 2 — consumer workflow skill.
+**Milestone:** 0 and 1 COMPLETE; 2 consumer workflow implemented locally —
+coordinator host execution of the eight eval specs is the remaining gate.
 Coordinator accepted `2eda8b3`; all three follow-up probes pass. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
@@ -46,6 +47,19 @@ committed-delta whitespace. M1's four exit criteria are met; no new blocker
 was found. M0 remains closed; no browser gate reopened. Milestone 2 consumer
 workflow is cleared in `docs/swe-2-brief-007.md`.
 Evidence: `docs/m1-core-engine-acceptance.md`.
+
+Brief 007 is implemented locally (uncommitted at this writing): `SKILL.md`
+now gives the executable consumer workflow — one start, one initial render,
+genuine reported phase boundaries, honest waits/resume, one truthful finish,
+one completion render, complete text answer — plus the metadata warning,
+rejection semantics, and headless/limited-access rules. The delegation and
+state-truth references carry the solo/team matrix and permission/provenance
+invariants. Eight eval specs (five positive, three negative, including the
+UI-unavailable variant) live under `evals/positive/` and `evals/negative/`;
+`evals/m2-consumer-workflow-probe.mts` pre-proves the server side of all
+four exit criteria locally (7/7 pass, exit 0). Host adherence is
+coordinator-run and marked unverified until executed.
+Evidence: `docs/m2-consumer-workflow-acceptance.md`.
 
 ## Current state
 
@@ -233,7 +247,9 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** brief 007 consumer workflow (Milestone 2). Brief 006 and
+**Current priority:** coordinator host execution of the eight M2 eval specs
+(Milestone 2). The skill/references/probe are implemented locally; the
+server side of all four criteria is proven by the new probe. Brief 006 and
 its follow-up are accepted; no further M1 work is required. The cases below are recorded
 compatibility/private-alpha follow-ups, not Milestone 1 conditions. Do not
 rerun accepted feasibility checks unless a changed path or new failure
@@ -332,7 +348,11 @@ Harness: `http://localhost:8788/dev.html`, parameters
 - `docs/m0-closeout.md`: M0 GO decision, supported path, deferred validation ownership.
 - `docs/swe-2-brief-006.md`: Milestone 1 core state engine completion brief.
 - `docs/swe-2-brief-006-follow-up.md`: exact three-case coordinator review and probe.
-- `docs/swe-2-brief-007.md`: prepared Milestone 2 consumer workflow brief.
+- `docs/swe-2-brief-007.md`: accepted Milestone 2 consumer workflow brief.
+- `docs/m2-consumer-workflow-acceptance.md`: M2 evidence, criteria map, and
+  the coordinator-run boundary for the eight eval specs.
+- `evals/m2-consumer-workflow-probe.mts`: synthetic server-side probe for
+  the workflow sequences the skill instructs.
 - `docs/m1-core-engine-acceptance.md`: four-criteria evidence mapping and corrections.
 - `docs/adr/`, architecture/privacy/security docs.
 - `packages/test-fixtures/fixtures/`: synthetic scenarios.
