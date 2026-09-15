@@ -9,8 +9,13 @@ Current tested/deployed code: `2eda8b3f42dac033e473345b579c76911ed73917`.
 M1 core engine is accepted with 145 tests, both unchanged coordinator probes,
 exact-code CI, and hosted HTTP wait/resume/finish smoke. This adds no new
 browser/native matrix claims; earlier dated M0 evidence is unchanged.
-See `docs/m1-core-engine-acceptance.md`; next work is brief 007.
-Latest packaging regenerated/refreshed from that SHA; installed skill and
+See `docs/m1-core-engine-acceptance.md`. M2 consumer workflow `6def930`
+is accepted for explicit skill invocation and one active visual task.
+Real native and ChatGPT evidence, partial/failed branches, and the unexecuted
+permission prompt are recorded in `docs/m2-consumer-workflow-acceptance.md`.
+M4 owns the observed cross-task hook routing and specialist status gaps.
+Next work is M3, brief 008.
+Latest packaging regenerated/refreshed from `6def930`; installed skill and
 hook files match source. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.
 

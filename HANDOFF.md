@@ -2,8 +2,11 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 and 1 COMPLETE; 2 consumer workflow implemented locally —
-coordinator host execution of the eight eval specs is the remaining gate.
+**Milestone:** 0, 1, and 2 COMPLETE; next is M3 visual experience,
+`docs/swe-2-brief-008.md`. M2 is accepted for explicit `$visual-team`
+invocation and one active visual task at a time. Partial/failed evaluation
+branches and integration limits remain recorded; no blanket eight-case pass
+or private-alpha readiness is claimed.
 Coordinator accepted `2eda8b3`; all three follow-up probes pass. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
@@ -48,7 +51,7 @@ was found. M0 remains closed; no browser gate reopened. Milestone 2 consumer
 workflow is cleared in `docs/swe-2-brief-007.md`.
 Evidence: `docs/m1-core-engine-acceptance.md`.
 
-Brief 007 is implemented locally (uncommitted at this writing): `SKILL.md`
+Brief 007 is accepted at `6def930`: `SKILL.md`
 now gives the executable consumer workflow — one start, one initial render,
 genuine reported phase boundaries, honest waits/resume, one truthful finish,
 one completion render, complete text answer — plus the metadata warning,
@@ -57,12 +60,25 @@ state-truth references carry the solo/team matrix and permission/provenance
 invariants. Eight eval specs (five positive, three negative, including the
 UI-unavailable variant) live under `evals/positive/` and `evals/negative/`;
 `evals/m2-consumer-workflow-probe.mts` pre-proves the server side of all
-four exit criteria locally (7/7 pass, exit 0). Host adherence is
-coordinator-run and marked unverified until executed.
+four exit criteria locally (7/7 pass, exit 0). Coordinator native execution
+proves small solo work, a real read-only reviewer with one writer, refusal
+of automatic approvals, a useful headless answer, and same-task restart/resume.
+Real ChatGPT renders native completion and reports hosted research without
+invented observed searches in sequential use. Explicit skill invocation is
+the accepted entry point: implicit discovery sometimes started before reading
+the skill and failed metadata handling. Untargeted hooks can cross active
+tasks, and hookless specialist completion is not accurately reflected in the
+roster. M3 owns truthful presentation; M4 owns correlation and hook coverage.
+Real native permission prompting remains unexecuted in the current settings.
 Evidence: `docs/m2-consumer-workflow-acceptance.md`.
 
 ## Current state
 
+- Accepted consumer skill/package: `6def930`; refreshed installed files match
+  source. Public native receipts: `docs/m2-native-host-evidence.json`.
+  Next SWE-2 assignment is brief 008. M2 changes no runtime/UI/endpoint code;
+  no Render redeploy is required for this release. Use explicit skill invocation
+  and only one active visual task until the recorded integration gaps close.
 - Accepted product-code baseline published to GitHub and live on Render:
   `2eda8b3f42dac033e473345b579c76911ed73917`.
   Exact-code CI `35011395446` is green. Hosted six-tool discovery, reported
@@ -247,10 +263,11 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** coordinator host execution of the eight M2 eval specs
-(Milestone 2). The skill/references/probe are implemented locally; the
-server side of all four criteria is proven by the new probe. Brief 006 and
-its follow-up are accepted; no further M1 work is required. The cases below are recorded
+**Current priority:** SWE-2 brief 008, Milestone 3 visual experience. The four
+M2 exit criteria have executed evidence; the eight evaluation outcomes and
+remaining limits are recorded individually. No further M1 work is required.
+M4 must fix concurrent hook routing and specialist lifecycle correlation,
+and exercise real native permissions. The cases below are recorded
 compatibility/private-alpha follow-ups, not Milestone 1 conditions. Do not
 rerun accepted feasibility checks unless a changed path or new failure
 warrants it.
@@ -351,6 +368,8 @@ Harness: `http://localhost:8788/dev.html`, parameters
 - `docs/swe-2-brief-007.md`: accepted Milestone 2 consumer workflow brief.
 - `docs/m2-consumer-workflow-acceptance.md`: M2 evidence, criteria map, and
   the coordinator-run boundary for the eight eval specs.
+- `docs/m2-native-host-evidence.json`: public receipts from actual native runs.
+- `docs/swe-2-brief-008.md`: next SWE-2 assignment, M3 visual experience.
 - `evals/m2-consumer-workflow-probe.mts`: synthetic server-side probe for
   the workflow sequences the skill instructs.
 - `docs/m1-core-engine-acceptance.md`: four-criteria evidence mapping and corrections.

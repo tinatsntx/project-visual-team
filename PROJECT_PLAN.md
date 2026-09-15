@@ -742,6 +742,16 @@ See `docs/m1-core-engine-acceptance.md`. Next: `docs/swe-2-brief-007.md`.
 
 ## Milestone 2 — Consumer workflow skill
 
+**COMPLETE / GO to Milestone 3 — 2026-09-15.** Coordinator accepted
+`6def930` for explicit installed skill invocation and sequential visual tasks.
+Real native edits/tests, one-writer plus independent read-only review,
+unsupported-approval refusal, headless usefulness, restart/resume, and real
+ChatGPT research/rendering provide the four-criterion evidence.
+`docs/m2-consumer-workflow-acceptance.md` preserves the partial/failed branches
+and unexecuted permission prompt. Implicit activation, concurrent hook routing,
+and specialist lifecycle coverage are not accepted as reliable. They remain
+integration/private-alpha work. Next: `docs/swe-2-brief-008.md`.
+
 ### Deliverables
 
 - `SKILL.md`.

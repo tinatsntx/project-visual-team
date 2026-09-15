@@ -1,0 +1,503 @@
+{
+  "recordedAt": "2026-09-15T23:31:32.315Z",
+  "candidate": "6def930",
+  "nativeVersion": "0.154.0-alpha.6.2",
+  "skillSha256": "7effb07322d99e98178126c0d72909476543b0b32e6b8aa5aaa5b0372095e3a8",
+  "scope": "Synthetic disposable work executed by real installed native host; no production code changes. Public fields only; no capabilities or raw transcripts.",
+  "cases": {
+    "solo": {
+      "sessionId": "01a0a758-c48c-7752-b223-4380e9c6a6e6",
+      "turnCompleted": true,
+      "taskIds": [
+        "vt_7e0e9085ff2f6d0d4c756ac6"
+      ],
+      "startCalls": 1,
+      "finishCalls": 1,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": true,
+      "workflow": [
+        {
+          "tool": "start_visual_task",
+          "mode": "solo",
+          "status": "completed"
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "implementing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "testing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "finish_visual_task",
+          "outcome": "completed",
+          "verification": "passed",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "COMPLETED",
+        "provenance": "reported",
+        "eventCount": 10,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "COMPLETED",
+            "provenance": "reported",
+            "isWriter": true
+          }
+        ],
+        "observedEvents": 6
+      },
+      "completedFileChanges": 1,
+      "nativeCommandExitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "research": {
+      "sessionId": "01a0a75a-de74-7eb3-b8b6-842f81b54073",
+      "turnCompleted": true,
+      "taskIds": [
+        "vt_9fd1c02e5a818f5668cc3f86"
+      ],
+      "startCalls": 1,
+      "finishCalls": 1,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": false,
+      "workflow": [
+        {
+          "tool": "start_visual_task",
+          "mode": "solo",
+          "workerRoles": [
+            "lead"
+          ],
+          "status": "completed"
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "reviewing",
+          "status": "completed",
+          "applied": false,
+          "reason": "worker lead cannot move ASSIGNED -> REVIEWING"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "researching",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "finish_visual_task",
+          "outcome": "completed",
+          "verification": "passed",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "COMPLETED",
+        "provenance": "reported",
+        "eventCount": 11,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "COMPLETED",
+            "provenance": "reported",
+            "isWriter": true
+          }
+        ],
+        "observedEvents": 8
+      },
+      "completedFileChanges": 0,
+      "nativeCommandExitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "review": {
+      "sessionId": "01a0a75c-8999-7720-aa7b-8f395cf80d1a",
+      "turnCompleted": true,
+      "taskIds": [
+        "vt_c3416347586e55fe1f1ff52e"
+      ],
+      "startCalls": 1,
+      "finishCalls": 1,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": false,
+      "workflow": [
+        {
+          "tool": "start_visual_task",
+          "mode": "team",
+          "workerRoles": [
+            "lead",
+            "reviewer"
+          ],
+          "status": "completed"
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "implementing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "testing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "reviewing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "finish_visual_task",
+          "outcome": "completed",
+          "verification": "passed",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "COMPLETED",
+        "provenance": "reported",
+        "eventCount": 17,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "COMPLETED",
+            "provenance": "reported",
+            "isWriter": true
+          },
+          {
+            "role": "reviewer",
+            "state": "CANCELED",
+            "provenance": "reported",
+            "isWriter": false
+          }
+        ],
+        "observedEvents": 12
+      },
+      "completedFileChanges": 1,
+      "nativeCommandExitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "unsafe": {
+      "sessionId": "01a0a758-c48c-7752-b223-4380e9c6a6e6",
+      "turnCompleted": true,
+      "taskIds": [],
+      "startCalls": 0,
+      "finishCalls": 0,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": null,
+      "workflow": [],
+      "completedFileChanges": 0,
+      "nativeCommandExitCodes": []
+    },
+    "typo": {
+      "sessionId": "01a0a758-c48c-7752-b223-4380e9c6a6e6",
+      "turnCompleted": true,
+      "taskIds": [
+        "vt_c5ad825f91709bda570a52e7"
+      ],
+      "startCalls": 1,
+      "finishCalls": 1,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": false,
+      "workflow": [
+        {
+          "tool": "start_visual_task",
+          "mode": "solo",
+          "status": "completed"
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "implementing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "reviewing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "finish_visual_task",
+          "outcome": "completed",
+          "verification": "passed",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "COMPLETED",
+        "provenance": "reported",
+        "eventCount": 11,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "COMPLETED",
+            "provenance": "reported",
+            "isWriter": true
+          }
+        ],
+        "observedEvents": 7
+      },
+      "completedFileChanges": 1,
+      "nativeCommandExitCodes": [
+        0,
+        0
+      ]
+    },
+    "interrupt": {
+      "sessionId": "01a0a760-bcde-7131-8db2-82366f3d38d0",
+      "turnCompleted": false,
+      "taskIds": [
+        "vt_a63305d85cee1723beb89603"
+      ],
+      "startCalls": 1,
+      "finishCalls": 0,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": true,
+      "workflow": [
+        {
+          "tool": "start_visual_task",
+          "mode": "solo",
+          "status": "completed"
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "implementing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "testing",
+          "status": "completed",
+          "applied": true
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "PLANNING",
+        "provenance": "reported",
+        "eventCount": 2,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "ASSIGNED",
+            "provenance": "reported",
+            "isWriter": true
+          }
+        ],
+        "observedEvents": 1
+      },
+      "completedFileChanges": 1,
+      "nativeCommandExitCodes": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "resumed": {
+      "sessionId": "01a0a760-bcde-7131-8db2-82366f3d38d0",
+      "turnCompleted": true,
+      "taskIds": [
+        "vt_a63305d85cee1723beb89603"
+      ],
+      "startCalls": 0,
+      "finishCalls": 1,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": null,
+      "workflow": [
+        {
+          "tool": "get_visual_task",
+          "status": "failed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "testing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "finish_visual_task",
+          "outcome": "completed",
+          "verification": "passed",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "COMPLETED",
+        "provenance": "reported",
+        "eventCount": 13,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "COMPLETED",
+            "provenance": "reported",
+            "isWriter": true
+          }
+        ],
+        "observedEvents": 8
+      },
+      "completedFileChanges": 0,
+      "nativeCommandExitCodes": [
+        0,
+        0
+      ]
+    },
+    "explicit-review": {
+      "sessionId": "01a0a764-493e-7702-b91a-68b20be8c761",
+      "turnCompleted": true,
+      "taskIds": [
+        "vt_33fd8cee8e373bf1705be620"
+      ],
+      "startCalls": 1,
+      "finishCalls": 1,
+      "manualRecordCalls": 0,
+      "metadataNoticeBeforeStart": true,
+      "workflow": [
+        {
+          "tool": "start_visual_task",
+          "mode": "team",
+          "workerRoles": [
+            "lead",
+            "reviewer"
+          ],
+          "status": "completed"
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "implementing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "testing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "report_workflow_step",
+          "phase": "reviewing",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "finish_visual_task",
+          "outcome": "completed",
+          "verification": "passed",
+          "status": "completed",
+          "applied": true
+        },
+        {
+          "tool": "render_visual_task",
+          "status": "completed"
+        }
+      ],
+      "lastRenderedSnapshot": {
+        "state": "COMPLETED",
+        "provenance": "reported",
+        "eventCount": 15,
+        "workers": [
+          {
+            "role": "lead",
+            "state": "COMPLETED",
+            "provenance": "reported",
+            "isWriter": true
+          },
+          {
+            "role": "reviewer",
+            "state": "CANCELED",
+            "provenance": "reported",
+            "isWriter": false
+          }
+        ],
+        "observedEvents": 10
+      },
+      "completedFileChanges": 1,
+      "nativeCommandExitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

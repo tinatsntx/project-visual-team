@@ -6,19 +6,20 @@ An open-source ChatGPT/Codex plugin that represents real work as a small
 visual team — who is doing what, what needs you, and what is done — without
 creating another agent platform.
 
-**Status: Milestone 0 (feasibility skeleton).** The plan's hard gate is in
-`docs/feasibility-report.md`. Read `PROJECT_PLAN.md` first — it is the
-controlling specification.
+**Status: M0, M1, and M2 accepted on the tested path; M3 visual experience next.**
+Read `HANDOFF.md` for the current supported path
+and `PROJECT_PLAN.md` for the controlling specification.
 
 ## What exists today
 
 - `plugin/` — portable Agent Plugins package (`plugin.json`, `mcp.json`,
-  bundled `PostToolUse` hook, `visual-team` skill stub, original SVG assets).
+  bundled `PostToolUse` hook, `visual-team` workflow skill, original SVG assets).
 - `apps/mcp-server/` — TypeScript MCP state service (Streamable HTTP at
-  `/mcp`) with the four M0 tools: `start_visual_task`, `record_codex_event`,
-  `get_visual_task`, `render_visual_task`.
+  `/mcp`) with six tools: `start_visual_task`, `report_workflow_step`,
+  `record_codex_event`, `get_visual_task`, `finish_visual_task`,
+  `render_visual_task`.
 - `apps/plugin-ui/` — React 18 UI bundled to a single ESM module: inline
-  card, fullscreen view, PiP behind a feature flag.
+  card, fullscreen view, and enabled PiP on the tested ChatGPT web path.
 - `packages/` — shared Zod contracts, the deterministic state machine with
   provenance guards, the Codex event mapper, and replayable test fixtures.
 
@@ -54,6 +55,20 @@ npm run dev:serve --workspace @visual-team/plugin-ui
    (`~/.agents/plugins/marketplace.json` or `.agents/plugins/marketplace.json`)
    and install it from the Plugins Directory. See
    `docs/feasibility-report.md` for the platform matrix to fill in.
+
+## Using the workflow
+
+For the installed native workflow, invoke the skill explicitly:
+
+```text
+$visual-team Fix the typo in this disposable file and verify the change.
+```
+
+Use generic task titles and summaries. Keep one active visual task at a time
+until M4 adds session correlation: untargeted hooks currently attach to the
+most recently active task. Native work and complete text answers continue
+when a surface cannot display the widget. See
+`docs/m2-consumer-workflow-acceptance.md` for the actual host evidence and limits.
 
 ## Ground rules
 

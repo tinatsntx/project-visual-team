@@ -11,9 +11,12 @@ not claimed. Closeout and backlog ownership: `docs/m0-closeout.md`.
 **Current code tested/deployed:** `2eda8b3f42dac033e473345b579c76911ed73917`.
 M1 is complete: 145 tests and both coordinator probes pass; exact-code CI and
 hosted wait/resume/finish smoke pass. UI/plugin source is unchanged by M1;
-the dated real-host M0 evidence below is preserved. Next is consumer workflow,
-`docs/swe-2-brief-007.md`. Full release record: `docs/m1-core-engine-acceptance.md`.
-**Latest packaging tested:** regenerated/refreshed from that SHA; installed
+the dated real-host M0 evidence below is preserved. M2 consumer workflow
+`6def930` is now accepted for explicit skill invocation and sequential tasks;
+see `docs/m2-consumer-workflow-acceptance.md` for the actual pass/partial/fail
+branches. Next: M3, `docs/swe-2-brief-008.md`.
+Full M1 release record: `docs/m1-core-engine-acceptance.md`.
+**Latest packaging tested:** regenerated/refreshed from `6def930`; installed
 skill, hook declaration, and script match source. The corrected installed-root
 hook is retained. Brief 005 and the M0 enablement fixes are accepted.
 **Sites experiment:** `433d93d`, privately deployed; MCP connection is blocked
