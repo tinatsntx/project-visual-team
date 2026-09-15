@@ -2,8 +2,8 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 COMPLETE; 1 — core state engine implemented locally, pending
-coordinator review. Initial supported
+**Milestone:** 0 COMPLETE; 1 — core state engine reviewed, three bounded
+targeting/wait fixes remain before acceptance. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
 Controlled connection-failure recovery and fullscreen/return also pass.
@@ -34,15 +34,21 @@ M0 is closed for the tested path. SWE-2 brief 006 is implemented locally:
 the engine now rejects cross-task events and explicit-unresolvable worker
 targets, closes derived-provenance holes on indirect kinds, validates
 finish targets, and gains seeded property + ordered replay evidence.
-120/120 tests, typecheck, build, and the coordinator probe pass.
-Evidence: `docs/m1-core-engine-acceptance.md`. Consumer workflow is
-Milestone 2 afterward.
+Coordinator verified 131/131 tests, typecheck, build, native compatibility,
+and the original M0 probe. Candidate `a4ffe13` has three reproduced gaps:
+colliding hook IDs target the lead, reported wait leaves needsUser false,
+and unrelated work clears a specialist's ask after derived idle. The fixed
+`evals/m1-coordinator-probe.mts` exits 1. Next:
+`docs/swe-2-brief-006-follow-up.md`. M0 remains closed; no browser gate reopened.
+Milestone 2 consumer workflow is prepared in `docs/swe-2-brief-007.md` for
+after those fixes pass. Evidence: `docs/m1-core-engine-acceptance.md`.
 
 ## Current state
 
-- Last verified product-code baseline on GitHub main and Render:
+- Last deployed product-code baseline on Render:
   `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
-  Documentation-only closeout commits may follow; Render stays on this code.
+  GitHub main is `daa32ad` (M0 closeout docs). Candidate `a4ffe13` and local
+  coordinator review records are not pushed/deployed while M1 fixes remain.
 - M0-enablement code `3ed245e` plus fixes `3ab16d0` are accepted: reported
   workflow/finish tools, testable TTL override, and PiP control. Terminal
   tasks reject new events; oversized finish metadata rejects before mutation.
@@ -219,8 +225,8 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** coordinator review of the brief 006 diff, then the
-consumer workflow (Milestone 2). The cases below are recorded
+**Current priority:** brief 006 follow-up's three reproduced cases, then
+brief 007 consumer workflow (Milestone 2). The cases below are recorded
 compatibility/private-alpha follow-ups, not Milestone 1 conditions. Do not
 rerun accepted feasibility checks unless a changed path or new failure
 warrants it.
@@ -317,6 +323,8 @@ Harness: `http://localhost:8788/dev.html`, parameters
 - `docs/m0-enablement-acceptance.md`: accepted fixes, deployment, native skill, terminal/PiP web proof.
 - `docs/m0-closeout.md`: M0 GO decision, supported path, deferred validation ownership.
 - `docs/swe-2-brief-006.md`: Milestone 1 core state engine completion brief.
+- `docs/swe-2-brief-006-follow-up.md`: exact three-case coordinator review and probe.
+- `docs/swe-2-brief-007.md`: prepared Milestone 2 consumer workflow brief.
 - `docs/m1-core-engine-acceptance.md`: four-criteria evidence mapping and corrections.
 - `docs/adr/`, architecture/privacy/security docs.
 - `packages/test-fixtures/fixtures/`: synthetic scenarios.

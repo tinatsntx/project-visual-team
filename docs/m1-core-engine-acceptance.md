@@ -1,10 +1,21 @@
 # Milestone 1 core state engine — acceptance evidence
 
+**Coordinator review, 2026-09-15: acceptance held for three bounded cases.**
+Reviewed candidate `a4ffe13e8055496f284b14a52c17713412b08107`. Independently
+verified typecheck, 131/131 tests, build, compatibility, original M0 probe, and
+committed-diff whitespace. New fixed probe `evals/m1-coordinator-probe.mts`
+exits 1: hook-ID collision targets the wrong worker; reported wait omits the
+pending need; unrelated lead work clears an unresolved specialist ask after
+derived idle. Details: `docs/swe-2-brief-006-follow-up.md`.
+The implementation's four-criterion table below describes its existing
+passing tests, not final coordinator acceptance. M0 stays complete. Candidate
+is not pushed/deployed. Consumer workflow brief 007 is prepared for next.
+
 Brief: `docs/swe-2-brief-006.md`. Scope: finish the existing engine — property
 coverage, provenance verification on every mutation path, invalid-target
 safety, replay fixtures — with no new storage or workflow features.
 
-Verification on this diff: `npm run typecheck` clean; `npm test` 120/120;
+Verification on this diff: `npm run typecheck` clean; `npm test` 131/131;
 `npm run build` produces widget + dev-host bundles and the verbatim-embed
 check passes; `node --import tsx evals/m0-enablement-coordinator-probe.mts`
 exits 0; `git diff --check` clean.
