@@ -1,5 +1,10 @@
 # Brief 006 follow-up — three reproduced targeting/wait cases
 
+**Resolved and accepted 2026-09-15:** `2eda8b3`. Coordinator reran the unchanged
+probe: all three cases PASS, exit 0. Typecheck, 145 tests, compatibility,
+build, original M0 probe, and committed-diff checks pass. M1 is COMPLETE;
+proceed to brief 007. The original reproduction below is historical.
+
 Coordinator review of `a4ffe13e8055496f284b14a52c17713412b08107`, 2026-09-15.
 M0 stays COMPLETE. M1 acceptance and publication are held for the cases below;
 this is not another platform-matrix gate. GitHub main remains `daa32ad` and

@@ -715,6 +715,13 @@ Proceed only if all are true:
 
 ## Milestone 1 — Core state engine
 
+**COMPLETE / GO to Milestone 2 — 2026-09-15.** Coordinator accepted
+`2eda8b3f42dac033e473345b579c76911ed73917` after re-review of all three
+follow-up cases. All four exit criteria below have passing evidence:
+145 tests, seeded invariant checks, complete-record replay, both unchanged
+coordinator probes, typecheck, build, and native compatibility verification.
+See `docs/m1-core-engine-acceptance.md`. Next: `docs/swe-2-brief-007.md`.
+
 ### Deliverables
 
 - Typed event schema.

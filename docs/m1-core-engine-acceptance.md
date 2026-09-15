@@ -1,14 +1,49 @@
 # Milestone 1 core state engine — acceptance evidence
 
-**Coordinator follow-up, 2026-09-15: the three held cases are fixed.**
+**M1 COMPLETE / GO to Milestone 2 — coordinator accepted 2026-09-15.**
+Accepted product code: `2eda8b3f42dac033e473345b579c76911ed73917`.
+Coordinator independently reviewed the namespace resolution, attributed
+pending-need lifecycle, immutable record handling, and regressions. Typecheck,
+145/145 tests, native compatibility, build/literal embedding, and both
+unchanged coordinator probes pass. The probe files were not modified by the
+fix. Full committed-delta whitespace check passes. Widget 160.1 KB; dev host
+465.9 KB. All four exit criteria below are accepted; no new blocker found.
+Proceed with `docs/swe-2-brief-007.md`. M0 stays closed.
+
+## Published release verification
+
+- Published and verified GitHub main at accepted product SHA `2eda8b3`.
+  [CI run 35011395446](https://github.com/tinatsntx/project-visual-team/actions/runs/35011395446)
+  completed successfully for that exact code.
+- Render deploy `dep-dakpdt15efls73d5b7r0` went live at
+  `2026-09-15T19:06:05.073713Z` with exact SHA
+  `2eda8b3f42dac033e473345b579c76911ed73917`. Auto-deploy remains off;
+  hosted TTL, package configuration, and permissions were not changed.
+- Hosted health and six-tool discovery pass. Synthetic HTTP task
+  `vt_59b5fbfa9e1d6c24d543f60c`, created `19:07:13.411Z`, correctly reported
+  work -> waiting for user (needsUser true, reported provenance) -> resumed
+  work (needs cleared) -> completed at `19:07:14.297Z`. Five events; final
+  verification retained. A later work report rejects without snapshot change.
+- Hosted render returns the completed snapshot; JS/CSS are embedded verbatim.
+  Widget SHA-256 remains
+  `609f38674d9bf60443c7a583574aa874334308278ee18a63de6ffd400835601e`.
+- Error-level app-log query for `19:06:05Z` through `19:07:24.590990647Z`
+  returned no entries and no remaining pages. This is a bounded smoke window.
+- These were synthetic hosted HTTP checks, not another native hook or browser
+  acceptance run. No new real-host observation is claimed. Existing M0 proof
+  remains valid; bridge, UI source, and plugin files were unchanged by M1.
+
+Closeout documentation commits may follow the deployed product SHA without
+another deployment. All four M1 criteria are accepted; start consumer workflow.
+
+**Follow-up history:** the three held cases are fixed.
 Review of `a4ffe13` reproduced three targeting/wait defects via the fixed
 probe `evals/m1-coordinator-probe.mts` (docs/swe-2-brief-006-follow-up.md).
 This follow-up diff resolves all three; the probe now exits 0 with every
 case `pass:true` — hook-ID collision routes to the specialist, a reported
 wait exposes `needsUser`/`reported` provenance, and unrelated lead activity
-cannot resolve another worker's pending ask. M0 stays complete; the
-candidate remains unpushed/undeployed pending coordinator re-review.
-Consumer workflow brief 007 is prepared for next.
+cannot resolve another worker's pending ask. The earlier publication hold
+is lifted by the acceptance above. Consumer workflow brief 007 is next.
 
 Brief: `docs/swe-2-brief-006.md`. Scope: finish the existing engine — property
 coverage, provenance verification on every mutation path, invalid-target

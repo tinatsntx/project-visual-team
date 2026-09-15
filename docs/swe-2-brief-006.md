@@ -1,5 +1,10 @@
 # SWE-2 brief 006 — finish Milestone 1 core state engine
 
+**Accepted / M1 COMPLETE, 2026-09-15:** `a4ffe13` plus follow-up `2eda8b3`.
+All four exit criteria are verified in `docs/m1-core-engine-acceptance.md`.
+The three coordinator findings are resolved; 145 tests and both unchanged
+probes pass. Next coding task is `docs/swe-2-brief-007.md`.
+
 M0 is closed. Start Milestone 1 under `PROJECT_PLAN.md` §14. Read
 `HANDOFF.md`, `docs/m0-closeout.md`, and the current source first.
 Product baseline is `4fb3548`; documentation-only closeout commits may follow.

@@ -5,7 +5,11 @@ Updated 2026-09-15. Results/GO decisions in `docs/feasibility-report.md`.
 **M0 COMPLETE / GO:** ChatGPT web + Windows Codex CLI + Render. The eight
 feasibility criteria pass on this supported path. Pending surfaces stay
 unverified and move to later compatibility work; see `docs/m0-closeout.md`.
-Current tested/deployed code: `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
+Current tested/deployed code: `2eda8b3f42dac033e473345b579c76911ed73917`.
+M1 core engine is accepted with 145 tests, both unchanged coordinator probes,
+exact-code CI, and hosted HTTP wait/resume/finish smoke. This adds no new
+browser/native matrix claims; earlier dated M0 evidence is unchanged.
+See `docs/m1-core-engine-acceptance.md`; next work is brief 007.
 Latest packaging regenerated/refreshed from that SHA; installed skill and
 hook files match source. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.

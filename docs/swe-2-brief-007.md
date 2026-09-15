@@ -1,7 +1,9 @@
 # SWE-2 brief 007 — Milestone 2 consumer workflow
 
-Prepared 2026-09-15. Execute after brief 006's three-case follow-up passes
-coordinator review. M0 is complete; do not repeat its browser matrix.
+**Cleared to execute, 2026-09-15.** Brief 006's three-case follow-up is accepted
+at `2eda8b3f42dac033e473345b579c76911ed73917`. M0 and M1 are complete;
+do not repeat the M0 browser matrix. Start from this accepted product code
+plus any coordinator closeout documentation commits.
 Read `HANDOFF.md`, `PROJECT_PLAN.md` §5/§6/§9/§14/§15, and final M1 evidence.
 
 ## Outcome

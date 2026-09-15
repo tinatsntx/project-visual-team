@@ -8,7 +8,11 @@ pass with CSP enforcement on. Native skill completion, terminal web modes,
 and actual web PiP also pass. All eight feasibility criteria pass on that
 supported path. Untested surfaces remain unverified; full compatibility is
 not claimed. Closeout and backlog ownership: `docs/m0-closeout.md`.
-**Current code tested/deployed:** `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
+**Current code tested/deployed:** `2eda8b3f42dac033e473345b579c76911ed73917`.
+M1 is complete: 145 tests and both coordinator probes pass; exact-code CI and
+hosted wait/resume/finish smoke pass. UI/plugin source is unchanged by M1;
+the dated real-host M0 evidence below is preserved. Next is consumer workflow,
+`docs/swe-2-brief-007.md`. Full release record: `docs/m1-core-engine-acceptance.md`.
 **Latest packaging tested:** regenerated/refreshed from that SHA; installed
 skill, hook declaration, and script match source. The corrected installed-root
 hook is retained. Brief 005 and the M0 enablement fixes are accepted.

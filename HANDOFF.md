@@ -2,8 +2,8 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 COMPLETE; 1 — core state engine reviewed, three bounded
-targeting/wait fixes remain before acceptance. Initial supported
+**Milestone:** 0 and 1 COMPLETE; next is 2 — consumer workflow skill.
+Coordinator accepted `2eda8b3`; all three follow-up probes pass. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
 Controlled connection-failure recovery and fullscreen/return also pass.
@@ -30,27 +30,30 @@ real ChatGPT/native and connection-recovery acceptance. Brief 005 `515727a`
 is accepted, published, and deployed: clean-checkout verification and literal
 resource embedding pass. M0 enablement and its two reviewed fixes are
 accepted at `4fb3548`; no new coding blocker was found in that review.
-M0 is closed for the tested path. SWE-2 brief 006 is implemented locally:
+M0 is closed for the tested path. SWE-2 brief 006 and its follow-up are accepted:
 the engine rejects cross-task events and explicit-unresolvable worker
 targets, closes derived-provenance holes on indirect kinds, validates
 finish targets, and gains seeded property + ordered replay evidence. The
-coordinator's three reproduced follow-up gaps are fixed in this working
-tree: worker resolution is now namespace-aware (hook agent_ids match
+coordinator's three reproduced follow-up gaps are fixed in `2eda8b3`:
+worker resolution is namespace-aware (hook agent_ids match
 externalId first; reported ids match internal roster ids first), a reported
 `waiting_for_user` records an attributed pending need, and pending needs
 are attributed per ask-holder (`pendingUserNeeds`) so unrelated activity
 can never resolve another worker's ask. `evals/m1-coordinator-probe.mts`
-exits 0 — all three cases pass — and 143/143 tests, typecheck, build, and
-both probes are green. M0 remains closed; no browser gate reopened.
-Milestone 2 consumer workflow is prepared in `docs/swe-2-brief-007.md` for
-after those fixes pass review. Evidence: `docs/m1-core-engine-acceptance.md`.
+exits 0 — all three cases pass. Coordinator independently verified 145/145
+tests, typecheck, build, native compatibility, both unchanged probes, and
+committed-delta whitespace. M1's four exit criteria are met; no new blocker
+was found. M0 remains closed; no browser gate reopened. Milestone 2 consumer
+workflow is cleared in `docs/swe-2-brief-007.md`.
+Evidence: `docs/m1-core-engine-acceptance.md`.
 
 ## Current state
 
-- Last deployed product-code baseline on Render:
-  `4fb35480edc85bc5f996684a0b45bbd2d0c2c5d3`.
-  GitHub main is `daa32ad` (M0 closeout docs). Candidate `a4ffe13` and local
-  coordinator review records are not pushed/deployed while M1 fixes remain.
+- Accepted product-code baseline published to GitHub and live on Render:
+  `2eda8b3f42dac033e473345b579c76911ed73917`.
+  Exact-code CI `35011395446` is green. Hosted six-tool discovery, reported
+  wait/resume/finish, terminal freeze, retained verification, and literal UI
+  assets pass. Closeout documentation commits may follow that deployed SHA.
 - M0-enablement code `3ed245e` plus fixes `3ab16d0` are accepted: reported
   workflow/finish tools, testable TTL override, and PiP control. Terminal
   tasks reject new events; oversized finish metadata rejects before mutation.
@@ -84,7 +87,7 @@ after those fixes pass review. Evidence: `docs/m1-core-engine-acceptance.md`.
   Full deployment IDs, availability decision, and remaining acceptance:
   `docs/sites-acceptance.md`.
 - npm workspaces, strict TypeScript, Node >= 20; Windows-first development.
-- Deployed `4fb3548` serves six MCP tools at `/mcp`, including the two
+- Deployed `2eda8b3` serves six MCP tools at `/mcp`, including the two
   reported-boundary tools. Stateless HTTP transport with an in-memory task
   repository, task-scoped read capabilities, and 2h task TTL (overridable
   via `VISUAL_TEAM_TTL_MS`; hosted default is unchanged).
@@ -108,8 +111,11 @@ Render: [project-visual-team-mcp](https://dashboard.render.com/web/srv-dak13nmk1
 - Free Node service, Ohio; Node `24.12.0`, `NODE_ENV=production`.
 - Build: `npm ci --include=dev && npm run build && npm run typecheck && npm test`
 - Start: `npm start --workspace @visual-team/mcp-server`
-- Deploy `dep-dakkf76k1f9s73dkl8q0` live at
-  `2026-09-15T13:27:45.029096Z`, server/UI SHA `4fb3548`.
+- Deploy `dep-dakpdt15efls73d5b7r0` live at
+  `2026-09-15T19:06:05.073713Z`, server/UI SHA `2eda8b3`.
+- Latest release smoke: `vt_59b5fbfa9e1d6c24d543f60c`, completed at
+  `2026-09-15T19:07:14.297Z`, five reported events. This is a synthetic hosted
+  HTTP check; earlier real ChatGPT/native evidence below remains separate.
 - Auto-deploy off: coordinator reviews each result before deploying.
 - In-memory tasks disappear on restart. Use synthetic M0 data.
 
@@ -119,7 +125,7 @@ ChatGPT development app: **Visual Team M0**
 - Connector: `plugin_asdk_app_6aa8123840f081918b2cd299cb5ca93d`.
 - [App details](https://chatgpt.com/plugins/plugin_asdk_app_6aa8123840f081918b2cd299cb5ca93d).
 - [Start visual task — earlier QA conversation](https://chatgpt.com/c/6aa81bf1-cd7c-83ea-8ce8-86707bcf2061).
-- Latest QA: [Render visual task](https://chatgpt.com/c/6aa949a4-a5b4-83ea-9586-4835f4304167).
+- Latest real-host QA: [Render visual task](https://chatgpt.com/c/6aa949a4-a5b4-83ea-9586-4835f4304167).
   Fresh `4fb3548` completed-task render, correct seven events including
   verification, fullscreen/return/host Close, and PiP/return pass. Task
   `vt_24d111a38068a994393527e1`, created `2026-09-15T13:31:08.842Z`.
@@ -227,8 +233,8 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** brief 006 follow-up's three reproduced cases, then
-brief 007 consumer workflow (Milestone 2). The cases below are recorded
+**Current priority:** brief 007 consumer workflow (Milestone 2). Brief 006 and
+its follow-up are accepted; no further M1 work is required. The cases below are recorded
 compatibility/private-alpha follow-ups, not Milestone 1 conditions. Do not
 rerun accepted feasibility checks unless a changed path or new failure
 warrants it.
