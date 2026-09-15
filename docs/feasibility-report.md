@@ -14,6 +14,18 @@ Codex writes plus ChatGPT read-only render/refresh now pass on this Pro account
 using Render. This does not enable Sites MCP. See `docs/sites-acceptance.md`.
 All eight GO criteria must hold before Milestone 1+.
 
+## M0 enablement review (3ed245e / 6cd5d87, 2026-09-14 CT)
+
+**HELD before publication/deployment.** Coordinator independently passes
+typecheck, 83/83 tests, native compatibility, build and literal resource checks.
+Two additional loopback HTTP probes fail: a work report after failure from
+PLANNING changes the worker to WORKING while the task stays FAILED; a valid
+500-character finish summary silently discards verification and artifact data.
+The tested Render version remains `515727a`; no PiP/terminal/native skill
+acceptance is claimed for this local build. Focused follow-up and exact
+reproduction: `docs/swe-2-m0-enablement-follow-up.md` and
+`evals/m0-enablement-coordinator-probe.mts`.
+
 ## Brief 005 acceptance (515727a, 2026-09-14 CT / 2026-09-15 UTC)
 
 Full record: `docs/brief-005-acceptance.md`. Coordinator independently reviewed

@@ -31,12 +31,17 @@ and platform gates remain open.
 
 - Verified GitHub main and Render deploy:
   `515727a2d8ec08c95ce3c2e610f4578c56978347`.
-- Local HEAD `3ed245e` adds unreviewed M0-enablement work: the plan §9.2/§9.5
+- Local HEAD `6cd5d87` includes M0-enablement code `3ed245e`: the plan §9.2/§9.5
   reported tools (`report_workflow_step`, `finish_visual_task`), a
   `VISUAL_TEAM_TTL_MS` override for expiry testing, and PiP enablement
   (flag on plus a Pop out control). 83/83 tests, typecheck, build, and the
-  UI-resource verbatim check pass locally. Awaiting coordinator review; not
-  pushed or deployed.
+  UI-resource verbatim check pass in coordinator verification. Review found
+  two real-HTTP blockers (a work report accepted after early task failure,
+  and silently discarded finish verification/artifact metadata); fix commit
+  `3ab16d0` freezes terminal tasks in the reducer and rejects oversized
+  finish detail rather than truncating. 88/88 tests and the coordinator
+  probe (exit 0) pass. See `docs/swe-2-m0-enablement-follow-up.md`. Awaiting
+  re-review; nothing pushed or deployed; the installed skill was not refreshed.
 - Coordinator independently verified typecheck, 74 tests, compatibility and
   installed-root Windows checks, build, and whitespace checks. A full committed
   source export with fresh dependencies and no generated UI passes tests

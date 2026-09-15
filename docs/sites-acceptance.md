@@ -113,4 +113,3 @@ then `npm run dev:sites`. The preview uses a local D1 database under ignored
 Never rewrite a migration after it has been applied to the hosted Site.
 
 Storage and retention decision: [ADR-007 in the Sites worktree](../../project-visual-team-sites/docs/adr/007-sites-storage.md).
-

@@ -7,6 +7,19 @@ Latest packaging tested: `8ef7822ef5d2ef6403d782bf2e50cd23f0a94239`;
 the corrected native package is unchanged. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.
 
+## M0 enablement review (3ed245e / 6cd5d87, local only)
+
+| Case | Result |
+|---|---|
+| Typecheck, 83 tests, compatibility, build, literal resource check | PASS independently |
+| Work report after reported failure directly from PLANNING | FAIL: applied true; FAILED task's worker becomes WORKING; count +1 |
+| Maximum accepted finish summary plus verification and reference | FAIL: applied true; verification and artifact discarded |
+| New real-host PiP, terminal, refreshed skill acceptance | HELD pending the two reproduced fixes; not deployed |
+
+Probe: `node --import tsx evals/m0-enablement-coordinator-probe.mts` (exit 1).
+Follow-up: `docs/swe-2-m0-enablement-follow-up.md`. Hosted `515727a` and its
+earlier acceptance remain unchanged.
+
 ## Brief 005 acceptance (515727a, 2026-09-14 CT / 2026-09-15 UTC)
 
 | ID | Case | Result |
