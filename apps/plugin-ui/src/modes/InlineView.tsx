@@ -63,6 +63,13 @@ export function InlineView({
         <button
           type="button"
           className="vt-btn"
+          onClick={() => void hostBridge.requestDisplayMode("pip")}
+        >
+          Pop out
+        </button>
+        <button
+          type="button"
+          className="vt-btn"
           aria-expanded={showEvidence}
           onClick={() => setShowEvidence((v) => !v)}
         >

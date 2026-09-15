@@ -35,4 +35,16 @@ describe("display-mode bridge state", () => {
     assert.equal(await applyDisplayModeRequest(async () => ({}), store), false);
     assert.equal(store.current(), "fullscreen");
   });
+
+  it("accepts pip as a host-provided or accepted mode", async () => {
+    const store = new DisplayModeStore();
+    assert.equal(store.applyHostGlobals({ globals: { displayMode: "pip" } }), true);
+    assert.equal(store.current(), "pip");
+
+    assert.equal(
+      await applyDisplayModeRequest(async () => ({ mode: "inline" }), store),
+      true,
+    );
+    assert.equal(store.current(), "inline");
+  });
 });

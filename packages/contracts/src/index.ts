@@ -180,8 +180,10 @@ export const TaskSnapshotSchema = z.object({
 export type TaskSnapshot = z.infer<typeof TaskSnapshotSchema>;
 
 // ---------------------------------------------------------------------------
-// Tool inputs / outputs (plan §9). Only the four Milestone-0 tools have
-// runtime implementations; the remaining contract shapes land in Milestone 1.
+// Tool inputs / outputs (plan §9). Milestone 0 implements start_visual_task,
+// record_codex_event, get_visual_task, render_visual_task, plus the reported
+// boundary tools report_workflow_step (§9.2) and finish_visual_task (§9.5) so
+// terminal states are reachable truthfully. Remaining shapes land later.
 // ---------------------------------------------------------------------------
 
 export const StartVisualTaskInputSchema = z.object({
@@ -212,6 +214,36 @@ export const RenderVisualTaskInputSchema = z.object({
   taskId: z.string().min(1).max(128),
 });
 export type RenderVisualTaskInput = z.infer<typeof RenderVisualTaskInputSchema>;
+
+/** §9.2: a model-reported phase boundary. Reported provenance, never observed. */
+export const ReportWorkflowStepInputSchema = z.object({
+  taskId: z.string().min(1).max(128),
+  phase: WorkflowPhaseSchema,
+  eventId: z.string().min(1).max(128).optional(),
+  at: z.string().min(1).max(64).optional(),
+});
+export type ReportWorkflowStepInput = z.infer<typeof ReportWorkflowStepInputSchema>;
+
+/** §9.5: final reported result. References only — no artifact contents (§13.1). */
+export const FinishVisualTaskInputSchema = z.object({
+  taskId: z.string().min(1).max(128),
+  outcome: z.enum(["completed", "failed"]),
+  /** Non-sensitive result label reported by the host model. */
+  summary: z.string().max(500).optional(),
+  verification: z.enum(["passed", "failed", "not_run"]).optional(),
+  artifacts: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(120),
+        uri: z.string().max(500).optional(),
+      }),
+    )
+    .max(10)
+    .optional(),
+  eventId: z.string().min(1).max(128).optional(),
+  at: z.string().min(1).max(64).optional(),
+});
+export type FinishVisualTaskInput = z.infer<typeof FinishVisualTaskInputSchema>;
 
 /** Result of applying one visual event to a snapshot. */
 export type ReduceResult =

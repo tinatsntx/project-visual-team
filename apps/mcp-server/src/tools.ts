@@ -1,8 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
+  FinishVisualTaskInputSchema,
   GetVisualTaskInputSchema,
   RecordCodexEventInputSchema,
   RenderVisualTaskInputSchema,
+  ReportWorkflowStepInputSchema,
   StartVisualTaskInputSchema,
   UI_TEMPLATE_URI,
   type TaskSnapshot,
@@ -12,18 +14,22 @@ import {
   createRenderVisualTaskResult,
 } from "@visual-team/contracts/meta";
 import { mapCodexEvent } from "@visual-team/codex-event-mapper";
+import { mapTaskFinish, mapWorkflowPhase } from "./reported-steps.js";
 import { safeTokenEqual } from "./auth/tokens.js";
 import type { Clock, InMemoryTaskRepository } from "./repositories/memory.js";
 import { RateLimiter } from "./ratelimit.js";
 import { bundleAvailable, uiResourceContents } from "./ui-resources/widget.js";
 
 /**
- * The four Milestone-0 tools (PROJECT_PLAN.md §9, §14):
- *   start_visual_task, record_codex_event, get_visual_task, render_visual_task.
+ * Milestone-0 tools (PROJECT_PLAN.md §9, §14): start_visual_task,
+ * report_workflow_step, record_codex_event, get_visual_task,
+ * finish_visual_task, render_visual_task.
  *
  * `record_codex_event` is append-only and can never approve, deny, rewrite, or
- * block a Codex action (§9.3, §13.4). `render_visual_task` is the only tool
- * that attaches the UI template (§9.6).
+ * block a Codex action (§9.3, §13.4). `report_workflow_step` and
+ * `finish_visual_task` record model-reported boundaries only — reported
+ * provenance, and the state machine still rejects unsupported transitions.
+ * `render_visual_task` is the only tool that attaches the UI template (§9.6).
  */
 
 export interface ToolDeps {
@@ -74,6 +80,51 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
         { taskId: snapshot.id, task: snapshot },
         { [TASK_CAPABILITY_META_KEY]: capability },
       );
+    },
+  );
+
+  server.registerTool(
+    "report_workflow_step",
+    {
+      description:
+        "Report an explicit workflow phase boundary for your own task: planning, researching, implementing, testing, reviewing, waiting_for_user, completed, or failed. Recorded with reported provenance — a claim about your own work, never observed evidence. The server rejects unsupported transitions.",
+      inputSchema: ReportWorkflowStepInputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async (args) => {
+      const stored = repo.get(args.taskId);
+      if (!stored) {
+        return textResult("No active visual task to attach this report to.", {
+          applied: false,
+          reason: "no_active_task",
+        });
+      }
+      const taskId = stored.record.snapshot.id;
+      if (!eventLimiter.allow(taskId)) {
+        return textResult("Rate limit reached for this task.", {
+          applied: false,
+          taskId,
+          reason: "rate_limited",
+        });
+      }
+      const event = mapWorkflowPhase({
+        taskId,
+        phase: args.phase,
+        at: args.at ?? clock.nowIso(),
+        eventId: args.eventId ?? `evt_${taskId}_${stored.record.snapshot.eventCount + 1}_report_${args.phase}`,
+      });
+      const applied = repo.apply(stored, event);
+      if (!applied.ok) {
+        return textResult(`Report rejected safely: ${applied.error}`, {
+          applied: false,
+          taskId,
+          reason: applied.error,
+        });
+      }
+      return textResult(applied.changed ? `Recorded. ${event.label}` : "Duplicate event ignored.", {
+        applied: applied.changed,
+        taskId,
+      });
     },
   );
 
@@ -147,6 +198,54 @@ export function registerTools(server: McpServer, deps: ToolDeps): void {
       const snapshot = repo.readSnapshot(stored);
       const recentEvents = repo.recentEvents(stored, args.eventLimit);
       return textResult(summarize(snapshot), { task: snapshot, recentEvents });
+    },
+  );
+
+  server.registerTool(
+    "finish_visual_task",
+    {
+      description:
+        "Report the final result for your own task: outcome (completed or failed), a short result summary, verification status, and artifact references. Recorded with reported provenance. Artifact contents are never uploaded or retained.",
+      inputSchema: FinishVisualTaskInputSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async (args) => {
+      const stored = repo.get(args.taskId);
+      if (!stored) {
+        return textResult("No active visual task to attach this report to.", {
+          applied: false,
+          reason: "no_active_task",
+        });
+      }
+      const taskId = stored.record.snapshot.id;
+      if (!eventLimiter.allow(taskId)) {
+        return textResult("Rate limit reached for this task.", {
+          applied: false,
+          taskId,
+          reason: "rate_limited",
+        });
+      }
+      const event = mapTaskFinish({
+        taskId,
+        outcome: args.outcome,
+        ...(args.summary !== undefined ? { summary: args.summary } : {}),
+        ...(args.verification !== undefined ? { verification: args.verification } : {}),
+        ...(args.artifacts !== undefined ? { artifacts: args.artifacts } : {}),
+        at: args.at ?? clock.nowIso(),
+        eventId: args.eventId ?? `evt_${taskId}_${stored.record.snapshot.eventCount + 1}_finish`,
+      });
+      const applied = repo.apply(stored, event);
+      if (!applied.ok) {
+        return textResult(`Report rejected safely: ${applied.error}`, {
+          applied: false,
+          taskId,
+          reason: applied.error,
+        });
+      }
+      return textResult(applied.changed ? `Recorded. ${event.label}` : "Duplicate event ignored.", {
+        applied: applied.changed,
+        taskId,
+      });
     },
   );
 

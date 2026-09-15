@@ -11,8 +11,17 @@ interface ToolResult {
   content?: Array<{ type: string; text?: string }>;
   structuredContent?: {
     taskId?: string;
-    task?: { id: string; title: string; workers: Array<{ role: string; label: string }>; eventCount: number };
-    recentEvents?: Array<{ id: string }>;
+    applied?: boolean;
+    reason?: string;
+    task?: {
+      id: string;
+      title: string;
+      state?: string;
+      stateProvenance?: string;
+      workers: Array<{ role: string; label: string }>;
+      eventCount: number;
+    };
+    recentEvents?: Array<{ id: string; kind?: string; provenance?: string; detail?: string }>;
     uiAvailable?: boolean;
   };
   _meta?: Record<string, unknown>;
@@ -79,6 +88,9 @@ describe("registered Streamable HTTP tool transport", () => {
         const getTool = listed.tools.find((tool) => tool.name === "get_visual_task");
         assert.ok(getTool);
         assert.equal(getTool.inputSchema.properties?.capability, undefined);
+        const toolNames = listed.tools.map((tool) => tool.name);
+        assert.ok(toolNames.includes("report_workflow_step"));
+        assert.ok(toolNames.includes("finish_visual_task"));
 
         const start = (await callMcp(baseUrl, "tools/call", {
           name: "start_visual_task",
@@ -204,5 +216,111 @@ describe("registered Streamable HTTP tool transport", () => {
         await stopServer(server);
       }
     }).finally(() => rmSync(bundleDir, { recursive: true, force: true }));
+  });
+
+  it("records reported boundaries and reaches a terminal state truthfully", async () => {
+    const { server, baseUrl } = await startServer();
+    try {
+      const start = (await callMcp(baseUrl, "tools/call", {
+        name: "start_visual_task",
+        arguments: {
+          title: "Reported finish regression",
+          summary: "Verify reported boundary tools reach terminal state.",
+          mode: "solo",
+          privacyMode: "standard",
+        },
+      })) as ToolResult;
+      const taskId = start.structuredContent?.taskId;
+      const capability = start._meta?.[TASK_CAPABILITY_META_KEY];
+      assert.equal(typeof taskId, "string");
+      assert.equal(typeof capability, "string");
+
+      // PLANNING -> COMPLETED is unsupported; the report is rejected safely.
+      const early = (await callMcp(baseUrl, "tools/call", {
+        name: "finish_visual_task",
+        arguments: { taskId, outcome: "completed" },
+      })) as ToolResult;
+      assert.equal(early.structuredContent?.applied, false);
+      assert.match(early.structuredContent?.reason ?? "", /cannot move/);
+
+      const step = (await callMcp(baseUrl, "tools/call", {
+        name: "report_workflow_step",
+        arguments: { taskId, phase: "implementing" },
+      })) as ToolResult;
+      assert.equal(step.structuredContent?.applied, true);
+
+      const finish = (await callMcp(baseUrl, "tools/call", {
+        name: "finish_visual_task",
+        arguments: {
+          taskId,
+          outcome: "completed",
+          summary: "Reported done",
+          verification: "passed",
+          artifacts: [{ label: "PR #1", uri: "https://example.test/pr/1" }],
+        },
+      })) as ToolResult;
+      assert.equal(finish.structuredContent?.applied, true);
+
+      const read = (await callMcp(baseUrl, "tools/call", {
+        name: "get_visual_task",
+        arguments: { taskId, eventLimit: 20 },
+        _meta: { [TASK_CAPABILITY_META_KEY]: capability },
+      })) as ToolResult;
+      assert.equal(read.structuredContent?.task?.state, "COMPLETED");
+      assert.equal(read.structuredContent?.task?.stateProvenance, "reported");
+      const finished = read.structuredContent?.recentEvents?.find((e) => e.kind === "task_finished");
+      assert.equal(finished?.provenance, "reported");
+      assert.match(finished?.detail ?? "", /Reported done/);
+
+      const late = (await callMcp(baseUrl, "tools/call", {
+        name: "report_workflow_step",
+        arguments: { taskId, phase: "testing" },
+      })) as ToolResult;
+      assert.equal(late.structuredContent?.applied, false);
+    } finally {
+      await stopServer(server);
+    }
+  });
+
+  it("expires tasks on the real HTTP path when VISUAL_TEAM_TTL_MS is set", async () => {
+    const previous = process.env.VISUAL_TEAM_TTL_MS;
+    process.env.VISUAL_TEAM_TTL_MS = "50";
+    try {
+      const { server, baseUrl } = await startServer();
+      try {
+        const start = (await callMcp(baseUrl, "tools/call", {
+          name: "start_visual_task",
+          arguments: {
+            title: "Expiry regression",
+            summary: "Verify real task expiry on the HTTP path.",
+            mode: "solo",
+            privacyMode: "standard",
+          },
+        })) as ToolResult;
+        const taskId = start.structuredContent?.taskId;
+        const capability = start._meta?.[TASK_CAPABILITY_META_KEY];
+        assert.equal(typeof taskId, "string");
+
+        await new Promise((resolve) => setTimeout(resolve, 120));
+
+        const read = (await callMcp(baseUrl, "tools/call", {
+          name: "get_visual_task",
+          arguments: { taskId },
+          _meta: { [TASK_CAPABILITY_META_KEY]: capability },
+        })) as ToolResult;
+        assert.equal(read.isError, true);
+
+        const render = (await callMcp(baseUrl, "tools/call", {
+          name: "render_visual_task",
+          arguments: { taskId },
+        })) as ToolResult;
+        assert.equal(render.isError, true);
+      } finally {
+        await stopServer(server);
+      }
+    } finally {
+      if (previous === undefined) delete process.env.VISUAL_TEAM_TTL_MS;
+      else process.env.VISUAL_TEAM_TTL_MS = previous;
+    }
   });
 });

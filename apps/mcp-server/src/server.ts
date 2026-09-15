@@ -1,7 +1,7 @@
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { InMemoryTaskRepository, systemClock } from "./repositories/memory.js";
+import { DEFAULT_TTL_MS, InMemoryTaskRepository, systemClock } from "./repositories/memory.js";
 import { registerTools } from "./tools.js";
 
 /**
@@ -15,14 +15,21 @@ import { registerTools } from "./tools.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
-const repo = new InMemoryTaskRepository(systemClock);
+/**
+ * Optional TTL override in milliseconds (acceptance/testing only). The default
+ * remains the 2h ephemeral retention in repositories/memory.ts (§13.2).
+ */
+export function taskTtlMs(): number {
+  const raw = Number(process.env.VISUAL_TEAM_TTL_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TTL_MS;
+}
 
 function log(level: "info" | "warn" | "error", msg: string, fields: Record<string, unknown> = {}) {
   // Never log capability tokens, prompts, command text, or user payloads (§13.4).
   process.stdout.write(JSON.stringify({ level, msg, at: new Date().toISOString(), ...fields }) + "\n");
 }
 
-function createServer(): McpServer {
+function createServer(repo: InMemoryTaskRepository): McpServer {
   const server = new McpServer(
     { name: "visual-team", version: "0.1.0" },
     { capabilities: { tools: {}, resources: {} } },
@@ -32,6 +39,7 @@ function createServer(): McpServer {
 }
 
 export function buildApp(): express.Express {
+  const repo = new InMemoryTaskRepository(systemClock, taskTtlMs());
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "64kb" }));
@@ -42,7 +50,7 @@ export function buildApp(): express.Express {
 
   app.post("/mcp", async (req, res) => {
     try {
-      const server = createServer();
+      const server = createServer(repo);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless
         enableJsonResponse: true,
@@ -73,6 +81,10 @@ const isMain = process.argv[1] && import.meta.url === new URL(`file://${process.
 if (isMain) {
   const app = buildApp();
   app.listen(PORT, () => {
-    log("info", "visual_team_mcp_listening", { port: PORT, endpoint: `http://localhost:${PORT}/mcp` });
+    log("info", "visual_team_mcp_listening", {
+      port: PORT,
+      endpoint: `http://localhost:${PORT}/mcp`,
+      taskTtlMs: taskTtlMs(),
+    });
   });
 }

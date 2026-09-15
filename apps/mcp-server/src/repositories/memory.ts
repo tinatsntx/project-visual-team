@@ -36,7 +36,7 @@ export const systemClock: Clock = {
   nowMs: () => Date.now(),
 };
 
-const DEFAULT_TTL_MS = 2 * 60 * 60 * 1000; // 2h ephemeral retention
+export const DEFAULT_TTL_MS = 2 * 60 * 60 * 1000; // 2h ephemeral retention
 
 export class InMemoryTaskRepository {
   private tasks = new Map<string, StoredTask>();

@@ -16,9 +16,16 @@ so the plugin package is coherent and testable during the feasibility gate.
    `references/delegation-rules.md`).
 2. Do the work with native ChatGPT/Codex capabilities. No new execution
    infrastructure, no Agents API.
-3. Call `render_visual_task` after the initial plan and again at completion
+3. Call `report_workflow_step` when your phase genuinely changes (planning,
+   researching, implementing, testing, reviewing, waiting_for_user). Report
+   only real boundaries — never invent progress.
+4. Call `finish_visual_task` once at the end with the true outcome, a short
+   result summary, and verification status. If the work did not finish, report
+   `failed` or leave the task unfinished — never claim completion you did not
+   reach.
+5. Call `render_visual_task` after the initial plan and again at completion
    so the user sees the visual view.
-4. If the UI does not render, still give a complete text answer — the workflow
+6. If the UI does not render, still give a complete text answer — the workflow
    must be useful without custom UI.
 
 ## What you must never do

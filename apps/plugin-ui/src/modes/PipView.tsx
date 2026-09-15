@@ -1,14 +1,15 @@
 import type { TaskSnapshot } from "@visual-team/contracts";
+import { hostBridge } from "../bridge/hostBridge.js";
 import { RobotAvatar } from "../components/RobotAvatar.js";
 import { WORKER_STATE_TEXT } from "../accessibility/stateText.js";
 import { useReducedMotion } from "../accessibility/useReducedMotion.js";
 
 /**
- * Picture-in-picture roster (PROJECT_PLAN.md §12.3). Milestone 0 placeholder:
- * rendered only when the host asks for PiP AND the feature flag is on.
+ * Picture-in-picture roster (PROJECT_PLAN.md §12.3). The flag stays so the
+ * view can be withdrawn if real-host PiP proves unreliable (plan §14).
  * See docs/feasibility-report.md for the PiP platform test.
  */
-export const PIP_FEATURE_ENABLED = false;
+export const PIP_FEATURE_ENABLED = true;
 
 export function PipView({ task, stale = false }: { task: TaskSnapshot; stale?: boolean }) {
   const reduced = useReducedMotion();
@@ -25,6 +26,9 @@ export function PipView({ task, stale = false }: { task: TaskSnapshot; stale?: b
         ))}
       </ul>
       {task.needsUser && <span className="vt-needs-dot" role="status" aria-label="This task needs you" />}
+      <button type="button" className="vt-btn" onClick={() => void hostBridge.requestDisplayMode("inline")}>
+        Back to chat
+      </button>
     </div>
   );
 }
