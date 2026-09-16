@@ -243,8 +243,9 @@ function Get-Marketplaces {
         throw 'codex plugin marketplace list --json did not return the expected marketplaces array'
     }
     foreach ($entry in $doc.marketplaces) {
-        if (-not $entry.name -or -not $entry.root) {
-            throw 'a marketplace entry is missing its name or root field'
+        if (($entry.PSObject.Properties.Name -notcontains 'name') -or ($entry.name -isnot [string]) -or ($entry.name -eq '') -or
+            ($entry.PSObject.Properties.Name -notcontains 'root') -or ($entry.root -isnot [string]) -or ($entry.root -eq '')) {
+            throw 'a marketplace entry is missing its name or root string field'
         }
     }
     # Observed schema: { marketplaces: [ { name, root } ] }
@@ -259,23 +260,39 @@ function Get-PluginState {
             throw "codex plugin list --available --json did not return the expected $field array"
         }
     }
-    foreach ($entry in $doc.installed) {
-        # Common identity: a name. Remote plugins carry source:{source:"remote",
-        # id:<string>} with no local path -- valid entries, just never ours.
-        if (-not $entry.name) {
-            throw 'an installed plugin entry is missing its name field'
+    foreach ($entry in @($doc.installed) + @($doc.available)) {
+        # Common identity: a name string on every entry, installed or listed.
+        if (($entry.PSObject.Properties.Name -notcontains 'name') -or ($entry.name -isnot [string]) -or ($entry.name -eq '')) {
+            throw 'a plugin entry is missing its name string field'
         }
+    }
+    foreach ($entry in $doc.installed) {
+        # Remote plugins carry source:{source:"remote", id:<string>} with no
+        # local path -- valid entries, just never ours.
         if ($entry.name -eq $script:PluginName) {
-            # The relevant entry must carry its full shape before state is
-            # read: enabled flag, version, and a recognizable source identity.
-            if (-not ($entry.PSObject.Properties.Name -contains 'enabled')) {
-                throw 'the visual-team plugin entry is missing its enabled field'
+            # The relevant entry must carry its real field types before state
+            # is read -- a string "false" would otherwise coerce to truthy.
+            if (($entry.PSObject.Properties.Name -notcontains 'enabled') -or ($entry.enabled -isnot [bool])) {
+                throw 'the visual-team plugin entry is missing a Boolean enabled field'
             }
-            if (-not $entry.version) {
-                throw 'the visual-team plugin entry is missing its version field'
+            if (($entry.PSObject.Properties.Name -notcontains 'version') -or ($entry.version -isnot [string]) -or ($entry.version -eq '')) {
+                throw 'the visual-team plugin entry is missing its version string field'
             }
-            if (-not $entry.source -or (-not $entry.source.path -and -not $entry.source.source)) {
+            $src = $entry.source
+            $hasLocal = ($null -ne $src) -and ($src.PSObject.Properties.Name -contains 'path') -and ($src.path -is [string]) -and ($src.path -ne '')
+            $hasRemote = ($null -ne $src) -and ($src.PSObject.Properties.Name -contains 'source') -and ($src.source -is [string]) -and ($src.source -ne '')
+            if (-not $hasLocal -and -not $hasRemote) {
                 throw 'the visual-team plugin entry has an unrecognized source shape'
+            }
+            if (($null -ne $src) -and ($src.PSObject.Properties.Name -contains 'id') -and ($src.id -isnot [string])) {
+                throw 'the visual-team plugin entry has a non-string remote source id'
+            }
+            $ms = $entry.marketplaceSource
+            if (($null -ne $ms) -and ($ms.PSObject.Properties.Name -contains 'source') -and ($ms.source -isnot [string])) {
+                throw 'the visual-team plugin entry has a non-string marketplace source'
+            }
+            if (($entry.PSObject.Properties.Name -contains 'marketplace') -and ($null -ne $entry.marketplace) -and ($entry.marketplace -isnot [string])) {
+                throw 'the visual-team plugin entry has a non-string marketplace field'
             }
         }
     }

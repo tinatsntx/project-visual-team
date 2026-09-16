@@ -700,8 +700,41 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       });
       const noVersion = await runPs(fx, "install.ps1");
       assert.equal(noVersion.code, 1, noVersion.stdout + noVersion.stderr);
-      assert.match(noVersion.stdout, /version field|could not read Codex plugin state/);
+      assert.match(noVersion.stdout, /version string field|could not read Codex plugin state/);
       assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("a string 'false' enabled field is malformed state, not truthy — rejected before mutation", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // enabled:"false" is a STRING — PowerShell truthiness would read it as
+      // enabled. The schema gate must require the actual Boolean before any
+      // mutation, in both installer and doctor.
+      writeStubState(fx, {
+        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        installed: [installedEntry(fx, { enabled: "false" })],
+      });
+      const install = await runPs(fx, "install.ps1");
+      assert.equal(install.code, 1, install.stdout + install.stderr);
+      assert.match(install.stdout, /Boolean enabled field/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+      const doctor = await runPs(fx, "doctor.ps1");
+      assert.equal(doctor.code, 1, doctor.stdout + doctor.stderr);
+      assert.match(doctor.stdout, /FAIL\] plugin state/);
+      assert.match(doctor.stdout, /Boolean enabled field/);
+      // Real Booleans still work: a genuinely disabled alternate is a note.
+      writeStubState(fx, {
+        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        installed: [remoteEntry(), installedEntry(fx, { enabled: false })],
+      });
+      const ok = await runPs(fx, "install.ps1");
+      assert.equal(ok.code, 0, ok.stdout + ok.stderr);
     } finally {
       fx.server?.close();
       rmSync(fx.root, { recursive: true, force: true });
