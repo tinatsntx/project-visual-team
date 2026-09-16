@@ -30,7 +30,7 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -77,6 +77,20 @@ function readPluginVersion() {
  * not match a commit (dirty tree or no git); `preview` carries the commit
  * the dirty tree was based on, for diagnosis.
  */
+/**
+ * Compare two directory paths by canonical form: git's --show-toplevel
+ * returns the real path (long names, on-disk case) while projectRoot may
+ * carry 8.3 short names (e.g. a Windows runner's TEMP) or symlinks.
+ * realpathSync expands both sides; the identity check stays strict.
+ */
+function canonicalPath(p) {
+  try {
+    return realpathSync(p).toLowerCase();
+  } catch {
+    return resolve(p).toLowerCase();
+  }
+}
+
 export function resolveSourceIdentity() {
   const override = process.env.VISUAL_TEAM_SOURCE_SHA;
   let revision;
@@ -88,7 +102,7 @@ export function resolveSourceIdentity() {
     if (!revision) throw new Error(`VISUAL_TEAM_SOURCE_SHA ${override} does not resolve to a commit`);
   } else {
     revision = git(["rev-parse", "HEAD"], { allowFailure: true });
-    if (!revision) return { revision: "unverified-preview", short: "preview", preview: null };
+    if (!revision) return { revision: "unverified-preview", short: "preview", preview: null, reason: "no-git" };
   }
 
   // The named tree must BE the checkout being verified. An export nested
@@ -97,8 +111,8 @@ export function resolveSourceIdentity() {
   // are not the commit's packaged inputs. A standalone export outside any
   // repo has no toplevel at all. Both are explicitly unverified.
   const toplevel = git(["rev-parse", "--show-toplevel"], { allowFailure: true });
-  if (!toplevel || resolve(toplevel).toLowerCase() !== projectRoot.toLowerCase()) {
-    return { revision: "unverified-preview", short: "preview", preview: revision };
+  if (!toplevel || canonicalPath(toplevel) !== canonicalPath(projectRoot)) {
+    return { revision: "unverified-preview", short: "preview", preview: revision, reason: "not-the-checkout" };
   }
 
   // Tracked drift vs the named revision, plus any untracked OR IGNORED files
@@ -110,7 +124,7 @@ export function resolveSourceIdentity() {
   const clean = git(["diff", "--quiet", revision, "--", ...packagedInputs], { allowFailure: true });
   const untrackedOrDirty = git(["status", "--porcelain", "--ignored", "--", ...packagedInputs]);
   if (clean === null || untrackedOrDirty !== "") {
-    return { revision: "unverified-preview", short: "preview", preview: revision };
+    return { revision: "unverified-preview", short: "preview", preview: revision, reason: "inputs-differ" };
   }
   return { revision, short: revision.slice(0, 12), preview: null };
 }
@@ -175,6 +189,7 @@ export async function buildAlphaPackage({ outDir } = {}) {
         pluginVersion: readPluginVersion(),
         sourceRevision: identity.revision,
         ...(identity.preview ? { previewOf: identity.preview } : {}),
+        ...(identity.reason ? { sourceIdentityReason: identity.reason } : {}),
         generatedAt: new Date().toISOString(),
         algorithm: "sha256",
         testedRuntime: "codex-cli 0.154.0-alpha.6.2",

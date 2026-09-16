@@ -853,7 +853,7 @@ async function copyInputs(destRoot: string) {
 
 async function identityOf(root: string) {
   const mod = await import(pathToFileURL(join(root, "scripts", "build-alpha-package.mjs")).href);
-  return mod.resolveSourceIdentity() as { revision: string; preview: string | null };
+  return mod.resolveSourceIdentity() as { revision: string; preview: string | null; reason?: string };
 }
 
 describe("alpha package source identity", () => {
@@ -873,6 +873,7 @@ describe("alpha package source identity", () => {
         const identity = await identityOf(exportDir);
         assert.equal(identity.revision, "unverified-preview",
           "a nested export must never report the parent checkout's sha as its own");
+        assert.equal(identity.reason, "not-the-checkout");
         assert.match(identity.preview ?? "", /^[0-9a-f]{40}$/,
           "the inherited parent HEAD is recorded as previewOf, not claimed");
       } finally {
@@ -896,6 +897,7 @@ describe("alpha package source identity", () => {
         const identity = await identityOf(plain);
         assert.equal(identity.revision, "unverified-preview");
         assert.equal(identity.preview, null);
+        assert.equal(identity.reason, "no-git");
       } finally {
         rmSync(plain, { recursive: true, force: true });
       }
@@ -910,7 +912,14 @@ describe("alpha package source identity", () => {
         assert.equal(git(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"]).status, 0);
         const head = git(["rev-parse", "HEAD"]).stdout.trim();
         const identity = await identityOf(checkout);
-        assert.equal(identity.revision, head, "a clean standalone checkout verifies to its own HEAD");
+        // Bounded diagnostics for a CI failure: which gate flipped, plus the
+        // fixture's own git view (toplevel/path forms, status). No creds.
+        const diag = [
+          `identity=${JSON.stringify(identity)}`,
+          `toplevel=${git(["rev-parse", "--show-toplevel"]).stdout.trim()}`,
+          `porcelain=${JSON.stringify(git(["status", "--porcelain", "--ignored"]).stdout)}`,
+        ].join(" | ");
+        assert.equal(identity.revision, head, `a clean standalone checkout verifies to its own HEAD — ${diag}`);
       } finally {
         rmSync(checkout, { recursive: true, force: true });
       }
