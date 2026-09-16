@@ -108,12 +108,84 @@ describe("replay-fixture CLI", () => {
     );
     const r = run(["--file", file]);
     assert.equal(r.status, 1);
-    assert.match(r.stderr, /requires event\.id, event\.kind, and event\.label/);
+    assert.match(r.stderr, /requires string event\.id, event\.kind, and event\.label/);
   });
 
   it("rejects an unreadable --file path with an actionable error", () => {
     const r = run(["--file", join(tmpdir(), "vt-definitely-missing-fixture.json")]);
     assert.equal(r.status, 1);
     assert.match(r.stderr, /could not read fixture file/);
+  });
+
+  it("refuses to print PASS for a fixture with no expect block", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vt-fx-"));
+    const file = join(dir, "no-expect.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        steps: [{ kind: "start", input: { title: "t", summary: "s", mode: "solo" } }],
+      }),
+    );
+    const r = run(["--file", file]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /missing expect block/);
+    assert.doesNotMatch(r.stdout, /expect: PASS/);
+  });
+
+  it("rejects malformed expectation blocks with actionable errors", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vt-fx-"));
+    const start = { kind: "start", input: { title: "t", summary: "s", mode: "solo" } };
+    const cases: Array<[string, unknown, RegExp]> = [
+      ["string-expect", "COMPLETED", /missing expect block/],
+      ["missing-workerStates", { taskState: "PLANNING" }, /expect\.workerStates/],
+      ["bad-worker-state", { taskState: "PLANNING", workerStates: { lead: 5 } }, /expect\.workerStates\.lead/],
+      ["bad-needsUser", { taskState: "PLANNING", workerStates: {}, needsUser: "yes" }, /expect\.needsUser/],
+    ];
+    for (const [name, expect, re] of cases) {
+      const file = join(dir, `${name}.json`);
+      writeFileSync(file, JSON.stringify({ name, steps: [start], expect }));
+      const r = run(["--file", file]);
+      assert.equal(r.status, 1, `${name} should fail`);
+      assert.match(r.stderr, re, name);
+      assert.doesNotMatch(r.stdout, /expect: PASS/, name);
+    }
+  });
+
+  it("fails on null steps without leaking a stack trace", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vt-fx-"));
+    const file = join(dir, "null-step.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        name: "null-step",
+        steps: [{ kind: "start", input: { title: "t", summary: "s", mode: "solo" } }, null],
+        expect: { taskState: "PLANNING", workerStates: { lead: "ASSIGNED" } },
+      }),
+    );
+    const r = run(["--file", file]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /steps\[1\] must be an object with a string kind/);
+    assert.doesNotMatch(r.stderr + r.stdout, /TypeError|at .*\.mts:/);
+  });
+
+  it("fails a wrong step expectation even when the final snapshot matches", () => {
+    // The activity event applies without changing task state — the declared
+    // "duplicate" is wrong even though every final expectation holds.
+    const dir = mkdtempSync(join(tmpdir(), "vt-fx-"));
+    const file = join(dir, "mismatch-matching-final.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        name: "mismatch-matching-final",
+        steps: [
+          { kind: "start", input: { title: "t", summary: "s", mode: "solo" } },
+          { kind: "event", event: { id: "a1", kind: "activity", label: "tick" }, expect: "duplicate" },
+        ],
+        expect: { taskState: "PLANNING", workerStates: { lead: "ASSIGNED" } },
+      }),
+    );
+    const r = run(["--file", file]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /expected duplicate, engine produced applied/);
   });
 });

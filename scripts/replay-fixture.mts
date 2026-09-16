@@ -93,6 +93,51 @@ function applyVisual(
 /** Outcomes a sequence step may declare; anything else is malformed input. */
 const STEP_OUTCOMES = new Set(["applied", "rejected", "duplicate"]);
 
+/**
+ * Minimum shape a fixture must have for a verified PASS: a non-empty steps
+ * list of objects with string kinds, a usable start input, and a final
+ * expectation block with taskState + workerStates. Without expectations
+ * there is nothing to verify against — print an actionable error instead
+ * of claiming a match.
+ */
+function validateFixtureShape(fixture: ReplayFixture | SequenceFixture, displayName: string): void {
+  const bad = (msg: string): never => fail(`fixture '${displayName}': ${msg}`);
+  if (fixture.name !== undefined && typeof fixture.name !== "string") {
+    bad("name must be a string when present");
+  }
+  if (!Array.isArray(fixture.steps) || fixture.steps.length === 0) {
+    bad("expected a non-empty steps[] array");
+  }
+  fixture.steps.forEach((s, i) => {
+    if (!s || typeof s !== "object" || typeof s.kind !== "string") {
+      bad(`steps[${i}] must be an object with a string kind`);
+    }
+  });
+  const start = fixture.steps.find((s) => s.kind === "start");
+  if (start?.input) {
+    const inp = start.input;
+    if (typeof inp.title !== "string" || typeof inp.summary !== "string" || (inp.mode !== "solo" && inp.mode !== "team")) {
+      bad('start step input requires string title, string summary, and mode "solo" | "team"');
+    }
+  }
+  const e = fixture.expect as Record<string, unknown> | undefined;
+  if (!e || typeof e !== "object" || Array.isArray(e)) {
+    bad("missing expect block — a verified PASS requires recorded expectations: expect: { taskState: \"<state>\", workerStates: { \"<roster id>\": \"<state>\" } }");
+  }
+  if (typeof e.taskState !== "string" || e.taskState.length === 0) {
+    bad("expect.taskState must be a non-empty task-state string");
+  }
+  if (!e.workerStates || typeof e.workerStates !== "object" || Array.isArray(e.workerStates)) {
+    bad("expect.workerStates must be an object mapping roster ids to worker states");
+  }
+  for (const [wid, st] of Object.entries(e.workerStates)) {
+    if (typeof st !== "string") bad(`expect.workerStates.${wid} must be a state string`);
+  }
+  if (e.needsUser !== undefined && typeof e.needsUser !== "boolean") bad("expect.needsUser must be a boolean");
+  if (e.eventCount !== undefined && !Number.isInteger(e.eventCount)) bad("expect.eventCount must be an integer");
+  if (e.logLength !== undefined && !Number.isInteger(e.logLength)) bad("expect.logLength must be an integer");
+}
+
 function runReplayFixture(fixture: ReplayFixture): { rec: TaskRecord; lines: StepLine[] } {
   const start = fixture.steps.find((s) => s.kind === "start");
   if (!start?.input) fail(`fixture '${fixture.name}' has no start step — expected steps[0].kind = "start" with input`);
@@ -154,8 +199,14 @@ function runSequenceFixture(fixture: SequenceFixture): { rec: TaskRecord; lines:
       fail(`fixture '${fixture.name}' step ${i}: invalid expect '${step.expect}' — use applied | rejected | duplicate`);
     }
     if (step.kind === "event") {
-      if (!step.event || typeof step.event !== "object" || !step.event.id || !step.event.kind || !step.event.label) {
-        fail(`fixture '${fixture.name}' step ${i}: kind "event" requires event.id, event.kind, and event.label`);
+      if (
+        !step.event ||
+        typeof step.event !== "object" ||
+        typeof step.event.id !== "string" ||
+        typeof step.event.kind !== "string" ||
+        typeof step.event.label !== "string"
+      ) {
+        fail(`fixture '${fixture.name}' step ${i}: kind "event" requires string event.id, event.kind, and event.label`);
       }
       const e: VisualEvent = {
         id: step.event.id,
@@ -230,7 +281,10 @@ function main(): void {
       fail(`fixture file '${filePath}' is not a replay/sequence fixture — expected a JSON object with a steps[] array`);
     }
     fixture = raw as ReplayFixture | SequenceFixture;
-    displayName = fixture.name ?? filePath;
+    displayName = typeof fixture.name === "string" ? fixture.name : filePath;
+    // Validate before shape detection touches step objects — a null or
+    // non-object step must surface as an actionable error, not a TypeError.
+    validateFixtureShape(fixture, displayName);
     // Shape detection: workflow fixtures carry codex_event/visual_event
     // steps; sequence fixtures carry literal event/duplicate steps.
     isSequence = !fixture.steps.some((s) => s.kind === "codex_event" || s.kind === "visual_event");
@@ -249,9 +303,18 @@ function main(): void {
 
   const description = fixture.description ?? "";
   fixture.name ??= displayName;
-  const { rec, lines } = isSequence
-    ? runSequenceFixture(fixture as SequenceFixture)
-    : runReplayFixture(fixture as ReplayFixture);
+  if (arg !== "--file") validateFixtureShape(fixture, displayName);
+  let rec: TaskRecord;
+  let lines: StepLine[];
+  try {
+    ({ rec, lines } = isSequence
+      ? runSequenceFixture(fixture as SequenceFixture)
+      : runReplayFixture(fixture as ReplayFixture));
+  } catch (err) {
+    // Unexpected engine/input errors surface as actionable text, never a
+    // bare stack trace.
+    fail(`replay of '${displayName}' failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
   const expect = fixture.expect;
 
   const snap = rec.snapshot;
@@ -290,7 +353,7 @@ function main(): void {
     );
     process.exit(1);
   }
-  const mismatches = expect ? checkExpect(rec, expect) : [];
+  const mismatches = checkExpect(rec, expect);
   if (mismatches.length > 0) {
     process.stderr.write(`\nreplay: expectation mismatch for '${displayName}':\n${mismatches.map((m) => `  - ${m}`).join("\n")}\n`);
     process.exit(1);
