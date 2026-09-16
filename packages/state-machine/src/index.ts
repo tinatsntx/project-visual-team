@@ -417,12 +417,21 @@ function validateResultReceipt(event: VisualEvent): string | null {
       }
     }
   }
-  // The receipt must fit the same combined bound as the legacy detail text it
-  // mirrors (plan §9.5): nothing larger applies whole, nothing is truncated.
-  const combined =
-    (r.summary?.length ?? 0) +
-    (r.verification?.length ?? 0) +
-    (r.artifacts ?? []).reduce((acc, a) => acc + a.label.length + (a.uri?.length ?? 0), 0);
+  // The receipt must fit the same bound as the legacy detail text it mirrors
+  // (plan §9.5): "result: <summary>" / "verification: <value>" /
+  // "artifacts: <label (uri), ...>" joined by "; ". Measure the serialized
+  // form — nothing larger applies whole, nothing is truncated.
+  const artifactText = (r.artifacts ?? [])
+    .map((a) => (a.uri ? `${a.label} (${a.uri})` : a.label))
+    .join(", ");
+  const serialized = [
+    r.summary !== undefined ? `result: ${r.summary}` : null,
+    r.verification !== undefined ? `verification: ${r.verification}` : null,
+    artifactText ? `artifacts: ${artifactText}` : null,
+  ]
+    .filter(Boolean)
+    .join("; ");
+  const combined = serialized.length;
   if (combined > EVENT_DETAIL_MAX_CHARS) {
     return bad(`is ${combined} chars combined; the bound is ${EVENT_DETAIL_MAX_CHARS}`);
   }

@@ -142,6 +142,34 @@ describe("structured result receipt", () => {
     assert.equal(rec.snapshot.state, "ACTIVE");
   });
 
+  it("matches the mapper's serialized detail bound exactly at the boundary", () => {
+    // Serialized detail is "result: <500>" + "; " + "artifacts: <119>" = 640.
+    const edge = makeActive();
+    const ok = applyEvent(
+      edge,
+      ev({
+        id: "edge",
+        kind: "task_finished",
+        to: "COMPLETED",
+        result: { summary: "s".repeat(500), artifacts: [{ label: "l".repeat(119) }] },
+      }),
+    );
+    assert.ok(ok.ok);
+    assert.equal(edge.snapshot.state, "COMPLETED");
+    // One char more is 641 serialized — rejected atomically.
+    const over = makeActive();
+    assertAtomic(
+      over,
+      ev({
+        id: "over",
+        kind: "task_finished",
+        to: "COMPLETED",
+        result: { summary: "s".repeat(500), artifacts: [{ label: "l".repeat(120) }] },
+      }),
+    );
+    assert.equal(over.snapshot.state, "ACTIVE");
+  });
+
   it("a finish without metadata leaves result absent — legacy stays honest", () => {
     const rec = makeActive();
     const r = applyEvent(rec, ev({ id: "fin", kind: "task_finished", to: "COMPLETED", detail: "result: done" }));
