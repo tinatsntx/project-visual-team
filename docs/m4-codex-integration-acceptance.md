@@ -1,9 +1,10 @@
 # M4 acceptance — session isolation, specialist correlation, record-only hook coverage
 
-Status: implemented and locally verified. **Real-native delivery not yet
-claimed** — every result below is synthetic or local-emulation evidence unless
-explicitly marked otherwise. Coordinator-owned real-host/native acceptance is
-pending.
+Status: **M4 accepted and deployed at `0f0e3ab`** on 2026-09-15 CT.
+Coordinator real-native/ChatGPT evidence and remaining platform limits are in
+`docs/m4-native-closeout.md` and `docs/m4-native-host-evidence.json`.
+The implementation checks below remain synthetic or local emulation unless
+explicitly marked otherwise; they are not relabeled as native evidence.
 
 Brief: `docs/swe-2-brief-009.md` (committed `39fd5a2`). Coordinator review
 findings folded in: `docs/m4-coordinator-review.md` plus the live
@@ -216,8 +217,9 @@ zero calls.
 
 ## Known limits
 
-- Real-native delivery, `/hooks` review/trust flow, and hosted-endpoint
-  delivery are unverified — coordinator acceptance.
+- Real-native delivery, normal `/hooks` review, and hosted ChatGPT delivery
+  pass on the supported Windows CLI/web path; see the coordinator closeout.
+  Other surfaces remain unverified.
 - A correlation key is routing metadata, not authentication; multiuser
   isolation remains out of scope (see `docs/security.md`).
 - Session/agent indexes live in the in-memory repository — a server restart

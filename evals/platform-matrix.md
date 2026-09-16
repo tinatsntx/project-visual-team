@@ -5,7 +5,9 @@ Updated 2026-09-15. Results/GO decisions in `docs/feasibility-report.md`.
 **M0 COMPLETE / GO:** ChatGPT web + Windows Codex CLI + Render. The eight
 feasibility criteria pass on this supported path. Pending surfaces stay
 unverified and move to later compatibility work; see `docs/m0-closeout.md`.
-Current tested/deployed code: `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6`.
+Current tested/deployed code: `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
+M4 is accepted on Windows CLI + ChatGPT web. Full real-native proof and
+support limits: `docs/m4-native-closeout.md`, `docs/m4-native-host-evidence.json`.
 M3 visual experience is accepted; real ChatGPT modes, same-widget reported
 completion, terminal switching, and result metadata pass. Independent
 183-test suite and seven M3 probes pass. Full evidence and compatibility
@@ -17,11 +19,28 @@ See `docs/m1-core-engine-acceptance.md`. M2 consumer workflow `6def930`
 is accepted for explicit skill invocation and one active visual task.
 Real native and ChatGPT evidence, partial/failed branches, and the unexecuted
 permission prompt are recorded in `docs/m2-consumer-workflow-acceptance.md`.
-M4 owns the observed cross-task hook routing and specialist status gaps.
-Current work is M4, brief 009.
-Latest packaging regenerated/refreshed from `6def930`; installed skill and
+M4 closed the cross-task hook routing and specialist status gaps on this path.
+Current work is release preparation (brief 010) and private-alpha recruitment.
+Latest packaging regenerated/refreshed from `0f0e3ab`; installed skill and
 hook files match source. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.
+
+## M4 real native acceptance (0f0e3ab, 2026-09-15 CT)
+
+| ID | Case | Result |
+|---|---|---|
+| M4-NATIVE-01 | Supported package refresh and normal hook review | PASS: installed script matches source; all nine hooks installed and active |
+| M4-NATIVE-02 | Real specialist start, native permission, tool completion, specialist finish | PASS: correct specialist observed in same ChatGPT widget; native single-action approval remained authoritative |
+| M4-NATIVE-03 | Independent native B and ChatGPT-only C while A works | PASS: B remains eventCount 12; C remains planning/eventCount 1, no observed events |
+| M4-NATIVE-04 | Native turn interruption and same-task resume | PASS: observed interrupted event; actual resumed work; truthful reported completion at count 25 |
+| M4-NATIVE-05 | Hooks disabled per process | PASS: useful native text and complete workflow; exactly three reported-only events |
+| M4-LOCAL-01 | Independent regression and package checks | PASS: 199 tests, four prior probes, routing 4/4, hook boundary 3/3, clean archive compat verification |
+| M4-LOG-01 | Bounded deployment-window application logs | PASS: all nine records reviewed, no payload/capability logging observed; not blanket privacy assurance |
+
+Initial headless process exit did not show a Stop delivery; the subsequent
+interactive native run did. Late asynchronous delivery can be lost at host
+shutdown. The widget must disclose missing evidence, not invent a finish.
+M5 participant feedback and untested surfaces remain pending.
 
 ## M0 enablement acceptance (4fb3548, 2026-09-15)
 

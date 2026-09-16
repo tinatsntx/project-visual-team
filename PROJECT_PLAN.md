@@ -795,6 +795,13 @@ remaining compatibility/private-alpha checks. Brief 009 is the M4 handoff.
 
 ## Milestone 4 — Codex integration
 
+**COMPLETE / GO to Milestone 5 preparation — 2026-09-15 CT.** Accepted and
+deployed at `0f0e3ab`: 199 tests plus independent regression/package checks;
+real native specialist start, permission, activity, and finish in the same
+ChatGPT widget; session isolation, interrupt/resume, and hook-disabled
+workflow pass. Evidence: `docs/m4-native-closeout.md` and
+`docs/m4-native-host-evidence.json`. M5 participant feedback remains pending.
+
 ### Deliverables
 
 - Bundled hooks.

@@ -2,13 +2,15 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0, 1, 2, and 3 COMPLETE on the supported path. M3 is
-accepted/published/deployed at `f78eac1`; evidence is in
-`docs/m3-visual-experience-acceptance.md`. SWE-2 is implementing M4 under
-`docs/swe-2-brief-009.md`. M2 is accepted for explicit `$visual-team`
-invocation and one active visual task at a time. Partial/failed evaluation
-branches and integration limits remain recorded; no blanket eight-case pass
-or private-alpha readiness is claimed.
+**Milestone:** 0 through 4 COMPLETE on the supported path. Current product
+code `0f0e3ab` is reviewed, published, and deployed. Real native specialist
+start/permission/activity/finish, same-widget ChatGPT updates, session
+isolation, interrupt/resume, and hook-disabled workflow pass. Evidence:
+`docs/m4-native-closeout.md` and `docs/m4-native-host-evidence.json`.
+M4 replaces M2's temporary one-active-task limit with explicit session
+correlation; explicit `$visual-team` invocation remains required.
+SWE-2 is executing brief 010 for release preparation. M5 needs real testers;
+M6/M7 preparation is not public-release or submission acceptance.
 Coordinator accepted `2eda8b3`; all three follow-up probes pass. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
@@ -27,7 +29,8 @@ Sites migration remains paused by owner MCP availability. Full evidence:
 
 ## Working arrangement
 
-SWE-2 normally owns product code and the owner relays briefs/results. The
+SWE-2 owns product code; Codex now relays briefs/results directly through
+the Devin harness, as explicitly authorized by the owner. The
 owner explicitly authorized Codex to implement the Sites port here. Codex
 also coordinates reviews, hosting, registration, real-surface tests, and
 evidence. Brief 002 is accepted on the tested paths below; brief 003's launch
@@ -76,8 +79,25 @@ Evidence: `docs/m2-consumer-workflow-acceptance.md`.
 
 ## Current state
 
-- M3 product baseline: `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6` on
-  GitHub and Render. Independent 183/183 tests, seven M3 probe cases,
+- M4 deployed product baseline: `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
+  Independent typecheck, 199 tests, build, native compatibility (including
+  clean archive export), four prior probes, routing 4/4, and hook boundary
+  3/3 pass. CI `35046625539` is green; Render deploy
+  `dep-dakvit740ujc73917cr0` is live, with automatic deployment still off.
+  Native package refreshed through supported installation; nine hooks
+  reviewed/trusted in normal `/hooks`, installed script matches source.
+  Real native approval stayed in the native UI; one-action approval only.
+  Task A finished at eventCount 25 in its original ChatGPT iframe, while
+  independent native B stayed at 12 and ChatGPT-only C at 1. Hook-disabled
+  fallback completed with three reported-only events. See M4 closeout.
+- Current SWE-2 handoff: `docs/swe-2-brief-010.md`, release preparation only.
+  Coordinator retains review, exact-SHA publication/deployment, acceptance,
+  and the human/owner gates. `docs/private-alpha-test-kit.md` is prepared;
+  no participant feedback has been invented. Private GitHub vulnerability
+  reporting is enabled; public name/domain/identity/legal gates remain open.
+
+- Earlier accepted M3 baseline: `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6`.
+  Independent 183/183 tests, seven M3 probe cases,
   typecheck/build/package checks pass; CI `35042201931` is green. Render
   deploy `dep-dakujgn40ujc738u0um0` is live. Refresh the developer app in
   ChatGPT after UI deployment; a fresh chat then loads current assets.
@@ -87,11 +107,11 @@ Evidence: `docs/m2-consumer-workflow-acceptance.md`.
   desktop harness, review/test/fix cycles, and continued milestone work.
   SWE-2 still owns product coding; coordinator owns publication and live
   acceptance. Do not wait for the owner to relay coding briefs/results.
-- Accepted consumer skill/package: `6def930`; refreshed installed files match
+- Earlier accepted consumer skill/package: `6def930`; refreshed installed files matched
   source. Public native receipts: `docs/m2-native-host-evidence.json`.
   M2 changes no runtime/UI/endpoint code;
   no Render redeploy is required for this release. Use explicit skill invocation
-  and only one active visual task until the recorded integration gaps close.
+  The former one-active-task restriction is superseded by accepted M4 routing.
 - Earlier M1 product-code baseline (superseded by M3 above):
   `2eda8b3f42dac033e473345b579c76911ed73917`.
   Exact-code CI `35011395446` is green. Hosted six-tool discovery, reported
@@ -193,8 +213,8 @@ Local native package (latest acceptance):
   `dist/native-codex-compat`, with matching installed cache copies.
 - Marketplace manifest: `dist/native-codex-compat/.agents/plugins/marketplace.json`.
 - Cache: `C:/Users/mstin/.codex/plugins/cache/visual-team-native/visual-team/0.1.0`.
-- Native 0.154.0-alpha.6.2 shows its skill, linked app, and one PostToolUse.
-- Normal `/hooks` readback: installed 1 / active 1, prior trust retained.
+- Native 0.154.0-alpha.6.2 now shows its skill, linked app, and nine hooks.
+- M4 normal `/hooks` readback: installed 9 / active 9 after normal review.
   Installed skill/declaration/script match source. Session
   `01a0a541-32ef-7f02-816e-1acec5d149dc` used the installed skill to report
   testing, perform one native date read, and truthfully finish. Automatic
@@ -231,7 +251,8 @@ Earlier portable installation (now disabled):
 - No hook trust bypass was used. The later native hook review is recorded above.
 - The hook defaults to localhost. Set `VISUAL_TEAM_MCP_URL` in the **Codex
   process environment** for hosted tests; `mcp.json` does not set it.
-  Pin `VISUAL_TEAM_TASK_ID` to a fresh QA task.
+  M4 learns task binding from the real start receipt; ordinary acceptance
+  does not need a `VISUAL_TEAM_TASK_ID` override.
 - Installed source/cache are copies. Refresh source and use the supported
   plugin update/reinstall flow after package changes, then verify readback.
 

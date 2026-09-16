@@ -8,10 +8,15 @@ pass with CSP enforcement on. Native skill completion, terminal web modes,
 and actual web PiP also pass. All eight feasibility criteria pass on that
 supported path. Untested surfaces remain unverified; full compatibility is
 not claimed. Closeout and backlog ownership: `docs/m0-closeout.md`.
-**Current code tested/deployed:** `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6`.
+**Current code tested/deployed:** `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
+M4 is accepted: real native specialist start/permission/activity/finish,
+same-widget ChatGPT updates, concurrent-session isolation, interruption/resume,
+and disabled-hook fallback pass. Independent 199 tests, build, clean package
+export, prior probes and new boundary/routing probes pass. Evidence:
+`docs/m4-native-closeout.md`. M5 participant results remain pending.
 M3 is accepted: 183 tests, seven new coordinator cases, exact-code CI,
 and real ChatGPT modes/completion/results pass. See
-`docs/m3-visual-experience-acceptance.md`. M4 is in progress under brief 009.
+`docs/m3-visual-experience-acceptance.md`.
 The following M0–M2 evidence remains historical, not rerun claims.
 M1 is complete: 145 tests and both coordinator probes pass; exact-code CI and
 hosted wait/resume/finish smoke pass. UI/plugin source is unchanged by M1;
@@ -20,9 +25,10 @@ the dated real-host M0 evidence below is preserved. M2 consumer workflow
 see `docs/m2-consumer-workflow-acceptance.md` for the actual pass/partial/fail
 branches. M3 subsequently closed as recorded above.
 Full M1 release record: `docs/m1-core-engine-acceptance.md`.
-**Latest packaging tested:** regenerated/refreshed from `6def930`; installed
+**Latest packaging tested:** regenerated/refreshed from `0f0e3ab`; installed
 skill, hook declaration, and script match source. The corrected installed-root
-hook is retained. Brief 005 and the M0 enablement fixes are accepted.
+hook is retained; nine native hooks are active after normal review.
+Brief 005 and the M0 enablement fixes are accepted.
 **Sites experiment:** `433d93d`, privately deployed; MCP connection is blocked
 by owner account availability. The owner confirmed Pro; migration is paused.
 Codex writes plus ChatGPT read-only render/refresh now pass on this Pro account

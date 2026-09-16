@@ -1,0 +1,809 @@
+{
+  "scope": "Real Windows Codex CLI + hosted Render + same mounted ChatGPT web widget; coordinator acceptance, not human private-alpha feedback",
+  "productCommit": "0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e",
+  "runtime": "0.154.0-alpha.6.2",
+  "deploy": {
+    "id": "dep-dakvit740ujc73917cr0",
+    "liveAt": "2026-09-16T02:06:24.003328Z"
+  },
+  "ci": "https://github.com/tinatsntx/project-visual-team/actions/runs/35046625539",
+  "hookReview": {
+    "installed": 9,
+    "active": 9,
+    "flow": "Normal native /hooks review; installed script SHA-256 matches source; no cache or trust-hash edits"
+  },
+  "nativeSessionA": "01a0a7f8-4f13-7dc1-80fe-f6a14e4fc208",
+  "nativeSessionB": "01a0a7fb-12a5-7470-bb2a-a982e942ac6e",
+  "fallbackSession": "01a0a801-5522-7cb2-add0-91794b5163df",
+  "chatA": "https://chatgpt.com/c/6aa9fa96-db40-83ea-9129-2334afd9aef5",
+  "chatC": "https://chatgpt.com/c/6aa9fb99-b18c-83ea-a390-2971092c52bf",
+  "permission": {
+    "nativePromptObserved": true,
+    "approval": "Single-action Yes, proceed; no persistent command rule",
+    "widget": "Same mounted widget showed needs you and the specialist waiting, then resumed and completed",
+    "nativeControlPreserved": true
+  },
+  "interruption": {
+    "scope": "Native turn interrupted through Escape after the harmless wait call had returned; not a claim that a running command was cancelled",
+    "sameTaskResumed": true
+  },
+  "snapshots": {
+    "permissionWait": {
+      "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+      "state": "WAITING_FOR_USER",
+      "stateProvenance": "observed",
+      "eventCount": 13,
+      "needsUser": true,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "WORKING",
+          "stateProvenance": "reported",
+          "isWriter": true
+        },
+        {
+          "id": "explorer",
+          "externalId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "role": "explorer",
+          "state": "WAITING_FOR_APPROVAL",
+          "stateProvenance": "observed",
+          "isWriter": false
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_f7f3a6406ac1e3cc127fdd44",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:09:12.790Z"
+        },
+        {
+          "id": "evt_vt_f7f3a6406ac1e3cc127fdd44_2_report_testing",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "reported",
+          "to": "WORKING",
+          "at": "2026-09-16T02:09:28.606Z"
+        },
+        {
+          "id": "hook_1789524570310_id5s87zm",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:09:30.308Z"
+        },
+        {
+          "id": "hook_1789524573030_rb4zf0iq",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:09:33.029Z"
+        },
+        {
+          "id": "hook_1789524825115_j3u9qcqj",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:13:45.114Z"
+        },
+        {
+          "id": "hook_1789524843331_b2ht57zs",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:03.329Z"
+        },
+        {
+          "id": "hook_1789524845899_cldkn524",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:14:05.896Z"
+        },
+        {
+          "id": "hook_1789524848405_7ckfxl60",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "specialist_joined",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:14:08.399Z"
+        },
+        {
+          "id": "hook_1789524855785_pd1ch484",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:15.780Z"
+        },
+        {
+          "id": "hook_1789524857281_xtfkq3b9",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:17.279Z"
+        },
+        {
+          "id": "hook_1789524860378_sned1646",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "permission_request",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:14:20.376Z"
+        },
+        {
+          "id": "hook_1789524912271_zsxhls98",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:15:12.260Z"
+        },
+        {
+          "id": "hook_1789524916877_4nfwuami",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:15:16.875Z"
+        }
+      ]
+    },
+    "specialistFinished": {
+      "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+      "state": "ACTIVE",
+      "stateProvenance": "observed",
+      "eventCount": 17,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "IDLE",
+          "stateProvenance": "observed",
+          "isWriter": true
+        },
+        {
+          "id": "explorer",
+          "externalId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "role": "explorer",
+          "state": "COMPLETED",
+          "stateProvenance": "observed",
+          "isWriter": false
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_f7f3a6406ac1e3cc127fdd44",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:09:12.790Z"
+        },
+        {
+          "id": "evt_vt_f7f3a6406ac1e3cc127fdd44_2_report_testing",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "reported",
+          "to": "WORKING",
+          "at": "2026-09-16T02:09:28.606Z"
+        },
+        {
+          "id": "hook_1789524570310_id5s87zm",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:09:30.308Z"
+        },
+        {
+          "id": "hook_1789524573030_rb4zf0iq",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:09:33.029Z"
+        },
+        {
+          "id": "hook_1789524825115_j3u9qcqj",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:13:45.114Z"
+        },
+        {
+          "id": "hook_1789524843331_b2ht57zs",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:03.329Z"
+        },
+        {
+          "id": "hook_1789524845899_cldkn524",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:14:05.896Z"
+        },
+        {
+          "id": "hook_1789524848405_7ckfxl60",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "specialist_joined",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:14:08.399Z"
+        },
+        {
+          "id": "hook_1789524855785_pd1ch484",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:15.780Z"
+        },
+        {
+          "id": "hook_1789524857281_xtfkq3b9",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:17.279Z"
+        },
+        {
+          "id": "hook_1789524860378_sned1646",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "permission_request",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:14:20.376Z"
+        },
+        {
+          "id": "hook_1789524912271_zsxhls98",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:15:12.260Z"
+        },
+        {
+          "id": "hook_1789524916877_4nfwuami",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:15:16.875Z"
+        },
+        {
+          "id": "hook_1789524957397_n5p5f0ez",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:15:57.395Z"
+        },
+        {
+          "id": "hook_1789524964618_9wfilwzy",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:16:04.617Z"
+        },
+        {
+          "id": "hook_1789524964592_bpfemyfz",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "specialist_finished",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:16:04.591Z"
+        },
+        {
+          "id": "hook_1789524974139_553devwb",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "turn_finished",
+          "provenance": "observed",
+          "at": "2026-09-16T02:16:14.138Z"
+        }
+      ]
+    },
+    "nativeFinal": {
+      "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+      "state": "COMPLETED",
+      "stateProvenance": "reported",
+      "eventCount": 25,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "COMPLETED",
+          "stateProvenance": "reported",
+          "isWriter": true
+        },
+        {
+          "id": "explorer",
+          "externalId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "role": "explorer",
+          "state": "COMPLETED",
+          "stateProvenance": "observed",
+          "isWriter": false
+        }
+      ],
+      "events": [
+        {
+          "id": "hook_1789524843331_b2ht57zs",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:03.329Z"
+        },
+        {
+          "id": "hook_1789524845899_cldkn524",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:14:05.896Z"
+        },
+        {
+          "id": "hook_1789524848405_7ckfxl60",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "specialist_joined",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:14:08.399Z"
+        },
+        {
+          "id": "hook_1789524855785_pd1ch484",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:15.780Z"
+        },
+        {
+          "id": "hook_1789524857281_xtfkq3b9",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "to": "WORKING",
+          "at": "2026-09-16T02:14:17.279Z"
+        },
+        {
+          "id": "hook_1789524860378_sned1646",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "permission_request",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:14:20.376Z"
+        },
+        {
+          "id": "hook_1789524912271_zsxhls98",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:15:12.260Z"
+        },
+        {
+          "id": "hook_1789524916877_4nfwuami",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:15:16.875Z"
+        },
+        {
+          "id": "hook_1789524957397_n5p5f0ez",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:15:57.395Z"
+        },
+        {
+          "id": "hook_1789524964618_9wfilwzy",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:16:04.617Z"
+        },
+        {
+          "id": "hook_1789524964592_bpfemyfz",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "specialist_finished",
+          "provenance": "observed",
+          "workerId": "01a0a7fe-137a-7aa3-8bac-c0745180ddea",
+          "at": "2026-09-16T02:16:04.591Z"
+        },
+        {
+          "id": "hook_1789524974139_553devwb",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "turn_finished",
+          "provenance": "observed",
+          "at": "2026-09-16T02:16:14.138Z"
+        },
+        {
+          "id": "hook_1789525084659_y9qjihgq",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "PLANNING",
+          "at": "2026-09-16T02:18:04.658Z"
+        },
+        {
+          "id": "hook_1789525094897_6dggnuey",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:18:14.896Z"
+        },
+        {
+          "id": "hook_1789525138521_7sa7pvk8",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:18:58.519Z"
+        },
+        {
+          "id": "hook_1789525149208_6nqw68gx",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "interrupted",
+          "provenance": "observed",
+          "at": "2026-09-16T02:19:09.200Z"
+        },
+        {
+          "id": "hook_1789525205116_ljg333lx",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "PLANNING",
+          "at": "2026-09-16T02:20:05.115Z"
+        },
+        {
+          "id": "hook_1789525225640_kez6ak0v",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:20:25.639Z"
+        },
+        {
+          "id": "hook_1789525227937_8f1vjo64",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:20:27.936Z"
+        },
+        {
+          "id": "evt_vt_f7f3a6406ac1e3cc127fdd44_25_finish",
+          "taskId": "vt_f7f3a6406ac1e3cc127fdd44",
+          "kind": "task_finished",
+          "provenance": "reported",
+          "to": "COMPLETED",
+          "at": "2026-09-16T02:20:41.725Z"
+        }
+      ]
+    },
+    "otherNativeBefore": {
+      "taskId": "vt_d410596caba39e23eaf45763",
+      "state": "ACTIVE",
+      "stateProvenance": "observed",
+      "eventCount": 12,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "WORKING",
+          "stateProvenance": "observed",
+          "isWriter": true
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_d410596caba39e23eaf45763",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:12:08.714Z"
+        },
+        {
+          "id": "hook_1789524750760_zfyp1zpe",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:30.758Z"
+        },
+        {
+          "id": "hook_1789524750761_8dtd02ik",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:30.759Z"
+        },
+        {
+          "id": "hook_1789524758480_4mcddkcl",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:38.478Z"
+        },
+        {
+          "id": "hook_1789524758451_oktsk7tz",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:38.449Z"
+        },
+        {
+          "id": "hook_1789524766468_jozfsfob",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:46.462Z"
+        },
+        {
+          "id": "hook_1789524766533_hzrukr0u",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:46.532Z"
+        },
+        {
+          "id": "hook_1789524779229_malb2qfy",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:59.228Z"
+        },
+        {
+          "id": "hook_1789524779329_bqhp1a4l",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:59.326Z"
+        },
+        {
+          "id": "evt_vt_d410596caba39e23eaf45763_10_report_testing",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "reported",
+          "to": "WORKING",
+          "at": "2026-09-16T02:13:11.982Z"
+        },
+        {
+          "id": "hook_1789524797974_pzqx3tmh",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:13:17.973Z"
+        },
+        {
+          "id": "hook_1789524800196_isvjr0zn",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:13:20.196Z"
+        }
+      ]
+    },
+    "otherNativeAfter": {
+      "taskId": "vt_d410596caba39e23eaf45763",
+      "state": "ACTIVE",
+      "stateProvenance": "observed",
+      "eventCount": 12,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "WORKING",
+          "stateProvenance": "observed",
+          "isWriter": true
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_d410596caba39e23eaf45763",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:12:08.714Z"
+        },
+        {
+          "id": "hook_1789524750760_zfyp1zpe",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:30.758Z"
+        },
+        {
+          "id": "hook_1789524750761_8dtd02ik",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:30.759Z"
+        },
+        {
+          "id": "hook_1789524758480_4mcddkcl",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:38.478Z"
+        },
+        {
+          "id": "hook_1789524758451_oktsk7tz",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:38.449Z"
+        },
+        {
+          "id": "hook_1789524766468_jozfsfob",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:46.462Z"
+        },
+        {
+          "id": "hook_1789524766533_hzrukr0u",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:46.532Z"
+        },
+        {
+          "id": "hook_1789524779229_malb2qfy",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:12:59.228Z"
+        },
+        {
+          "id": "hook_1789524779329_bqhp1a4l",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:12:59.326Z"
+        },
+        {
+          "id": "evt_vt_d410596caba39e23eaf45763_10_report_testing",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "reported",
+          "to": "WORKING",
+          "at": "2026-09-16T02:13:11.982Z"
+        },
+        {
+          "id": "hook_1789524797974_pzqx3tmh",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "worker_transition",
+          "provenance": "observed",
+          "to": "WORKING",
+          "at": "2026-09-16T02:13:17.973Z"
+        },
+        {
+          "id": "hook_1789524800196_isvjr0zn",
+          "taskId": "vt_d410596caba39e23eaf45763",
+          "kind": "activity",
+          "provenance": "observed",
+          "at": "2026-09-16T02:13:20.196Z"
+        }
+      ]
+    },
+    "chatOnlyBefore": {
+      "taskId": "vt_b0124b13496b8c14a7161b8c",
+      "state": "PLANNING",
+      "stateProvenance": "reported",
+      "eventCount": 1,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "ASSIGNED",
+          "stateProvenance": "reported",
+          "isWriter": true
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_b0124b13496b8c14a7161b8c",
+          "taskId": "vt_b0124b13496b8c14a7161b8c",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:15:08.220Z"
+        }
+      ]
+    },
+    "chatOnlyAfter": {
+      "taskId": "vt_b0124b13496b8c14a7161b8c",
+      "state": "PLANNING",
+      "stateProvenance": "reported",
+      "eventCount": 1,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "ASSIGNED",
+          "stateProvenance": "reported",
+          "isWriter": true
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_b0124b13496b8c14a7161b8c",
+          "taskId": "vt_b0124b13496b8c14a7161b8c",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:15:08.220Z"
+        }
+      ]
+    },
+    "hooklessFinal": {
+      "taskId": "vt_a7c911de620e41f07418795a",
+      "state": "COMPLETED",
+      "stateProvenance": "reported",
+      "eventCount": 3,
+      "needsUser": false,
+      "workers": [
+        {
+          "id": "lead",
+          "role": "lead",
+          "state": "COMPLETED",
+          "stateProvenance": "reported",
+          "isWriter": true
+        }
+      ],
+      "events": [
+        {
+          "id": "evt_start_vt_a7c911de620e41f07418795a",
+          "taskId": "vt_a7c911de620e41f07418795a",
+          "kind": "task_started",
+          "provenance": "reported",
+          "at": "2026-09-16T02:18:41.325Z"
+        },
+        {
+          "id": "evt_vt_a7c911de620e41f07418795a_2_report_testing",
+          "taskId": "vt_a7c911de620e41f07418795a",
+          "kind": "worker_transition",
+          "provenance": "reported",
+          "to": "WORKING",
+          "at": "2026-09-16T02:18:53.611Z"
+        },
+        {
+          "id": "evt_vt_a7c911de620e41f07418795a_3_finish",
+          "taskId": "vt_a7c911de620e41f07418795a",
+          "kind": "task_finished",
+          "provenance": "reported",
+          "to": "COMPLETED",
+          "at": "2026-09-16T02:19:06.703Z"
+        }
+      ]
+    }
+  },
+  "logReview": {
+    "start": "2026-09-16T02:06:24Z",
+    "end": "2026-09-16T02:21:02.727Z",
+    "appLogCount": 9,
+    "hasMore": false,
+    "observed": "Render lifecycle and port messages only; no prompts, commands, transcripts, code, or capabilities",
+    "limit": "Bounded acceptance-window review, not blanket assurance or completed private alpha"
+  }
+}
