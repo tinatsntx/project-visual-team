@@ -28,10 +28,17 @@ export function PipView({
   const needs = needActions(task);
   return (
     <section className="vt-pip" aria-label={`Team status: ${task.title}`}>
+      <h2 className="vt-pip-title">{task.title}</h2>
       <ul>
         {task.workers.slice(0, 3).map((w) => (
           <li key={w.id}>
-            <RobotAvatar role={w.role} state={w.state} label={w.label} size={22} animated={!reduced && !stale} />
+            <RobotAvatar
+              role={w.role}
+              state={w.state}
+              label={w.label}
+              size={22}
+              animated={!reduced && !stale && !task.noRecentActivity}
+            />
             <span className="vt-pip-line">{workerLine(w, task)}</span>
           </li>
         ))}

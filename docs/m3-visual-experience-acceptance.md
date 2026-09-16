@@ -16,8 +16,8 @@ screenshots under `docs/m3-shots/`, `HANDOFF.md`, and this record.
 | Brief §exit criterion | Evidence | Result |
 |---|---|---|
 | Goal, owner, current status, and needed action readable in ~10 s | Inline shows title, status badge, lead line, and a plain-language action line from attributed pending needs (`needActions` in `stateText.ts`): a `worker:` need says "answer the Codex permission prompt", a `task` need says "answer in the chat". See `m3-shots/inline-permission-need.png`, `inline-reported-question.png`. | PASS locally |
-| Truthful limited visibility (noRecentActivity, stale, unavailable) in every applicable mode | Refresh banner with Try again / "Ask ChatGPT to render it again" on stale+unavailable; `noRecentActivity` derived by `refreshDerivedFlags` and rendered as "No recent activity." PiP shows compact text for both need and refresh state — never only a dot. `m3-shots/inline-stale-norecent.png`, `pip-stale.png`, `pip-permission-need.png`. Motion suppressed when stale (`stale` prop gates avatar animation). | PASS locally |
-| Useful fullscreen results | `resultDetail.ts` conservatively parses the bounded finish `detail` into a verification badge (passed / failed / unverified) plus the raw detail rendered verbatim; absent finish/verification shows "No finish reported" — never a success claim. `m3-shots/fullscreen-completed-verified.png` (+-light), `fullscreen-failed.png`. | PASS locally |
+| Truthful limited visibility (noRecentActivity, stale, unavailable) in every applicable mode | Refresh banner with Try again / "Ask ChatGPT to render it again" on stale+unavailable; `noRecentActivity` derived by `refreshDerivedFlags` and rendered as "No recent activity." PiP shows compact text for both need and refresh state — never only a dot — **plus a visible task title** (follow-up item 2). `m3-shots/inline-stale-norecent.png`, `pip-stale.png`, `pip-permission-need.png`, `pip-long-labels-narrow.png`. Avatar animation is gated on **both** refresh health and the activity-age flag — healthy reads with old activity do not animate (follow-up item 3, probe cases 5–7). | PASS locally (fixed in follow-up) |
+| Useful fullscreen results | `resultDetail.ts` returns the bounded finish `detail` verbatim; the Results section labels it "Reported result" — **no token is extracted into a badge**, because a summary or artifact label can legitimately contain "verification: passed" (follow-up item 1, probe cases 1–3). Absent finish/detail states absence. `m3-shots/fullscreen-completed-verified.png` (+-light), `fullscreen-failed.png`. | PASS locally (fixed in follow-up) |
 | Accessible responsive views | 320 px layout, 175% text at 320 px, both themes, reduced-motion (no animation as sole indicator; every state has text), keyboard-focusable controls with names and `aria-expanded`, sr-only status line, three-worker and long-label wrapping without losing controls. `m3-shots/inline-narrow-320.png`, `inline-narrow-large-text.png`, `fullscreen-long-labels.png`. | PASS locally |
 
 Plus the §13.6 notice: every mode carries the muted metadata warning —
@@ -39,10 +39,9 @@ consent gate, settings surface, or onboarding flow was added.
   show "No recent activity.", not "stuck". A `CANCELED` task never renders
   "in progress" — terminal detection uses the shared `TERMINAL_TASK_STATES`.
 - Artifact references are rendered as inert text inside the bounded detail
-  string; nothing is parsed as code or linked. The verification badge is
-  labeled `reported` — a `task_finished` event is always reported
-  provenance, and the badge highlights part of that reported detail, not a
-  system-verified claim.
+  string; nothing is parsed as code or linked. No inferred verification
+  badge exists — the detail is reported free text and any `verification:`
+  token inside it is a claim within that text, not a parsed field.
 
 ## Harness and methodology
 
@@ -66,12 +65,17 @@ coordinator's.
 ## Test coverage added
 
 - `tests/views.test.ts` — markup assertions per mode: attributed need text,
-  "No recent activity.", PiP text need + compact refresh text + qualified
-  canceled-worker wording, verification badge + `reported` qualifier,
-  privacy line, three-worker and long-label rendering, CANCELED task never
-  reads "in progress".
-- `tests/resultDetail.test.ts` — verification-label parsing, raw detail
-  passthrough, absent/garbage detail handling, mid-segment token rejection.
+  "No recent activity.", PiP text need + compact refresh text + visible
+  title + qualified canceled-worker wording, verbatim detail under
+  "Reported result", privacy line, three-worker and long-label rendering,
+  CANCELED task never reads "in progress", and animation gating on
+  `noRecentActivity` (including that fresh activity restores motion).
+- `tests/finishTruth.test.ts` — the three probe cases end-to-end through
+  the real `mapTaskFinish` → `applyEvent` → `FullscreenView`: a summary or
+  artifact carrying "verification: passed" cannot mint a passed badge,
+  whether explicit verification is `failed` or absent.
+- `tests/resultDetail.test.ts` — verbatim detail passthrough, absent
+  finish/detail handling, and no extracted verification field.
 - `tests/stateText.test.ts` — `needActions` attribution (worker→native
   prompt, task→chat), canceled-worker task-context wording, `taskLine`.
 - Stale-motion suppression remains covered in `tests/taskData.test.ts`;
@@ -93,16 +97,17 @@ coordinator's.
 | `docs/m3-shots/fullscreen-failed.png` | failed verification, not success |
 | `docs/m3-shots/fullscreen-review-untracked.png` | honest untracked specialist |
 | `docs/m3-shots/fullscreen-long-labels.png` | long title/summary/artifacts, 3 workers |
-| `docs/m3-shots/pip-permission-need.png` | PiP text need equivalent |
+| `docs/m3-shots/pip-permission-need.png` | PiP visible goal + text need equivalent |
 | `docs/m3-shots/pip-stale.png` | PiP text refresh equivalent + Try again |
+| `docs/m3-shots/pip-long-labels-narrow.png` | 280 px PiP, long title wraps |
 
 ## Bundle size
 
 | Bundle | M2 (`c26a7a5` build log) | This diff | Delta |
 |---|---|---|---|
-| `visual-team.js` | ~160.1 KiB | 166,867 B (~163.0 KiB) | **+~2.9 KiB** |
-| `visual-team.css` | ~3.6 KiB | 4,714 B (~4.6 KiB) | +~1.0 KiB |
-| `dev-host.js` | ~471 KiB | 482,579 B | +~11 KiB (fixtures; dev only) |
+| `visual-team.js` | ~160.1 KiB | ~162.7 KiB | **+~2.6 KiB** |
+| `visual-team.css` | ~3.6 KiB | ~4.5 KiB | +~0.9 KiB |
+| `dev-host.js` | ~471 KiB | ~471.3 KiB | +~0.3 KiB |
 
 (An earlier draft imported `TERMINAL_TASK_STATES` from
 `@visual-team/state-machine`, which pulled ~450 KB into the widget bundle —
@@ -111,12 +116,14 @@ caught by size review and replaced with a local check.)
 ## Verification on this diff
 
 - `npm run typecheck` — clean.
-- `npm test` — 178/178 (33 new tests vs the M2 145 baseline: view markup,
-  result detail, state text, and canceled/terminal regressions).
+- `npm test` — 183/183 (38 new tests vs the M2 145 baseline: view markup,
+  result detail, finish truth through the real mapper, state text, and
+  canceled/terminal/motion regressions).
 - `npm run build` — clean; verbatim-embed and native compat verification pass.
 - `node --import tsx evals/m0-enablement-coordinator-probe.mts` — exit 0.
 - `node --import tsx evals/m1-coordinator-probe.mts` — exit 0.
 - `node --import tsx evals/m2-consumer-workflow-probe.mts` — exit 0 (7/7).
+- `node --import tsx evals/m3-coordinator-probe.mts` — exit 0 (7/7).
 - `git diff --check` — clean.
 - No server, reducer, hook, session-binding, or transport file changed; the
   six tools, private `_meta` capability handling, single-flight reads,
@@ -132,8 +139,10 @@ An independent read-only review of this diff found and this commit fixes:
 - A `CANCELED` task rendered "Work is still in progress." — terminal
   detection now includes `CANCELED`, so it reads "Task ended as canceled".
 - PiP lacked the §13.6 notice — compact line added.
-- The verification badge could read as system-verified — it is explicitly
-  labeled `reported`.
+- The verification badge could read as system-verified — initially labeled
+  `reported`; the coordinator follow-up then showed the deeper defect (a
+  summary/artifact token could mint a *wrong-value* badge), so the badge
+  was removed entirely rather than patched.
 - `RobotAvatar` announced the bare state to screen readers next to the
   qualified text — the svg is now `aria-hidden` (adjacent text is the
   accessible state in all three views).
@@ -151,9 +160,22 @@ Known nits retained with rationale: the Workstreams "owns the reviewer
 track" line is a roster-assignment statement (the Team section above it
 shows the tracking-ended caveat); fixture `visual` events are applied
 through the real reducer without an extra schema pass (synthetic local
-fixtures only); the `verification:`-inside-summary case can't be
-distinguished by UI parsing — the `reported` qualifier is the bounded fix,
-and tightening the finish-input schema is a server change owned outside M3.
+fixtures only). The earlier retained nit — `verification:` inside a
+summary minting a badge — was reclassified by the coordinator as a
+correctness defect and fixed by removing the badge.
+
+## Coordinator follow-up fixes (brief-008 follow-up, `evals/m3-coordinator-probe.mts`)
+
+- **Ambiguous inferred badge removed.** `finishDetail` returns only
+  `{event, detail}`; Results renders a "Reported result" label plus the
+  bounded detail verbatim. Probe cases 1–3 (`failed` overridden by a
+  summary token, `absent` minted, artifact-label token) all pass.
+- **PiP shows the task goal.** A wrapping `vt-pip-title` heading at 340 px
+  and a 280 px long-title capture (`pip-long-labels-narrow.png`).
+- **Activity animation gated on evidence age.** `animated` now requires
+  `!reduced && !stale && !task.noRecentActivity` in all three views —
+  healthy reads with stale evidence no longer imply live work (probe cases
+  5–7); fresh activity still animates (covered in `views.test.ts`).
 
 ## Remaining real-host checks (coordinator)
 

@@ -49,7 +49,8 @@ const SCENARIOS: Scenario[] = [
   { name: "fullscreen-failed", fixture: "failed-verification", mode: "fullscreen", width: 760, height: 760 },
   { name: "fullscreen-review-untracked", fixture: "review-untracked", mode: "fullscreen", width: 760, height: 860 },
   { name: "fullscreen-long-labels", fixture: "long-labels", mode: "fullscreen", width: 760, height: 1000 },
-  { name: "pip-permission-need", fixture: "team-with-permission", mode: "pip", width: 340, height: 260 },
+  { name: "pip-permission-need", fixture: "team-with-permission", mode: "pip", width: 340, height: 320 },
+  { name: "pip-long-labels-narrow", fixture: "long-labels", mode: "pip", width: 280, height: 400 },
   { name: "inline-narrow-320", fixture: "long-labels", mode: "inline", width: 320, height: 620 },
   { name: "inline-narrow-large-text", fixture: "long-labels", mode: "inline", fontSize: "175%", width: 320, height: 760 },
   // ACTIVE solo task aged past the stale threshold → real noRecentActivity.

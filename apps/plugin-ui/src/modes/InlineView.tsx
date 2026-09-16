@@ -33,7 +33,12 @@ export function InlineView({
     <section className="vt-inline" aria-label={`Visual team status: ${task.title}`}>
       <div className="vt-inline-main">
         {lead && (
-          <RobotAvatar role={lead.role} state={lead.state} label={lead.label} animated={!reduced && !stale} />
+          <RobotAvatar
+            role={lead.role}
+            state={lead.state}
+            label={lead.label}
+            animated={!reduced && !stale && !task.noRecentActivity}
+          />
         )}
         <div className="vt-inline-text">
           <h3 className="vt-title">{task.title}</h3>
@@ -51,7 +56,13 @@ export function InlineView({
         <ul className="vt-support" aria-label="Supporting team members">
           {support.map((w) => (
             <li key={w.id}>
-              <RobotAvatar role={w.role} state={w.state} label={w.label} size={24} animated={!reduced && !stale} />
+              <RobotAvatar
+                role={w.role}
+                state={w.state}
+                label={w.label}
+                size={24}
+                animated={!reduced && !stale && !task.noRecentActivity}
+              />
               <span>{workerLine(w, task)}</span>
             </li>
           ))}

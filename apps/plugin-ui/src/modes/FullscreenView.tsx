@@ -5,7 +5,7 @@ import { EvidencePanel } from "../components/EvidencePanel.js";
 import { needActions, TASK_STATE_TEXT, taskLine, workerLine } from "../accessibility/stateText.js";
 import { useReducedMotion } from "../accessibility/useReducedMotion.js";
 import { hostBridge } from "../bridge/hostBridge.js";
-import { finishDetail, VERIFICATION_TEXT } from "../resultDetail.js";
+import { finishDetail } from "../resultDetail.js";
 
 /**
  * Fullscreen view (PROJECT_PLAN.md §12.2): Goal, Team, Workstreams,
@@ -52,7 +52,12 @@ export function FullscreenView({
         <ul className="vt-roster">
           {task.workers.map((w) => (
             <li key={w.id} className="vt-roster-item">
-              <RobotAvatar role={w.role} state={w.state} label={w.label} animated={!reduced && !stale} />
+              <RobotAvatar
+                role={w.role}
+                state={w.state}
+                label={w.label}
+                animated={!reduced && !stale && !task.noRecentActivity}
+              />
               <div>
                 <strong>{w.label}</strong> <span className="vt-muted">{w.role}{w.isWriter ? " · writes" : " · read-only"}</span>
                 <p className="vt-muted">{workerLine(w, task)}</p>
@@ -97,17 +102,11 @@ export function FullscreenView({
           </p>
         ) : (
           <div className="vt-result">
+            {/* No inferred badge: the finish detail is reported free text
+                rendered verbatim — a "verification:" token inside a summary
+                or artifact label must not mint a success claim. */}
             <p>
-              {finish.verification ? (
-                <>
-                  <span className={`vt-verify vt-verify-${finish.verification.replaceAll("_", "-")}`}>
-                    {VERIFICATION_TEXT[finish.verification]}
-                  </span>{" "}
-                  <span className="vt-muted">reported</span>
-                </>
-              ) : (
-                <span className="vt-verify">No verification recorded</span>
-              )}
+              <span className="vt-verify">Reported result</span>
             </p>
             {finish.detail ? (
               <p className="vt-result-detail">{finish.detail}</p>

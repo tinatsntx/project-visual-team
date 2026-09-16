@@ -100,24 +100,56 @@ describe("pip text equivalents", () => {
   });
 });
 
+describe("pip goal and stale-free motion", () => {
+  it("shows the task title as visible text", () => {
+    const html = renderToStaticMarkup(createElement(PipView, { task: task() }));
+    const text = html.replace(/<[^>]*>/g, " ");
+    assert.match(text, /Change the button label/);
+  });
+
+  it("suppresses activity motion when noRecentActivity is set, even on healthy reads", () => {
+    const t = task({ noRecentActivity: true });
+    for (const el of [
+      createElement(InlineView, { task: t, recentEvents: [], stale: false }),
+      createElement(FullscreenView, { task: t, recentEvents: [], stale: false }),
+      createElement(PipView, { task: t, stale: false, refresh: "live" as const }),
+    ]) {
+      assert.doesNotMatch(renderToStaticMarkup(el), /\bvt-bob\b/);
+    }
+    assert.match(renderToStaticMarkup(createElement(InlineView, { task: t, recentEvents: [] })), /No recent activity\./);
+  });
+
+  it("keeps activity motion for a working worker with fresh evidence", () => {
+    const t = task({ noRecentActivity: false });
+    const html = renderToStaticMarkup(
+      createElement(InlineView, { task: t, recentEvents: [], stale: false }),
+    );
+    assert.match(html, /\bvt-bob\b/);
+  });
+});
+
 describe("fullscreen results and canceled specialists", () => {
-  it("surfaces recorded finish detail and verification without claiming more", () => {
+  it("renders bounded finish detail verbatim under a reported label — no inferred badge", () => {
     const t = task({ state: "COMPLETED" });
     const events = [finishEvent("result: label changed; verification: passed; artifacts: app.ts (file:app.ts)")];
     const html = renderToStaticMarkup(
       createElement(FullscreenView, { task: t, recentEvents: events }),
     );
-    assert.match(html, /Verification passed/);
+    assert.match(html, /Reported result/);
     assert.match(html, /result: label changed/);
     assert.match(html, /app\.ts/);
+    // No structured verification claim is extracted from free text.
+    assert.doesNotMatch(html, />Verification passed</);
   });
 
-  it("states the absence of verification honestly", () => {
+  it("shows finish detail without a verification badge when none exists", () => {
     const t = task({ state: "COMPLETED" });
     const html = renderToStaticMarkup(
       createElement(FullscreenView, { task: t, recentEvents: [finishEvent("result: done")] }),
     );
-    assert.match(html, /No verification recorded/);
+    assert.match(html, /Reported result/);
+    assert.match(html, /result: done/);
+    assert.doesNotMatch(html, /vt-verify-(passed|failed|not-run)/);
   });
 
   it("states the absence of a finish event honestly on a terminal task", () => {
@@ -138,15 +170,15 @@ describe("fullscreen results and canceled specialists", () => {
     assert.doesNotMatch(html, /still in progress/);
   });
 
-  it("marks the verification badge as reported, not system-verified", () => {
+  it("does not mint a badge from a verification token embedded in the summary", () => {
     const t = task({ state: "COMPLETED" });
     const html = renderToStaticMarkup(
       createElement(FullscreenView, {
         task: t,
-        recentEvents: [finishEvent("result: done; verification: passed")],
+        recentEvents: [finishEvent("result: prior run; verification: passed")],
       }),
     );
-    assert.match(html, /Verification passed<\/span> <span class="vt-muted">reported<\/span>/);
+    assert.doesNotMatch(html, />Verification passed</);
   });
 
   it("reads a canceled specialist under a completed task as ended tracking, not verified cancellation", () => {
