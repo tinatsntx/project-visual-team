@@ -1,0 +1,41 @@
+{
+  "name": "failed-verification",
+  "description": "M3 display case: reported failure with verification recorded as failed — the UI must not dress a failed finish as success.",
+  "steps": [
+    {
+      "kind": "start",
+      "input": {
+        "title": "Reproduce the export crash",
+        "summary": "Try the export path and capture whether it fails.",
+        "mode": "solo",
+        "privacyMode": "standard"
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-501",
+        "name": "PreToolUse",
+        "at": "2026-09-15T20:15:00.000Z",
+        "payload": { "session_id": "sess-6", "turn_id": "turn-1", "tool_name": "shell" }
+      }
+    },
+    {
+      "kind": "visual_event",
+      "visual": {
+        "id": "evt-502",
+        "kind": "task_finished",
+        "provenance": "reported",
+        "to": "FAILED",
+        "label": "Reported: task failed.",
+        "detail": "result: could not reproduce the crash path; verification: failed"
+      }
+    }
+  ],
+  "expect": {
+    "taskState": "FAILED",
+    "workerStates": { "lead": "FAILED" },
+    "needsUser": false,
+    "eventCount": 3
+  }
+}

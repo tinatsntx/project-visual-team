@@ -2,14 +2,16 @@ import type { TaskSnapshot, VisualEvent } from "@visual-team/contracts";
 import { RobotAvatar } from "../components/RobotAvatar.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import { EvidencePanel } from "../components/EvidencePanel.js";
-import { taskLine, workerLine } from "../accessibility/stateText.js";
+import { needActions, TASK_STATE_TEXT, taskLine, workerLine } from "../accessibility/stateText.js";
 import { useReducedMotion } from "../accessibility/useReducedMotion.js";
 import { hostBridge } from "../bridge/hostBridge.js";
+import { finishDetail, VERIFICATION_TEXT } from "../resultDetail.js";
 
 /**
  * Fullscreen view (PROJECT_PLAN.md §12.2): Goal, Team, Workstreams,
  * Needs you, Results, Evidence. The host's composer stays the conversational
- * control surface — none is recreated here.
+ * control surface — none is recreated here. Results surface the recorded
+ * finish detail and verification label; absence is stated, never success.
  */
 export function FullscreenView({
   task,
@@ -22,8 +24,12 @@ export function FullscreenView({
   stale?: boolean;
 }) {
   const reduced = useReducedMotion();
-  const needsUser = task.needsUser;
-  const done = task.state === "COMPLETED" || task.state === "FAILED";
+  const needs = needActions(task);
+  // Mirrors TERMINAL_TASK_STATES — kept local so the widget bundle doesn't
+  // pull in the reducer package.
+  const done =
+    task.state === "COMPLETED" || task.state === "FAILED" || task.state === "CANCELED";
+  const finish = finishDetail(recentEvents);
 
   return (
     <main className="vt-full" aria-label={`Visual team: ${task.title}`}>
@@ -48,8 +54,8 @@ export function FullscreenView({
             <li key={w.id} className="vt-roster-item">
               <RobotAvatar role={w.role} state={w.state} label={w.label} animated={!reduced && !stale} />
               <div>
-                <strong>{w.label}</strong> <span className="vt-muted">{w.role}</span>
-                <p className="vt-muted">{workerLine(w)}</p>
+                <strong>{w.label}</strong> <span className="vt-muted">{w.role}{w.isWriter ? " · writes" : " · read-only"}</span>
+                <p className="vt-muted">{workerLine(w, task)}</p>
               </div>
             </li>
           ))}
@@ -69,8 +75,12 @@ export function FullscreenView({
 
       <section aria-labelledby="vt-needs">
         <h3 id="vt-needs">Needs you</h3>
-        {needsUser ? (
-          <p role="alert">Approval or a decision is pending. Respond in the chat — nothing is approved automatically.</p>
+        {needs.length > 0 ? (
+          <ul className="vt-needs-list" role="status">
+            {needs.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
         ) : (
           <p className="vt-muted">Nothing needs you right now.</p>
         )}
@@ -78,10 +88,33 @@ export function FullscreenView({
 
       <section aria-labelledby="vt-results">
         <h3 id="vt-results">Results</h3>
-        {done ? (
-          <p>Task finished with status: {task.state.toLowerCase()}. Check the chat for the full result.</p>
-        ) : (
+        {!done ? (
           <p className="vt-muted">Work is still in progress.</p>
+        ) : !finish.event ? (
+          <p className="vt-muted">
+            Task ended as {TASK_STATE_TEXT[task.state].toLowerCase()} — no finish event was
+            recorded in this view's recent history. Check the chat for what the model reported.
+          </p>
+        ) : (
+          <div className="vt-result">
+            <p>
+              {finish.verification ? (
+                <>
+                  <span className={`vt-verify vt-verify-${finish.verification.replaceAll("_", "-")}`}>
+                    {VERIFICATION_TEXT[finish.verification]}
+                  </span>{" "}
+                  <span className="vt-muted">reported</span>
+                </>
+              ) : (
+                <span className="vt-verify">No verification recorded</span>
+              )}
+            </p>
+            {finish.detail ? (
+              <p className="vt-result-detail">{finish.detail}</p>
+            ) : (
+              <p className="vt-muted">The finish event carried no result summary — check the chat.</p>
+            )}
+          </div>
         )}
       </section>
 
@@ -89,6 +122,11 @@ export function FullscreenView({
         <h3 id="vt-evidence">Evidence</h3>
         <EvidencePanel events={recentEvents} />
       </section>
+
+      <p className="vt-privacy">
+        Task titles and summaries are stored as ephemeral metadata — keep secrets and
+        sensitive content out of them. Private mode changes nothing about retention today.
+      </p>
     </main>
   );
 }

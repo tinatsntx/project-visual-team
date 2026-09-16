@@ -1,0 +1,42 @@
+{
+  "name": "review-untracked",
+  "description": "M3 display case: a team with a reviewer whose real review produced no hook events. At finish, finalization cancels the never-started reviewer — the UI must show tracking ended without a finish signal, not a verified cancellation.",
+  "steps": [
+    {
+      "kind": "start",
+      "input": {
+        "title": "Improve the greeting module and have it reviewed",
+        "summary": "Lead writes the change; a reviewer checks it read-only.",
+        "mode": "team",
+        "workerRoles": ["lead", "reviewer"],
+        "privacyMode": "standard"
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-201",
+        "name": "PreToolUse",
+        "at": "2026-09-15T20:00:00.000Z",
+        "payload": { "session_id": "sess-3", "turn_id": "turn-1", "tool_name": "apply_patch" }
+      }
+    },
+    {
+      "kind": "visual_event",
+      "visual": {
+        "id": "evt-202",
+        "kind": "task_finished",
+        "provenance": "reported",
+        "to": "COMPLETED",
+        "label": "Reported: task completed.",
+        "detail": "result: greeting module updated and checked; verification: passed; artifacts: greeting.ts"
+      }
+    }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED", "reviewer": "CANCELED" },
+    "needsUser": false,
+    "eventCount": 3
+  }
+}

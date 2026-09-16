@@ -41,7 +41,7 @@ body {
 .vt-inline { padding: 12px; display: grid; gap: 10px; }
 .vt-inline-main { display: flex; gap: 12px; align-items: center; }
 .vt-inline-text { min-width: 0; }
-.vt-title { margin: 0; font-size: 1rem; }
+.vt-title { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
 .vt-status { margin: 4px 0 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .vt-lead-line { color: var(--vt-muted); font-size: 0.9rem; }
 .vt-muted { color: var(--vt-muted); }
@@ -49,7 +49,7 @@ body {
 .vt-support { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .vt-support li { display: flex; gap: 8px; align-items: center; font-size: 0.9rem; color: var(--vt-muted); }
 
-.vt-actions { display: flex; gap: 8px; }
+.vt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .vt-btn {
   font: inherit;
   padding: 6px 12px;
@@ -61,6 +61,7 @@ body {
 }
 .vt-btn:focus-visible { outline: 2px solid var(--vt-focus); outline-offset: 2px; }
 .vt-btn-primary { background: var(--vt-accent); border-color: var(--vt-accent); color: var(--vt-on-accent); }
+.vt-btn-compact { padding: 4px 8px; font-size: 0.85rem; color: var(--vt-muted); }
 
 .vt-badge {
   display: inline-block;
@@ -78,24 +79,38 @@ body {
 .vt-badge-planning, .vt-badge-reviewing { border-color: var(--vt-info); color: var(--vt-info); }
 
 .vt-needs-user { color: var(--vt-warn); font-weight: 600; margin: 4px 0 0; }
-.vt-needs-dot {
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--vt-warn); display: inline-block;
+.vt-needs-list { margin: 0; padding-left: 1.1rem; }
+.vt-needs-list li { color: var(--vt-warn); font-weight: 600; margin: 2px 0; }
+
+.vt-result { display: grid; gap: 6px; }
+.vt-result-detail { overflow-wrap: anywhere; }
+.vt-verify {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600;
+  border: 1px solid var(--vt-muted); color: var(--vt-muted);
 }
+.vt-verify-passed { border-color: var(--vt-ok); color: var(--vt-ok); }
+.vt-verify-failed { border-color: var(--vt-danger); color: var(--vt-danger); }
+.vt-verify-not-run { border-color: var(--vt-warn); color: var(--vt-warn); }
+
+.vt-privacy { margin: 0; font-size: 0.75rem; color: var(--vt-muted); }
 
 .vt-full { padding: 20px; max-width: 720px; margin: 0 auto; display: grid; gap: 18px; }
-.vt-full-header { display: flex; gap: 12px; align-items: center; }
-.vt-full-header h2 { margin: 0; flex: 1; }
+.vt-full-header { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.vt-full-header h2 { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .vt-full h3 { margin: 0 0 6px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--vt-muted); }
 .vt-full p { margin: 0; }
 .vt-roster { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .vt-roster-item { display: flex; gap: 12px; align-items: center; }
-.vt-roster-item p { margin: 2px 0 0; font-size: 0.9rem; }
+.vt-roster-item > div { min-width: 0; }
+.vt-roster-item p { margin: 2px 0 0; font-size: 0.9rem; overflow-wrap: anywhere; }
 
-.vt-pip { padding: 8px; display: flex; align-items: center; gap: 10px; }
-.vt-pip ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 12px; }
-.vt-pip li { display: flex; gap: 6px; align-items: center; }
-.vt-pip-line { font-size: 0.8rem; white-space: nowrap; }
+.vt-pip { padding: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vt-pip ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 12px; flex-wrap: wrap; }
+.vt-pip li { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.vt-pip-line { font-size: 0.8rem; }
+.vt-pip-note { margin: 0; font-size: 0.8rem; color: var(--vt-muted); flex-basis: 100%; }
+.vt-pip-needs { color: var(--vt-warn); font-weight: 600; }
 
 .vt-notice {
   padding: 8px 12px;
@@ -122,4 +137,16 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .vt-bob { animation: none; }
+}
+
+/* Narrow layout (PiP ~320 px, split panes, enlarged text): nothing may clip
+ * or lose controls — content wraps, gaps shrink, long strings break. */
+@media (max-width: 360px) {
+  .vt-inline { padding: 10px; gap: 8px; }
+  .vt-inline-main { gap: 8px; }
+  .vt-full { padding: 12px; gap: 14px; }
+  .vt-full-header { gap: 8px; }
+  .vt-pip { gap: 8px; }
+  .vt-pip ul { gap: 8px; }
+  .vt-roster-item { align-items: flex-start; }
 }

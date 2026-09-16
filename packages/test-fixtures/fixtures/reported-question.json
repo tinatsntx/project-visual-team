@@ -1,0 +1,40 @@
+{
+  "name": "reported-question",
+  "description": "M3 display case: a reported task-level wait — a question that belongs in the chat, not a native permission prompt. The UI must point the user at the chat.",
+  "steps": [
+    {
+      "kind": "start",
+      "input": {
+        "title": "Pick the retry strategy",
+        "summary": "Choose between backoff options before changing config.",
+        "mode": "solo",
+        "privacyMode": "standard"
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-301",
+        "name": "PreToolUse",
+        "at": "2026-09-15T20:05:00.000Z",
+        "payload": { "session_id": "sess-4", "turn_id": "turn-1", "tool_name": "read" }
+      }
+    },
+    {
+      "kind": "visual_event",
+      "visual": {
+        "id": "evt-302",
+        "kind": "task_transition",
+        "provenance": "reported",
+        "to": "WAITING_FOR_USER",
+        "label": "Reported: waiting for you."
+      }
+    }
+  ],
+  "expect": {
+    "taskState": "WAITING_FOR_USER",
+    "workerStates": { "lead": "WORKING" },
+    "needsUser": true,
+    "eventCount": 3
+  }
+}

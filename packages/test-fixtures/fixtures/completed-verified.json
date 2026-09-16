@@ -1,0 +1,41 @@
+{
+  "name": "completed-verified",
+  "description": "M3 display case: reported completion carrying bounded result, verification, and artifact references — the fullscreen Results section must surface them.",
+  "steps": [
+    {
+      "kind": "start",
+      "input": {
+        "title": "Change the onboarding button label",
+        "summary": "Update the label and confirm the build still passes.",
+        "mode": "solo",
+        "privacyMode": "standard"
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-401",
+        "name": "PreToolUse",
+        "at": "2026-09-15T20:10:00.000Z",
+        "payload": { "session_id": "sess-5", "turn_id": "turn-1", "tool_name": "apply_patch" }
+      }
+    },
+    {
+      "kind": "visual_event",
+      "visual": {
+        "id": "evt-402",
+        "kind": "task_finished",
+        "provenance": "reported",
+        "to": "COMPLETED",
+        "label": "Reported: task completed.",
+        "detail": "result: button label changed and build checked; verification: passed; artifacts: package.json (file:package.json), build log (file:build.log)"
+      }
+    }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED" },
+    "needsUser": false,
+    "eventCount": 3
+  }
+}

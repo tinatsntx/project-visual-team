@@ -1,0 +1,42 @@
+{
+  "name": "long-labels",
+  "description": "M3 display case: three workers, a long title and summary, and artifact references — layout must wrap at 320 px and enlarged text without losing controls.",
+  "steps": [
+    {
+      "kind": "start",
+      "input": {
+        "title": "Improve the onboarding checklist flow across the whole activation funnel and verify the multi-step completion reporting end to end",
+        "summary": "A deliberately long task summary that exercises wrapping: research the funnel, implement the bounded change, and have an independent reviewer confirm nothing regressed before the finish report lands.",
+        "mode": "team",
+        "workerRoles": ["lead", "explorer", "reviewer"],
+        "privacyMode": "standard"
+      }
+    },
+    {
+      "kind": "codex_event",
+      "event": {
+        "eventId": "evt-602",
+        "name": "PreToolUse",
+        "at": "2026-09-15T20:20:10.000Z",
+        "payload": { "session_id": "sess-7", "turn_id": "turn-1", "tool_name": "apply_patch" }
+      }
+    },
+    {
+      "kind": "visual_event",
+      "visual": {
+        "id": "evt-603",
+        "kind": "task_finished",
+        "provenance": "reported",
+        "to": "COMPLETED",
+        "label": "Reported: task completed.",
+        "detail": "result: checklist flow updated across the activation funnel with the bounded change applied and confirmed; verification: passed; artifacts: activation-checklist.ts (file:activation-checklist.ts), funnel verification notes (file:notes/verification.md)"
+      }
+    }
+  ],
+  "expect": {
+    "taskState": "COMPLETED",
+    "workerStates": { "lead": "COMPLETED", "explorer": "CANCELED", "reviewer": "CANCELED" },
+    "needsUser": false,
+    "eventCount": 3
+  }
+}

@@ -81,7 +81,9 @@ export function App() {
       </>
     );
   }
-  if (mode === "pip" && PIP_FEATURE_ENABLED) return <PipView task={task} stale={stale} />;
+  if (mode === "pip" && PIP_FEATURE_ENABLED) {
+    return <PipView task={task} stale={stale} refresh={refresh} onRetry={retry} />;
+  }
   return (
     <>
       {notice}

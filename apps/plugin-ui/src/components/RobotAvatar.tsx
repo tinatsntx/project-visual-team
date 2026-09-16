@@ -29,13 +29,14 @@ const ROLE_ANTENNA: Record<WorkerRole, "dot" | "bar" | "fork" | "ring"> = {
 export function RobotAvatar({
   role,
   state,
-  label,
   size = 40,
   animated = true,
 }: {
   role: WorkerRole;
   state: WorkerState;
-  label: string;
+  /** Display name, retained for callers; adjacent text lines are the
+   *  accessible state (the avatar is aria-hidden decoration). */
+  label?: string;
   size?: number;
   animated?: boolean;
 }) {
@@ -46,8 +47,7 @@ export function RobotAvatar({
       width={size}
       height={size}
       viewBox="0 0 48 48"
-      role="img"
-      aria-label={`${label}, ${state.toLowerCase().replaceAll("_", " ")}`}
+      aria-hidden="true"
       className={bob ? "vt-bob" : undefined}
     >
       {/* antenna — per-role silhouette */}

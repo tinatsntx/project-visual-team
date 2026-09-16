@@ -13,7 +13,7 @@ import type {
  */
 
 export interface FixtureStep {
-  kind: "start" | "codex_event";
+  kind: "start" | "codex_event" | "visual_event";
   input?: {
     title: string;
     summary: string;
@@ -22,6 +22,22 @@ export interface FixtureStep {
     privacyMode?: "standard" | "private";
   };
   event?: Omit<RecordCodexEventInput, "taskId">;
+  /**
+   * Literal visual event (M3 display fixtures): reported waits and finish
+   * metadata are model calls, not hook traffic, so they cannot be expressed
+   * as a codex_event. Applied through the real reducer like any event —
+   * `taskId` and `at` are injected by the runner.
+   */
+  visual?: {
+    id: string;
+    kind: VisualEventKind;
+    provenance?: EvidenceLevel;
+    workerId?: string;
+    to?: string;
+    label: string;
+    detail?: string;
+    at?: string;
+  };
 }
 
 export interface ReplayFixture {
@@ -90,7 +106,15 @@ export function loadSequenceFixture(name: string): SequenceFixture {
   return JSON.parse(raw) as SequenceFixture;
 }
 
-export const FIXTURE_NAMES = ["solo-posttooluse", "team-with-permission"] as const;
+export const FIXTURE_NAMES = [
+  "solo-posttooluse",
+  "team-with-permission",
+  "review-untracked",
+  "reported-question",
+  "completed-verified",
+  "failed-verification",
+  "long-labels",
+] as const;
 
 export const SEQUENCE_FIXTURE_NAMES = [
   "seq-success",

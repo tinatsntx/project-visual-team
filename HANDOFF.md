@@ -2,8 +2,10 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0, 1, and 2 COMPLETE; next is M3 visual experience,
-`docs/swe-2-brief-008.md`. M2 is accepted for explicit `$visual-team`
+**Milestone:** 0, 1, and 2 COMPLETE; M3 visual experience is implemented
+locally (`docs/swe-2-brief-008.md`, evidence
+`docs/m3-visual-experience-acceptance.md`) and awaits coordinator
+acceptance. M2 is accepted for explicit `$visual-team`
 invocation and one active visual task at a time. Partial/failed evaluation
 branches and integration limits remain recorded; no blanket eight-case pass
 or private-alpha readiness is claimed.
@@ -263,7 +265,9 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** SWE-2 brief 008, Milestone 3 visual experience. The four
+**Current priority:** coordinator acceptance of M3 visual experience
+(brief 008; local evidence in
+`docs/m3-visual-experience-acceptance.md`). The four
 M2 exit criteria have executed evidence; the eight evaluation outcomes and
 remaining limits are recorded individually. No further M1 work is required.
 M4 must fix concurrent hook routing and specialist lifecycle correlation,
@@ -339,8 +343,13 @@ npm run dev:serve --workspace @visual-team/plugin-ui
 ```
 
 Harness: `http://localhost:8788/dev.html`, parameters
-`?mode=inline|fullscreen|pip` and
-`?fixture=team-with-permission|solo-posttooluse`.
+`?mode=inline|fullscreen|pip` and `?fixture=` over
+`team-with-permission`, `solo-posttooluse`, `reported-question`,
+`completed-verified`, `failed-verification`, `review-untracked`,
+`long-labels`. M3 deterministic screenshots: `node --import tsx
+scripts/m3-capture.mts` writes `apps/plugin-ui/capture/` (gitignored);
+serve the workspace and headless-shot
+`capture/frame.html?n=<scenario>&w=<px>&h=<px>`.
 
 - esbuild watch/serve exits when stdin closes; use `serve.mjs` through
   `npm run dev:serve`. `PORT` selects an isolated port.
@@ -369,7 +378,11 @@ Harness: `http://localhost:8788/dev.html`, parameters
 - `docs/m2-consumer-workflow-acceptance.md`: M2 evidence, criteria map, and
   the coordinator-run boundary for the eight eval specs.
 - `docs/m2-native-host-evidence.json`: public receipts from actual native runs.
-- `docs/swe-2-brief-008.md`: next SWE-2 assignment, M3 visual experience.
+- `docs/swe-2-brief-008.md`: M3 visual experience brief.
+- `docs/m3-visual-experience-acceptance.md`: M3 criteria map, screenshot
+  index, harness method, and remaining real-host checks.
+- `docs/m3-shots/`: deterministic local capture PNGs for M3 evidence.
+- `scripts/m3-capture.mts`: regenerates the capture pages from fixtures.
 - `evals/m2-consumer-workflow-probe.mts`: synthetic server-side probe for
   the workflow sequences the skill instructs.
 - `docs/m1-core-engine-acceptance.md`: four-criteria evidence mapping and corrections.

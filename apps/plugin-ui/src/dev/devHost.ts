@@ -19,6 +19,11 @@ import type {
 import type { ReplayFixture } from "@visual-team/test-fixtures";
 import teamFixture from "../../../../packages/test-fixtures/fixtures/team-with-permission.json";
 import soloFixture from "../../../../packages/test-fixtures/fixtures/solo-posttooluse.json";
+import reviewUntrackedFixture from "../../../../packages/test-fixtures/fixtures/review-untracked.json";
+import reportedQuestionFixture from "../../../../packages/test-fixtures/fixtures/reported-question.json";
+import completedVerifiedFixture from "../../../../packages/test-fixtures/fixtures/completed-verified.json";
+import failedVerificationFixture from "../../../../packages/test-fixtures/fixtures/failed-verification.json";
+import longLabelsFixture from "../../../../packages/test-fixtures/fixtures/long-labels.json";
 import { syntheticCompletionDiagnostic } from "./diagnostics.js";
 
 /**
@@ -36,6 +41,11 @@ import { syntheticCompletionDiagnostic } from "./diagnostics.js";
 const FIXTURES: Record<string, ReplayFixture> = {
   "team-with-permission": teamFixture as unknown as ReplayFixture,
   "solo-posttooluse": soloFixture as unknown as ReplayFixture,
+  "review-untracked": reviewUntrackedFixture as unknown as ReplayFixture,
+  "reported-question": reportedQuestionFixture as unknown as ReplayFixture,
+  "completed-verified": completedVerifiedFixture as unknown as ReplayFixture,
+  "failed-verification": failedVerificationFixture as unknown as ReplayFixture,
+  "long-labels": longLabelsFixture as unknown as ReplayFixture,
 };
 
 const EVENT_STEP_MS = 3_000;
@@ -50,6 +60,9 @@ const GLOBALS_DELAY_MS = 1_200;
  */
 type DeliveryMode = "initialized" | "immediate" | "split" | "globals" | "never";
 type ReadMode = "ok" | "reject" | "drop";
+type QueueStep =
+  | { codex: NonNullable<ReplayFixture["steps"][number]["event"]> }
+  | { visual: NonNullable<ReplayFixture["steps"][number]["visual"]> };
 
 interface DevHostOptions {
   fixture: ReplayFixture;
@@ -100,7 +113,7 @@ class DevHost {
   private record: TaskRecord;
   private readonly capability = createDevCapability();
   private readonly iframe: HTMLIFrameElement;
-  private readonly queue: Array<NonNullable<ReplayFixture["steps"][number]["event"]>>;
+  private readonly queue: QueueStep[];
   private readonly delivery: DeliveryMode;
   /** Mutable so the harness can switch read behavior in the same iframe. */
   private readMode: ReadMode;
@@ -119,9 +132,14 @@ class DevHost {
       startedAt: nowIso(),
       eventId: "evt_dev_start",
     });
-    this.queue = fixture.steps
-      .map((s) => s.event)
-      .filter((e): e is NonNullable<typeof e> => e !== undefined);
+    // Ordered queue preserves fixture interleaving: literal visual events
+    // (reported waits/finishes — model calls, not hook traffic) replay
+    // through the real reducer alongside mapped codex events.
+    this.queue = fixture.steps.flatMap((s): QueueStep[] => {
+      if (s.event) return [{ codex: s.event }];
+      if (s.visual) return [{ visual: s.visual }];
+      return [];
+    });
     this.displayMode = displayMode;
     this.delivery = delivery;
     this.readMode = read;
@@ -395,15 +413,34 @@ class DevHost {
     return result;
   }
 
-  /** Feed the next queued codex event through the real mapper, then autofinish. */
+  /** Feed the next queued step through the real mapper/reducer, then autofinish. */
   private tick(): void {
     const next = this.queue.shift();
     if (next) {
-      log(`codex → ${next.name}`);
-      this.recordCodexEvent({ ...next, at: nowIso() });
+      if ("codex" in next) {
+        log(`codex → ${next.codex.name}`);
+        this.recordCodexEvent({ ...next.codex, at: nowIso() });
+      } else {
+        log(`reported → ${next.visual.kind}`);
+        const result = this.injectVisualEvent({
+          ...next.visual,
+          taskId: this.record.snapshot.id,
+          at: next.visual.at ?? nowIso(),
+          provenance: next.visual.provenance ?? "reported",
+        } as VisualEvent);
+        if (!result.ok) log(`visual event ${next.visual.id} rejected: ${result.error ?? "unknown"}`);
+      }
       return;
     }
     if (this.finished) return;
+    // A fixture that already reached a terminal or waiting state is its own
+    // ending — don't force a finish on top of it.
+    const terminalOrWaiting = new Set(["COMPLETED", "FAILED", "CANCELED", "WAITING_FOR_USER"]);
+    if (terminalOrWaiting.has(this.record.snapshot.state)) {
+      this.finished = true;
+      log(`fixture ended in ${this.record.snapshot.state} — no autofinish`);
+      return;
+    }
     this.finished = true;
     setTimeout(() => {
       const result = this.injectVisualEvent({
