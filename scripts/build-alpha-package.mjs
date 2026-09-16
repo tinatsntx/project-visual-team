@@ -7,9 +7,19 @@
  * reviewed source revision.
  *
  * The package is generated output — dist/ is gitignored. The manifest's
- * sourceRevision is the commit the package was built FROM (the reviewed
- * source), never the hash of a commit containing the package itself.
- * Override with VISUAL_TEAM_SOURCE_SHA for clean-export builds.
+ * sourceRevision is the commit the packaged inputs were verified to match —
+ * never HEAD-by-assumption: the inputs (plugin/, packaging/alpha/, and the
+ * two build scripts) must be unmodified relative to the named commit, with
+ * no untracked files inside them. A dirty input set produces an explicitly
+ * separated `unverified-preview` package directory instead of mislabeling
+ * bytes as a reviewed commit. Override the commit with
+ * VISUAL_TEAM_SOURCE_SHA for clean-export builds (it must resolve to a real
+ * commit, and the same input check applies to that revision).
+ *
+ * Output identity is versioned: dist/visual-team-alpha-<pluginVersion>-<sha12>
+ * (or ...-preview), so building a new revision can never silently replace
+ * the folder an earlier alpha install is using as its marketplace source.
+ * Source identity is resolved BEFORE any output is removed or replaced.
  *
  *   node scripts/build-alpha-package.mjs          # folder only
  *   node scripts/build-alpha-package.mjs --zip    # folder + .zip via tar
@@ -18,8 +28,9 @@
  * the archive is a Windows-side packaging step.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,16 +41,73 @@ import {
 } from "./build-native-codex-compat.mjs";
 
 const alphaSourceDir = resolve(projectRoot, "packaging", "alpha");
-export const alphaPackageRoot = resolve(projectRoot, "dist", "visual-team-alpha");
-export const alphaZipPath = resolve(projectRoot, "dist", "visual-team-alpha.zip");
 
-function sourceRevision() {
-  if (process.env.VISUAL_TEAM_SOURCE_SHA) return process.env.VISUAL_TEAM_SOURCE_SHA;
-  try {
-    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8" }).trim();
-  } catch {
-    return "unknown";
+/**
+ * Every path whose content lands in the package, relative to projectRoot.
+ * The manifest claims the package matches the named commit, so these are the
+ * paths that must be clean — coordinator evidence and other unrelated
+ * uncommitted work never gate a build.
+ */
+const packagedInputs = [
+  "plugin",
+  "packaging/alpha",
+  "scripts/build-native-codex-compat.mjs",
+  "scripts/build-alpha-package.mjs",
+];
+
+function git(args, { allowFailure = false } = {}) {
+  const run = spawnSync("git", args, { cwd: projectRoot, encoding: "utf8" });
+  if (run.status !== 0) {
+    if (allowFailure) return null;
+    throw new Error(`git ${args[0]} failed: ${(run.stderr || "").trim()}`);
   }
+  return run.stdout.trim();
+}
+
+function readPluginVersion() {
+  const manifest = JSON.parse(readFileSync(resolve(projectRoot, "plugin", "plugin.json"), "utf8"));
+  if (!manifest.version) throw new Error("plugin/plugin.json has no version field");
+  return manifest.version;
+}
+
+/**
+ * Resolves what the package's bytes actually are, before any output is
+ * touched. Returns { revision, short, preview }: `revision` is the full
+ * verified commit sha, or "unverified-preview" when the packaged inputs do
+ * not match a commit (dirty tree or no git); `preview` carries the commit
+ * the dirty tree was based on, for diagnosis.
+ */
+export function resolveSourceIdentity() {
+  const override = process.env.VISUAL_TEAM_SOURCE_SHA;
+  let revision;
+  if (override) {
+    if (!/^[0-9a-f]{6,40}$/i.test(override)) {
+      throw new Error(`VISUAL_TEAM_SOURCE_SHA must be a commit sha, got: ${override}`);
+    }
+    revision = git(["rev-parse", "--verify", `${override}^{commit}`]);
+    if (!revision) throw new Error(`VISUAL_TEAM_SOURCE_SHA ${override} does not resolve to a commit`);
+  } else {
+    revision = git(["rev-parse", "HEAD"], { allowFailure: true });
+    if (!revision) return { revision: "unverified-preview", short: "preview", preview: null };
+  }
+
+  // Tracked drift vs the named revision, plus any untracked files sitting
+  // inside packaged input dirs. `diff --quiet` exits 1 on differences (the
+  // helper returns null for nonzero exits); status --porcelain catches
+  // untracked files inside the scoped paths.
+  const clean = git(["diff", "--quiet", revision, "--", ...packagedInputs], { allowFailure: true });
+  const untrackedOrDirty = git(["status", "--porcelain", "--", ...packagedInputs]);
+  if (clean === null || untrackedOrDirty !== "") {
+    return { revision: "unverified-preview", short: "preview", preview: revision };
+  }
+  return { revision, short: revision.slice(0, 12), preview: null };
+}
+
+/** Default output dir is versioned by plugin version + verified source. */
+export function defaultAlphaPackageRoot(identity) {
+  const version = readPluginVersion();
+  const suffix = identity.revision === "unverified-preview" ? "preview" : identity.short;
+  return resolve(projectRoot, "dist", `visual-team-alpha-${version}-${suffix}`);
 }
 
 async function filesInDirectory(root) {
@@ -55,38 +123,46 @@ async function filesInDirectory(root) {
   return paths;
 }
 
-export async function buildAlphaPackage({ outDir = alphaPackageRoot } = {}) {
+export async function buildAlphaPackage({ outDir } = {}) {
+  // Resolve the packaged source identity FIRST — before any existing output
+  // is removed — so a manifest can never claim bytes came from a commit they
+  // do not match.
+  const identity = resolveSourceIdentity();
+  const target = outDir ?? defaultAlphaPackageRoot(identity);
+
   // Regenerate the compatibility artifact so the package always carries the
   // current reviewed source — never a stale dist/ leftover.
   await buildNativeCodexCompat();
 
-  await rm(outDir, { recursive: true, force: true });
-  await mkdir(outDir, { recursive: true });
-  await cp(compatOutputDir, outDir, { recursive: true });
+  await rm(target, { recursive: true, force: true });
+  await mkdir(target, { recursive: true });
+  await cp(compatOutputDir, target, { recursive: true });
   for (const name of ["install.ps1", "doctor.ps1", "vt-alpha-common.ps1", "README.txt"]) {
     const contents = await readFile(join(alphaSourceDir, name));
     // Windows PowerShell 5.1 reads BOM-less .ps1 files as ANSI; emit a UTF-8
     // BOM so the scripts can never be silently misdecoded on a participant
     // machine.
     const bom = name.endsWith(".ps1") ? Buffer.from([0xef, 0xbb, 0xbf]) : Buffer.alloc(0);
-    await writeFile(join(outDir, name), Buffer.concat([bom, contents]));
+    await writeFile(join(target, name), Buffer.concat([bom, contents]));
   }
 
   // Integrity manifest: sha256 of every packaged file except the manifest
   // itself, keyed by forward-slash relative path.
   const files = {};
-  for (const path of await filesInDirectory(outDir)) {
-    if (path === join(outDir, "integrity.json")) continue;
-    const rel = relative(outDir, path).replaceAll("\\", "/");
+  for (const path of await filesInDirectory(target)) {
+    if (path === join(target, "integrity.json")) continue;
+    const rel = relative(target, path).replaceAll("\\", "/");
     files[rel] = createHash("sha256").update(await readFile(path)).digest("hex");
   }
   const sorted = Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
   await writeFile(
-    join(outDir, "integrity.json"),
+    join(target, "integrity.json"),
     `${JSON.stringify(
       {
         package: "visual-team-alpha",
-        sourceRevision: sourceRevision(),
+        pluginVersion: readPluginVersion(),
+        sourceRevision: identity.revision,
+        ...(identity.preview ? { previewOf: identity.preview } : {}),
         generatedAt: new Date().toISOString(),
         algorithm: "sha256",
         testedRuntime: "codex-cli 0.154.0-alpha.6.2",
@@ -97,16 +173,21 @@ export async function buildAlphaPackage({ outDir = alphaPackageRoot } = {}) {
     )}\n`,
     "utf8",
   );
-  return outDir;
+  return target;
 }
 
-async function makeZip() {
+async function makeZip(packageRoot) {
+  const zipPath = `${packageRoot}.zip`;
   try {
-    await rm(alphaZipPath, { force: true });
-    execFileSync("tar", ["-a", "-c", "-f", alphaZipPath, "-C", dirname(alphaPackageRoot), "visual-team-alpha"], {
+    await rm(zipPath, { force: true });
+    // Relative paths only: BSD tar parses a drive-letter `-f C:\...` as a
+    // remote host and fails.
+    const name = relative(dirname(packageRoot), packageRoot);
+    execFileSync("tar", ["-a", "-c", "-f", `${name}.zip`, name], {
+      cwd: dirname(packageRoot),
       stdio: "inherit",
     });
-    return alphaZipPath;
+    return zipPath;
   } catch (error) {
     throw new Error(`archive creation failed (tar -a is required): ${error.message}`, { cause: error });
   }
@@ -117,7 +198,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   buildAlphaPackage()
     .then(async (dir) => {
       process.stdout.write(`Generated alpha package: ${dir}\n`);
-      if (wantZip) process.stdout.write(`Archived: ${await makeZip()}\n`);
+      if (wantZip) process.stdout.write(`Archived: ${await makeZip(dir)}\n`);
     })
     .catch((error) => {
       process.stderr.write(`${error instanceof Error ? error.stack : error}\n`);

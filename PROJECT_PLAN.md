@@ -843,13 +843,23 @@ workflow pass. Evidence: `docs/m4-native-closeout.md` and
 ## Milestone 5 — Private alpha
 
 **Guided setup package implemented — 2026-09-16.** `npm run build:alpha-package`
-generates `dist/visual-team-alpha/` (local marketplace + plugin artifact,
-`install.ps1`, read-only `doctor.ps1`, participant README, sha256 integrity
-manifest pinned to the source revision). Windows-only, tested runtime
-codex-cli `0.154.0-alpha.6.2`; hook endpoint resolves from
+generates a versioned `dist/visual-team-alpha-<version>-<sha12>/` (local
+marketplace + plugin artifact, `install.ps1`, read-only `doctor.ps1`,
+participant README, sha256 integrity manifest verified against the named
+source revision — dirty packaged inputs produce an explicitly separated
+`unverified-preview` build). Windows-only, tested runtime codex-cli
+`0.154.0-alpha.6.2`; discovery covers `-CodexPath`, PATH, and the
+enumerated desktop bundle; conflict detection completes before any CLI
+mutation and adds are verified by re-query. Hook endpoint resolves from
 `VISUAL_TEAM_MCP_URL` or the packaged MCP config — no implicit localhost.
 Trust and hook approval stay manual; `$visual-team` invocation is still
 explicit. Packaged, not yet distributed — no participant results exist.
+
+This round is a guided private alpha: the coordinator prepares ChatGPT
+registration and disposable tasks, with one participant using the service at
+a time. Independent accounts, authentication, public listings and multiuser
+hosting are outside this round. Contributor/self-host instructions remain
+separate from the participant path; guided setup is measured as assisted.
 
 ### Participants
 
@@ -872,11 +882,40 @@ Use a small group containing:
 
 ### Exit criteria
 
-- At least 80% of testers correctly identify what is happening and what requires them.
-- At least 80% prefer the visual summary for multi-step work.
+- Five actual participants complete comparable multistep tasks with and
+  without the board. Counterbalance the order (three board-first, two
+  native-first), and use the same underlying task behavior and evidence.
+- At least four of five correctly identify recorded status and required
+  action/location within ten seconds in the required permission, reported
+  question, reported finish and stale/unavailable observations.
+- At least four of five prefer the summary for multistep work after trying
+  both interfaces.
+- Target at least 20% lower median correct-answer time than the native
+  interface. Use valid matched comparisons, require coverage from every
+  participant, and report incorrect, missing and excluded observations.
+- Offer another session 2–7 days later; at least three of five must
+  voluntarily choose the board again before coaching.
 - Solo routing is correct for at least 90% of small-task evaluation cases.
-- No tester mistakes animation for proof of success.
+- Zero cases of animation or reported completion being mistaken for
+  independent proof of success.
+- Measure prerequisite time, installation time, assistance and abandonment
+  separately. Guided setup cannot count as unassisted installation success.
 - No sensitive payload appears in server logs.
+
+These are directional alpha thresholds, not proof of market demand. The
+[study kit](docs/private-alpha-test-kit.md) and
+[blank results template](docs/private-alpha-results-template.md) define the
+protocol and denominators. Missing participant evidence stays pending;
+agent reviews and synthetic fixtures cannot supply human results.
+
+### Stopping rule for this round
+
+After briefs 011 and 012 pass technical acceptance, including the revised
+real ChatGPT/native workflow and Windows package, stop feature expansion
+and run the participant study. Reopen implementation only for a concrete,
+bounded defect or an evidence-backed study finding. Do not expand into a
+task manager, diff viewer, approval controls or estimated completion
+percentages while waiting for participants.
 
 ## Milestone 6 — Open-source release
 

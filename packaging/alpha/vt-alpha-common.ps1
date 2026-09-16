@@ -1,6 +1,11 @@
 # Visual Team alpha -- shared helpers for install.ps1 and doctor.ps1.
 # Dot-sourced by both scripts; not meant to run alone. Read-only except where
 # install.ps1 explicitly calls the supported CLI add commands.
+#
+# Error model: discovery/query helpers RETURN status objects or THROW
+# descriptive errors -- they never `exit`, so doctor.ps1 can catch a failure,
+# report it, and keep running its independent read-only checks. install.ps1
+# converts failures into Stop-WithGuidance at its own decision points.
 
 $script:TestedCodexVersion = '0.154.0-alpha.6.2'
 $script:MarketplaceName = 'visual-team-native'
@@ -89,87 +94,159 @@ function Get-NodeStatus {
 
 # --- Codex discovery ----------------------------------------------------------
 
-# -CodexPath wins outright. Otherwise PATH is the only discovery surface --
-# versioned/hashed desktop bundle directories are observations, not paths to
-# guess. Multiple PATH candidates are an ambiguity report, never a pick.
-function Resolve-Codex {
-    param([string]$ExplicitPath)
-    if ($ExplicitPath) {
-        if (-not (Test-Path -LiteralPath $ExplicitPath)) {
-            Stop-WithGuidance "-CodexPath does not exist: $ExplicitPath" @(
-                'Pass the full path to the Codex CLI executable, or omit -CodexPath to use PATH.'
-            )
+# Desktop Codex bundles live under %LOCALAPPDATA%\OpenAI\Codex\bin\<build>\.
+# The build directory name is a hash that changes per release -- enumerate it,
+# never guess it. codex.exe is the real binary; codex.cmd is accepted so
+# controlled fixtures can exercise the same discovery path.
+function Find-DesktopCodexCandidates {
+    $binRoot = Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\bin'
+    if (-not (Test-Path -LiteralPath $binRoot)) { return @() }
+    $found = @()
+    foreach ($dir in (Get-ChildItem -LiteralPath $binRoot -Directory -ErrorAction SilentlyContinue)) {
+        foreach ($name in @('codex.exe', 'codex.cmd')) {
+            $candidate = Join-Path $dir.FullName $name
+            if (Test-Path -LiteralPath $candidate) { $found += $candidate }
         }
-        return @{ path = $ExplicitPath; source = '-CodexPath' }
     }
-    $candidates = @(
-        Get-Command codex -All -ErrorAction SilentlyContinue |
-            ForEach-Object { $_.Source } |
-            Sort-Object -Unique
-    )
-    if ($candidates.Count -eq 0) {
-        Stop-WithGuidance 'codex was not found on PATH' @(
-            "Install Codex CLI $script:TestedCodexVersion (the tested alpha runtime), open a new PowerShell window, and re-run.",
-            'Or pass -CodexPath <full path to codex>.'
-        )
-    }
-    if ($candidates.Count -gt 1) {
-        Stop-WithGuidance "more than one codex is on PATH: $($candidates -join '; ')" @(
-            'Pick one explicitly: .\install.ps1 -CodexPath "<full path to codex>"'
-        )
-    }
-    return @{ path = $candidates[0]; source = 'PATH' }
+    return $found
 }
 
 function Get-CodexVersion {
     param([string]$Codex)
-    $raw = (& $Codex --version 2>$null) -join ' '
+    # A discovered candidate may not even execute (e.g. an extensionless npm
+    # shim) -- that is an unreadable version, never a fatal error.
+    $raw = $null
+    try { $raw = (& $Codex --version 2>$null) -join ' ' } catch { $raw = $null }
     if ($raw -match 'codex-cli\s+(\S+)') { return $Matches[1] }
     if ($raw -match '(\d+\.\d+\.\d+\S*)') { return $Matches[1] }
     return $null
 }
 
-function Assert-TestedCodex {
+# Returns @{ ok; path; source; problem; remediation } -- never exits, so
+# doctor.ps1 can report the failure and continue its read-only checks.
+# -CodexPath wins outright. Otherwise every PATH command and every
+# desktop-bundled binary is version-checked; exactly one match for the tested
+# runtime resolves, anything else is an actionable report. An unsupported
+# global wrapper is never a substitute.
+function Resolve-Codex {
+    param([string]$ExplicitPath)
+    if ($ExplicitPath) {
+        if (-not (Test-Path -LiteralPath $ExplicitPath)) {
+            return @{
+                ok = $false
+                problem = "-CodexPath does not exist: $ExplicitPath"
+                remediation = @('Pass the full path to the Codex CLI executable, or omit -CodexPath to use discovery.')
+            }
+        }
+        return @{ ok = $true; path = $ExplicitPath; source = '-CodexPath' }
+    }
+
+    $candidates = @(
+        Get-Command codex -All -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.Source }
+    )
+    $candidates += Find-DesktopCodexCandidates
+    $candidates = @($candidates | ForEach-Object { ConvertTo-NormalizedPath $_ } | Sort-Object -Unique)
+
+    if ($candidates.Count -eq 0) {
+        return @{
+            ok = $false
+            problem = 'no codex executable found on PATH or in the desktop bundle'
+            remediation = @(
+                "Install Codex CLI $script:TestedCodexVersion (the tested alpha runtime), open a new PowerShell window, and re-run.",
+                'The desktop app bundles it under %LOCALAPPDATA%\OpenAI\Codex\bin\<build>\codex.exe.',
+                'Or pass -CodexPath <full path to codex>.'
+            )
+        }
+    }
+
+    $matching = @()
+    $seen = @()
+    foreach ($candidate in $candidates) {
+        $v = Get-CodexVersion $candidate
+        $seen += "$candidate ($v)"
+        if ($v -eq $script:TestedCodexVersion) { $matching += $candidate }
+    }
+    if ($matching.Count -eq 1) {
+        return @{ ok = $true; path = $matching[0]; source = 'discovered' }
+    }
+    if ($matching.Count -gt 1) {
+        return @{
+            ok = $false
+            problem = "more than one codex matches the tested runtime: $($matching -join '; ')"
+            remediation = @('Pick one explicitly: .\install.ps1 -CodexPath "<full path to codex>"')
+        }
+    }
+    return @{
+        ok = $false
+        problem = "no codex on PATH or in the desktop bundle matches the tested runtime $script:TestedCodexVersion -- found: $($seen -join '; ')"
+        remediation = @(
+            "Install codex-cli $script:TestedCodexVersion, or pass -CodexPath pointing at it.",
+            'Other installed Codex versions are not claimed to work -- do not retry expecting support.'
+        )
+    }
+}
+
+# Returns @{ ok; version; detail } -- never exits; the caller decides whether
+# an unsupported version is fatal (install) or a report line (doctor).
+function Test-TestedCodex {
     param([string]$Codex)
     $v = Get-CodexVersion $Codex
     if (-not $v) {
-        Stop-WithGuidance "could not read a version from '$Codex --version'" @(
-            "The alpha is tested on codex-cli $script:TestedCodexVersion only."
-        )
+        return @{ ok = $false; version = $null; detail = "could not read a version from '$Codex --version'" }
     }
     if ($v -ne $script:TestedCodexVersion) {
-        Stop-WithGuidance "codex-cli $v is installed; the tested alpha runtime is $script:TestedCodexVersion" @(
-            "Install codex-cli $script:TestedCodexVersion, or pass -CodexPath pointing at it.",
-            'Newer/global Codex versions are not claimed to work -- do not retry expecting support.'
-        )
+        return @{
+            ok = $false
+            version = $v
+            detail = "codex-cli $v is installed; the tested alpha runtime is $script:TestedCodexVersion"
+        }
     }
-    return $v
+    return @{ ok = $true; version = $v; detail = "codex-cli $v" }
 }
 
 # --- supported CLI JSON ------------------------------------------------------
 
+# Runs a supported CLI query/mutation and returns parsed JSON. Throws a
+# descriptive error (with the CLI's own stderr text when present) on a nonzero
+# exit or an unexpected payload -- callers decide how to report it; the CLI
+# failure is never hidden.
 function Invoke-CodexJson {
-    param([string]$Codex, [string[]]$Arguments)
-    # Stderr is intentionally not swallowed: when a call fails, the CLI's own
-    # error text is the most useful remediation output.
-    $out = & $Codex @Arguments '--json'
-    if ($LASTEXITCODE -ne 0) {
-        Stop-WithGuidance "codex $($Arguments -join ' ') exited $LASTEXITCODE" @(
-            'Run the command manually to see the CLI error, then re-run this script.'
-        )
+    param([string]$Codex, [string[]]$CliArgs)
+    $errFile = [IO.Path]::GetTempFileName()
+    try {
+        $out = & $Codex @CliArgs '--json' 2>$errFile
+        $code = $LASTEXITCODE
+        $errText = (Get-Content -LiteralPath $errFile -Raw -ErrorAction SilentlyContinue)
+    } finally {
+        Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue
+    }
+    if ($code -ne 0) {
+        $detail = ''
+        if ($errText -and $errText.Trim()) { $detail = " -- $($errText.Trim())" }
+        throw "codex $($CliArgs -join ' ') exited $code$detail"
     }
     try { return ($out -join "`n") | ConvertFrom-Json }
     catch {
-        Stop-WithGuidance "codex $($Arguments -join ' ') did not return the expected JSON" @(
-            "Expected the observed CLI JSON schema on codex-cli $script:TestedCodexVersion.",
-            'Re-run with the tested runtime or report this output to the coordinator.'
-        )
+        throw "codex $($CliArgs -join ' ') did not return the expected JSON on codex-cli $script:TestedCodexVersion"
     }
 }
 
+# Validates the observed CLI response object before anyone reads state from
+# it: the document must carry a real `marketplaces` array, and every entry we
+# might compare needs its schema fields. Malformed state throws -- it must
+# stop a run, never be mistaken for "nothing installed".
 function Get-Marketplaces {
     param([string]$Codex)
     $doc = Invoke-CodexJson $Codex @('plugin', 'marketplace', 'list')
+    if (-not $doc -or -not ($doc.PSObject.Properties.Name -contains 'marketplaces') -or -not ($doc.marketplaces -is [array])) {
+        throw 'codex plugin marketplace list --json did not return the expected marketplaces array'
+    }
+    foreach ($entry in $doc.marketplaces) {
+        if (-not $entry.name -or -not $entry.root) {
+            throw 'a marketplace entry is missing its name or root field'
+        }
+    }
     # Observed schema: { marketplaces: [ { name, root } ] }
     return @($doc.marketplaces)
 }
@@ -177,6 +254,24 @@ function Get-Marketplaces {
 function Get-PluginState {
     param([string]$Codex)
     $doc = Invoke-CodexJson $Codex @('plugin', 'list', '--available')
+    foreach ($field in @('installed', 'available')) {
+        if (-not $doc -or -not ($doc.PSObject.Properties.Name -contains $field) -or -not ($doc.$field -is [array])) {
+            throw "codex plugin list --available --json did not return the expected $field array"
+        }
+    }
+    foreach ($entry in $doc.installed) {
+        if (-not $entry.name -or -not $entry.source -or -not $entry.source.path) {
+            throw 'an installed plugin entry is missing its name or source.path field'
+        }
+        if ($entry.name -eq $script:PluginName) {
+            if (-not ($entry.PSObject.Properties.Name -contains 'enabled')) {
+                throw 'the visual-team plugin entry is missing its enabled field'
+            }
+            if (-not $entry.version) {
+                throw 'the visual-team plugin entry is missing its version field'
+            }
+        }
+    }
     # Observed schema: { installed: [ { name, version, enabled, source:{path},
     #   marketplaceSource:{sourceType,source}, marketplace } ], available: [...] }
     return @{ installed = @($doc.installed); available = @($doc.available) }
@@ -200,6 +295,26 @@ function Get-PackagedEndpoint {
         return @{ ok = $true; url = $parsed.AbsoluteUri; config = $name }
     }
     return @{ ok = $false; detail = 'no .mcp.json or mcp.json in the packaged plugin' }
+}
+
+# A defined VISUAL_TEAM_MCP_URL is the hook's actual destination -- it wins
+# over the packaged config, so package health alone never proves where events
+# go. Reports @{ state = absent|invalid|differs|matches; url? }.
+function Get-EndpointOverride {
+    param([string]$PackagedUrl)
+    $override = $env:VISUAL_TEAM_MCP_URL
+    if ([string]::IsNullOrWhiteSpace($override)) {
+        return @{ state = 'absent'; url = $null }
+    }
+    $parsed = $null
+    try { $parsed = [Uri]$override } catch { }
+    if (-not $parsed -or -not $parsed.IsAbsoluteUri -or ($parsed.Scheme -notin @('http', 'https'))) {
+        return @{ state = 'invalid'; url = $override }
+    }
+    if ($PackagedUrl -and $parsed.AbsoluteUri -ne $PackagedUrl) {
+        return @{ state = 'differs'; url = $parsed.AbsoluteUri }
+    }
+    return @{ state = 'matches'; url = $parsed.AbsoluteUri }
 }
 
 function Test-EndpointHealth {

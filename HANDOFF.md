@@ -22,18 +22,26 @@ bundled hook resolves its endpoint explicitly: `VISUAL_TEAM_MCP_URL` wins
 when defined and valid http(s); otherwise the packaged MCP config next to
 the installed plugin root (`.mcp.json` Legacy first, then `mcp.json`). There
 is no implicit localhost fallback and no second endpoint after a selection.
-`npm run build:alpha-package` generates `dist/visual-team-alpha/` — the
-complete marketplace/plugin artifact plus `install.ps1`, read-only
-`doctor.ps1`, shared helpers, participant README, and a sha256 integrity
-manifest pinned to the source revision. The installer supports only
-codex-cli 0.154.0-alpha.6.2, resolves Codex via `-CodexPath` or exactly one
-PATH candidate, checks package integrity, Node range, endpoint config and
-service health, then registers the local marketplace and plugin through the
-supported CLI JSON commands — idempotently, failing closed on conflicts,
-unsupported versions, malformed CLI JSON, or CLI failures. It never changes
-trust or approves hooks; the nine-hook review stays manual. Windows-only
-PowerShell execution tests cover the failure paths against a controlled
-stub; `npm run build` stays Linux-safe and does not build the archive.
+`npm run build:alpha-package` generates
+`dist/visual-team-alpha-<pluginVersion>-<sha12>/` — a versioned directory so
+a new build never silently replaces an installed alpha's marketplace source.
+The manifest's `sourceRevision` is verified against the packaged inputs
+(plugin/, packaging/alpha/, the build scripts): a dirty input set produces
+an explicitly separated `unverified-preview` package, never a mislabeled
+commit; `VISUAL_TEAM_SOURCE_SHA` must name a real commit. The installer
+supports only codex-cli 0.154.0-alpha.6.2, resolves Codex via `-CodexPath`
+or exactly one tested-runtime match across PATH and the desktop bundle
+(`%LOCALAPPDATA%\OpenAI\Codex\bin\*\codex.exe`, enumerated not guessed),
+checks package integrity, Node range, endpoint config and service health,
+then reads BOTH marketplace and plugin CLI state before mutating —
+conflicts (foreign-source enabled plugin, same-path different version,
+marketplace at another root) stop before any add, and successful adds are
+verified by re-query. It never changes trust or approves hooks; the
+nine-hook review stays manual. Doctor stays read-only, tolerates discovery
+failure, and reports a defined `VISUAL_TEAM_MCP_URL` override separately
+from package health. Windows-only PowerShell execution tests cover the
+failure paths against controlled stubs; `npm run build` stays Linux-safe
+and does not build the archive.
 Earlier state: milestones 0 through 4 COMPLETE on the supported path. Current
 deployed product code `0f0e3ab` is reviewed, published, and deployed. Real native specialist
 start/permission/activity/finish, same-widget ChatGPT updates, session

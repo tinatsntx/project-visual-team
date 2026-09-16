@@ -229,6 +229,28 @@ describe("hook endpoint resolution (brief 012)", () => {
   );
 
   it(
+    "with both configs valid, only the Legacy .mcp.json endpoint receives traffic",
+    async () => {
+      const legacy = await startStub();
+      const portable = await startStub();
+      const root = mkdtempSync(join(tmpdir(), "vt-hook-endpoint-"));
+      try {
+        // Two valid configs at distinct endpoints — priority, not fallback.
+        const script = installHook(root, { name: ".mcp.json", contents: configJson(legacy.url) });
+        writeFileSync(join(root, "mcp.json"), configJson(portable.url));
+        const result = await runHook(script);
+        assertSilent(result, "both-valid precedence");
+        assert.ok(legacy.requests > 0, "the Legacy .mcp.json endpoint must receive delivery");
+        assert.equal(portable.requests, 0, "the portable mcp.json endpoint must not be tried");
+      } finally {
+        legacy.server.close();
+        portable.server.close();
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it(
     "resolves the config relative to the script root from a foreign cwd",
     withStub(async (stub, root) => {
       const foreign = join(root, "foreign task cwd");

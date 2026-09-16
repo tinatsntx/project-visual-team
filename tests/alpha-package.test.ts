@@ -35,6 +35,10 @@ const POWERSHELL =
 // check must genuinely pass), and System32 (cmd.exe launches the stub).
 const SYSTEM32 = process.env.SystemRoot ? join(process.env.SystemRoot, "System32") : "C:\\Windows\\System32";
 const STUB_PATH = (binDir: string) => `${binDir};${join(process.execPath, "..")};${SYSTEM32}`;
+// The controlled PS 5.1 child needs its own module path: inheriting the
+// parent's can hide Microsoft.PowerShell.Utility (Get-FileHash) and fail the
+// integrity check before the CLI is ever reached.
+const STUB_PSMODULEPATH = join(SYSTEM32, "WindowsPowerShell", "v1.0", "Modules");
 
 // ---------------------------------------------------------------------------
 // Cross-platform package checks
@@ -62,7 +66,8 @@ describe("alpha package layout", () => {
       }
       const manifest = JSON.parse(readFileSync(join(outDir, "integrity.json"), "utf8"));
       assert.equal(manifest.algorithm, "sha256");
-      assert.match(manifest.sourceRevision, /^[0-9a-f]{40}$|^unknown$/);
+      assert.match(manifest.sourceRevision, /^[0-9a-f]{40}$|^unverified-preview$/);
+      assert.equal(manifest.pluginVersion, "0.1.0");
       assert.equal(manifest.testedRuntime, "codex-cli 0.154.0-alpha.6.2");
       for (const [rel, hex] of Object.entries<string>(manifest.files)) {
         const actual = createHash("sha256").update(readFileSync(join(outDir, rel))).digest("hex");
@@ -94,7 +99,11 @@ if "%~2"=="list" goto plist
 if "%~2"=="add" goto padd
 exit /b 2
 :version
+if exist "%~dp0version.txt" goto versionfile
 echo codex-cli %VT_STUB_VERSION%
+exit /b 0
+:versionfile
+type "%~dp0version.txt"
 exit /b 0
 :marketplace
 if "%~3"=="list" goto mlist
@@ -105,12 +114,14 @@ type "%VT_STUB_DIR%\\marketplace.json"
 exit /b %VT_STUB_EXIT%
 :madd
 type "%VT_STUB_DIR%\\added.json"
+if exist "%VT_STUB_DIR%\\post-marketplace.json" copy /y "%VT_STUB_DIR%\\post-marketplace.json" "%VT_STUB_DIR%\\marketplace.json" >nul
 exit /b %VT_STUB_ADD_EXIT%
 :plist
 type "%VT_STUB_DIR%\\plugins.json"
 exit /b %VT_STUB_EXIT%
 :padd
 type "%VT_STUB_DIR%\\added.json"
+if exist "%VT_STUB_DIR%\\post-plugins.json" copy /y "%VT_STUB_DIR%\\post-plugins.json" "%VT_STUB_DIR%\\plugins.json" >nul
 exit /b %VT_STUB_ADD_EXIT%
 `;
 
@@ -130,13 +141,66 @@ interface Fixture {
   server: Server;
 }
 
-function writeStubState(fx: Fixture, opts: { marketplaces?: unknown[]; installed?: unknown[]; available?: unknown[] }) {
-  writeFileSync(join(fx.stubDir, "marketplace.json"), JSON.stringify({ marketplaces: opts.marketplaces ?? [] }));
+function writeStubState(
+  fx: Fixture,
+  opts: {
+    marketplaces?: unknown[] | Record<string, unknown>;
+    installed?: unknown[] | Record<string, unknown>;
+    available?: unknown[];
+    /** State the CLI reports AFTER a successful add (models the real mutation). */
+    postMarketplaces?: unknown[];
+    postInstalled?: unknown[];
+    postAvailable?: unknown[];
+  },
+) {
+  writeFileSync(
+    join(fx.stubDir, "marketplace.json"),
+    JSON.stringify(
+      opts.marketplaces !== undefined && !Array.isArray(opts.marketplaces)
+        ? opts.marketplaces
+        : { marketplaces: opts.marketplaces ?? [] },
+    ),
+  );
   writeFileSync(
     join(fx.stubDir, "plugins.json"),
-    JSON.stringify({ installed: opts.installed ?? [], available: opts.available ?? [] }),
+    JSON.stringify(
+      opts.installed !== undefined && !Array.isArray(opts.installed)
+        ? opts.installed
+        : { installed: opts.installed ?? [], available: opts.available ?? [] },
+    ),
   );
   writeFileSync(join(fx.stubDir, "added.json"), JSON.stringify({ added: true }));
+  if (opts.postMarketplaces) {
+    writeFileSync(join(fx.stubDir, "post-marketplace.json"), JSON.stringify({ marketplaces: opts.postMarketplaces }));
+  }
+  if (opts.postInstalled || opts.postAvailable) {
+    writeFileSync(
+      join(fx.stubDir, "post-plugins.json"),
+      JSON.stringify({ installed: opts.postInstalled ?? [], available: opts.postAvailable ?? [] }),
+    );
+  }
+}
+
+/** The installed entry this package's installer expects the CLI to record. */
+function installedEntry(fx: Fixture, over: Record<string, unknown> = {}) {
+  return {
+    name: "visual-team",
+    version: "0.1.0",
+    enabled: true,
+    source: { path: join(fx.pkg, "visual-team") },
+    marketplaceSource: { sourceType: "local", source: fx.pkg },
+    marketplace: "visual-team-native",
+    ...over,
+  };
+}
+
+/** A desktop-bundled codex stub at LOCALAPPDATA\OpenAI\Codex\bin\<build>\. */
+function desktopStub(fx: Fixture, build: string, version?: string): string {
+  const dir = join(fx.stubDir, "localappdata", "OpenAI", "Codex", "bin", build);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "codex.cmd"), STUB_CMD);
+  if (version) writeFileSync(join(dir, "version.txt"), `codex-cli ${version}\n`);
+  return join(dir, "codex.cmd");
 }
 
 async function makeFixture(): Promise<Fixture> {
@@ -187,6 +251,10 @@ function runPs(
   const env = {
     ...process.env,
     PATH: STUB_PATH(fx.binDir),
+    // Controlled module path: System32's PS5.1 modules only (review §6.1).
+    PSModulePath: STUB_PSMODULEPATH,
+    // Controlled desktop-bundle root: the fixture's own, never the real one.
+    LOCALAPPDATA: join(fx.stubDir, "localappdata"),
     VT_STUB_DIR: fx.stubDir,
     VT_STUB_LOG: fx.log,
     VT_STUB_VERSION: "0.154.0-alpha.6.2",
@@ -212,40 +280,44 @@ function runPs(
 
 function invocations(fx: Fixture): string[] {
   if (!existsSync(fx.log)) return [];
-  return readFileSync(fx.log, "utf8").split(/\r?\n/).filter(Boolean);
+  // `echo %*` leaves a trailing space; trim so assertions compare real argv.
+  return readFileSync(fx.log, "utf8").split(/\r?\n/).map((l) => l.trimEnd()).filter(Boolean);
 }
 
 const describeWindows = IS_WINDOWS && POWERSHELL ? describe : describe.skip;
 
 describeWindows("alpha installer/doctor against a stubbed codex", () => {
-  it("fresh install registers the marketplace and plugin, then repeats as a no-op", async () => {
+  it("fresh install registers the marketplace and plugin, verifies by re-query, then repeats as a no-op", async () => {
     const fx = await makeFixture();
     try {
       const port = await startHealth(fx);
       pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
-      writeStubState(fx, {});
+      // The stub models the real CLI: after an add, subsequent list calls
+      // report the newly recorded state.
+      writeStubState(fx, {
+        postMarketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        postInstalled: [installedEntry(fx)],
+      });
 
       const first = await runPs(fx, "install.ps1");
       assert.equal(first.code, 0, first.stdout + first.stderr);
       assert.match(first.stdout, /added local marketplace/);
       assert.match(first.stdout, /installed visual-team@visual-team-native/);
+      assert.match(first.stdout, /identity confirmed by re-query/);
       assert.match(first.stdout, /\/hooks/);
 
+      // Exact argv: the supported query and add commands, nothing else.
+      const calls = invocations(fx);
+      assert.ok(calls.length >= 4, `expected >=4 CLI calls, saw ${calls.length}: ${calls.join(" | ")}`);
+      assert.equal(calls[0], "plugin marketplace list --json");
+      assert.equal(calls[1], "plugin list --available --json");
+      assert.match(calls[2], /^plugin marketplace add .+ --json$/);
+      assert.equal(calls[3], "plugin add visual-team@visual-team-native --json");
+      // Readback: both list queries run again after the adds.
+      assert.deepEqual(calls.slice(4), ["plugin marketplace list --json", "plugin list --available --json"]);
+
       // Now the CLI reports the install — rerun must change nothing.
-      writeStubState(fx, {
-        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
-        installed: [
-          {
-            name: "visual-team",
-            version: "0.1.0",
-            enabled: true,
-            source: { path: join(fx.pkg, "visual-team") },
-            marketplaceSource: { sourceType: "local", source: fx.pkg },
-            marketplace: "visual-team-native",
-          },
-        ],
-      });
-      const addsAfterFirst = invocations(fx).filter((l) => / add /.test(l)).length;
+      const addsAfterFirst = calls.filter((l) => / add /.test(l)).length;
       const second = await runPs(fx, "install.ps1");
       assert.equal(second.code, 0, second.stdout + second.stderr);
       assert.match(second.stdout, /no change/);
@@ -257,29 +329,24 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
     }
   });
 
-  it("stops on an enabled foreign-source visual-team and never mutates it", async () => {
+  it("stops on an enabled foreign-source visual-team before any mutation — even with the marketplace absent", async () => {
     const fx = await makeFixture();
     try {
       const port = await startHealth(fx);
       pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // Marketplace NOT registered: conflict detection must finish before the
+      // installer adds anything, so the log must show zero add invocations.
       writeStubState(fx, {
-        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
-        installed: [
-          {
-            name: "visual-team",
-            version: "9.9.9",
-            enabled: true,
-            source: { path: "C:\\other\\visual-team" },
-            marketplaceSource: { sourceType: "local", source: "C:\\other" },
-            marketplace: null,
-          },
-        ],
+        installed: [installedEntry(fx, { version: "9.9.9", source: { path: "C:\\other\\visual-team" }, marketplaceSource: { sourceType: "local", source: "C:\\other" }, marketplace: null })],
       });
       const result = await runPs(fx, "install.ps1");
       assert.equal(result.code, 1);
       assert.match(result.stdout, /different source/);
       assert.match(result.stdout, /never disables or replaces/);
       assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+      // Both reads happened — the conflict was found from state, not from a failed add.
+      assert.ok(invocations(fx).includes("plugin marketplace list --json"));
+      assert.ok(invocations(fx).includes("plugin list --available --json"));
     } finally {
       fx.server?.close();
       rmSync(fx.root, { recursive: true, force: true });
@@ -294,22 +361,8 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       writeStubState(fx, {
         marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
         installed: [
-          {
-            name: "visual-team",
-            version: "0.1.0",
-            enabled: true,
-            source: { path: join(fx.pkg, "visual-team") },
-            marketplaceSource: { sourceType: "local", source: fx.pkg },
-            marketplace: "visual-team-native",
-          },
-          {
-            name: "visual-team",
-            version: "9.9.9",
-            enabled: false,
-            source: { path: "C:\\other\\visual-team" },
-            marketplaceSource: { sourceType: "local", source: "C:\\other" },
-            marketplace: null,
-          },
+          installedEntry(fx),
+          installedEntry(fx, { version: "9.9.9", enabled: false, source: { path: "C:\\other\\visual-team" }, marketplaceSource: { sourceType: "local", source: "C:\\other" }, marketplace: null }),
         ],
       });
       const result = await runPs(fx, "install.ps1");
@@ -354,16 +407,7 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
       writeStubState(fx, {
         marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
-        installed: [
-          {
-            name: "visual-team",
-            version: "0.1.0",
-            enabled: true,
-            source: { path: join(fx.pkg, "visual-team") },
-            marketplaceSource: { sourceType: "local", source: fx.pkg },
-            marketplace: "visual-team-native",
-          },
-        ],
+        installed: [installedEntry(fx)],
       });
       const result = await runPs(fx, "doctor.ps1");
       assert.equal(result.code, 0, result.stdout + result.stderr);
@@ -374,6 +418,8 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       assert.match(result.stdout, /PASS\] marketplace/);
       assert.match(result.stdout, /PASS\] plugin/);
       assert.match(result.stdout, /not proof of hook delivery/);
+      // With no override defined, doctor reports the hook uses the packaged endpoint.
+      assert.match(result.stdout, /VISUAL_TEAM_MCP_URL is not set/);
       // Doctor may list but must never add/remove/trust.
       for (const line of invocations(fx)) {
         assert.doesNotMatch(line, /add|remove|disable|enable/);
@@ -421,17 +467,19 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
     try {
       const port = await startHealth(fx);
       pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
-      writeStubState(fx, {});
-
-      // Absent: PATH without any codex.
+      // Post-add state lets the -CodexPath happy path pass readback.
+      writeStubState(fx, {
+        postMarketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        postInstalled: [installedEntry(fx)],
+      });
       const emptyBin = join(fx.root, "empty-bin");
       mkdirSync(emptyBin);
       const absent = await runPs(fx, "install.ps1", [], { PATH: STUB_PATH(emptyBin) });
       assert.equal(absent.code, 1);
-      assert.match(absent.stdout, /not found on PATH/);
+      assert.match(absent.stdout, /no codex executable found/);
       assert.match(absent.stdout, /0\.154\.0-alpha\.6\.2/);
 
-      // Ambiguous: a second bin dir holding its own codex.cmd.
+      // Ambiguous: a second bin dir holding its own tested-version codex.cmd.
       const bin2 = join(fx.root, "bin2");
       mkdirSync(bin2);
       cpSync(join(fx.binDir, "codex.cmd"), join(bin2, "codex.cmd"));
@@ -454,7 +502,57 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
     }
   });
 
-  it("stops when the CLI itself fails or returns non-JSON", async () => {
+  it("discovers the desktop-bundled runtime and never substitutes an unsupported PATH wrapper", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      writeStubState(fx, {
+        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        installed: [installedEntry(fx)],
+      });
+      const emptyBin = join(fx.root, "no-path-bin");
+      mkdirSync(emptyBin);
+
+      // One tested desktop candidate, no PATH codex at all.
+      desktopStub(fx, "buildA", "0.154.0-alpha.6.2");
+      const desktopOnly = await runPs(fx, "install.ps1", [], { PATH: STUB_PATH(emptyBin) });
+      assert.equal(desktopOnly.code, 0, desktopOnly.stdout + desktopOnly.stderr);
+      assert.match(desktopOnly.stdout, /via discovered/);
+
+      // An unsupported global wrapper beside it is not a substitute and does
+      // not shadow the one tested desktop candidate.
+      const wrapperBin = join(fx.root, "wrapper-bin");
+      mkdirSync(wrapperBin);
+      writeFileSync(join(wrapperBin, "codex.cmd"), STUB_CMD);
+      writeFileSync(join(wrapperBin, "version.txt"), "codex-cli 0.149.0\n");
+      const wrapper = await runPs(fx, "install.ps1", [], { PATH: STUB_PATH(wrapperBin) });
+      assert.equal(wrapper.code, 0, wrapper.stdout + wrapper.stderr);
+      assert.match(wrapper.stdout, /via discovered/);
+      assert.match(wrapper.stdout, /OpenAI\\Codex\\bin\\buildA/i);
+
+      // Two matching desktop builds require explicit selection.
+      desktopStub(fx, "buildB", "0.154.0-alpha.6.2");
+      const two = await runPs(fx, "install.ps1", [], { PATH: STUB_PATH(emptyBin) });
+      assert.equal(two.code, 1);
+      assert.match(two.stdout, /more than one codex matches the tested runtime/);
+      assert.match(two.stdout, /-CodexPath/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+
+      // Only an unsupported desktop build remains a refusal, listing what it saw.
+      rmSync(join(fx.stubDir, "localappdata", "OpenAI", "Codex", "bin", "buildB"), { recursive: true, force: true });
+      writeFileSync(join(fx.stubDir, "localappdata", "OpenAI", "Codex", "bin", "buildA", "version.txt"), "codex-cli 0.130.0\n");
+      const unsupported = await runPs(fx, "install.ps1", [], { PATH: STUB_PATH(emptyBin) });
+      assert.equal(unsupported.code, 1);
+      assert.match(unsupported.stdout, /no codex .* matches the tested runtime 0\.154\.0-alpha\.6\.2/);
+      assert.match(unsupported.stdout, /builda/i);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("stops when the CLI itself fails — reaching the query, emitting guidance, mutating nothing", async () => {
     const fx = await makeFixture();
     try {
       const port = await startHealth(fx);
@@ -462,8 +560,155 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       writeStubState(fx, {});
       const failed = await runPs(fx, "install.ps1", [], { VT_STUB_EXIT: "3" });
       assert.equal(failed.code, 1, failed.stdout + failed.stderr);
-      assert.match(failed.stdout, /exited 3|expected JSON/);
+      // Proves the run reached the intended failing query — not an earlier gate.
+      assert.ok(
+        invocations(fx).includes("plugin marketplace list --json"),
+        `expected the marketplace query in the log, saw: ${invocations(fx).join(" | ") || "(none)"}`,
+      );
+      // Actionable guidance names the command and its exit; CLI stderr is
+      // carried in the failure detail (stdout+stderr both captured by runPs).
+      assert.match(failed.stdout, /plugin marketplace list.*exited 3|exited 3/);
+      assert.match(failed.stdout + failed.stderr, /Run the command manually/);
+      // Zero mutations — the failure was a query, and the run stopped there.
       assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("a non-JSON CLI response stops distinctly from a nonzero exit", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      writeStubState(fx, {});
+      // The query exits 0 but answers garbage — different failure kind.
+      writeFileSync(join(fx.stubDir, "marketplace.json"), "this is not json");
+      const bad = await runPs(fx, "install.ps1");
+      assert.equal(bad.code, 1, bad.stdout + bad.stderr);
+      assert.match(bad.stdout, /could not read Codex plugin state|did not return the expected JSON|marketplaces array/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("malformed CLI state stops before any mutation — a missing array is not empty state", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // installed is not an array — must stop, never be read as "nothing".
+      writeStubState(fx, { installed: { bogus: true } });
+      const result = await runPs(fx, "install.ps1");
+      assert.equal(result.code, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /expected installed array|could not read Codex plugin state/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+      // A visual-team entry missing its version field is also unreadable state.
+      writeStubState(fx, {
+        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        installed: [installedEntry(fx, { version: undefined })],
+      });
+      const noVersion = await runPs(fx, "install.ps1");
+      assert.equal(noVersion.code, 1, noVersion.stdout + noVersion.stderr);
+      assert.match(noVersion.stdout, /version field|could not read Codex plugin state/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("a same-path install at a different version is a conflict, never an upgrade", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      writeStubState(fx, {
+        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        installed: [installedEntry(fx, { version: "9.9.9" })],
+      });
+      const result = await runPs(fx, "install.ps1");
+      assert.equal(result.code, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /different version|never upgrades/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("a successful add whose readback does not show the expected identity is a failure, not a pass", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // The CLI accepts both adds but the re-query shows a wrong version —
+      // exit 0 + JSON is not proof the expected identity was installed.
+      writeStubState(fx, {
+        postMarketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        postInstalled: [installedEntry(fx, { version: "0.2.0" })],
+      });
+      const result = await runPs(fx, "install.ps1");
+      assert.equal(result.code, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /post-install verification failed/);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("doctor reports a defined VISUAL_TEAM_MCP_URL override separately from package health", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      writeStubState(fx, {
+        marketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        installed: [installedEntry(fx)],
+      });
+      // Valid but different: the package checks still pass, and the override
+      // is identified so healthy output is not mistaken for the hook target.
+      const differs = await runPs(fx, "doctor.ps1", [], { VISUAL_TEAM_MCP_URL: "http://127.0.0.1:9/mcp" });
+      assert.equal(differs.code, 0, differs.stdout + differs.stderr);
+      assert.match(differs.stdout, /WARN\] endpoint override/);
+      assert.match(differs.stdout, /hooks deliver there, NOT the packaged endpoint/);
+      // Invalid defined override disables delivery — a FAIL, not silent.
+      const invalid = await runPs(fx, "doctor.ps1", [], { VISUAL_TEAM_MCP_URL: "not-a-url" });
+      assert.equal(invalid.code, 1);
+      assert.match(invalid.stdout, /FAIL\] endpoint override/);
+      // Matching override is reported plainly.
+      const matches = await runPs(fx, "doctor.ps1", [], { VISUAL_TEAM_MCP_URL: `http://127.0.0.1:${port}/mcp` });
+      assert.equal(matches.code, 0, matches.stdout + matches.stderr);
+      assert.match(matches.stdout, /matches the packaged endpoint/);
+      // Doctor never mutates regardless of override state.
+      for (const line of invocations(fx)) {
+        assert.doesNotMatch(line, /add|remove|disable|enable/);
+      }
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("doctor still completes its read-only checks when codex discovery fails", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      writeStubState(fx, {});
+      const emptyBin = join(fx.root, "empty-bin");
+      mkdirSync(emptyBin);
+      const result = await runPs(fx, "doctor.ps1", [], { PATH: STUB_PATH(emptyBin) });
+      assert.equal(result.code, 1);
+      // The discovery failure is a report line, and later checks still ran.
+      assert.match(result.stdout, /FAIL\] codex cli/);
+      assert.match(result.stdout, /PASS\] package integrity/);
+      assert.match(result.stdout, /PASS\] service health/);
+      assert.match(result.stdout, /SKIP\] marketplace\/plugin state/);
+      assert.equal(invocations(fx).length, 0, "no CLI call may run without a codex");
     } finally {
       fx.server?.close();
       rmSync(fx.root, { recursive: true, force: true });
