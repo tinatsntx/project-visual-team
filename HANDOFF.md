@@ -2,8 +2,13 @@
 
 **Updated:** 2026-09-16
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** Brief 011 "attention and results first" is implemented and
-locally verified — pending coordinator review, not yet pushed or deployed.
+**Milestone:** Briefs 011 and 012 are implemented and reviewed. The coordinator
+is completing final checks and live acceptance; neither is deployed yet.
+Product code is frozen while this bounded acceptance runs. The five-person
+usefulness study and its 2–7-day voluntary repeat-use follow-up remain pending
+actual people. See `docs/attention-alpha-acceptance.md` for the current gate
+record, `docs/private-alpha-test-kit.md` for the protocol, and
+`docs/private-alpha-results-template.md` for the blank results sheet.
 All three display modes default to text status: unresolved needs with
 ask-holder and response location, recorded phase with provenance, latest
 recorded activity with source/time, and last successful refresh stated
@@ -15,9 +20,11 @@ and snapshot alongside the bounded legacy detail; the reducer accepts it
 only on reported `task_finished` events, enforces the allowlist/combined
 bound (measured on the serialized detail representation), and rejects
 atomically. The unchanged coordinator probe
-`evals/brief-011-coordinator-probe.mts` passes 6/6.
-Brief 012 "guided private-alpha setup" is implemented and locally verified —
-pending coordinator review, not yet pushed, deployed, or installed. The
+`evals/brief-011-coordinator-probe.mts` passes 9/9.
+Brief 012's clean `18f3a18` ZIP passes integrity verification and all six actual
+native installer checks: isolated install, repeat no-op, read-only doctor,
+conflict refusal without mutation, and owner-profile preservation. Only the
+isolated test profiles have received this package so far. The
 bundled hook resolves its endpoint explicitly: `VISUAL_TEAM_MCP_URL` wins
 when defined and valid http(s); otherwise the packaged MCP config next to
 the installed plugin root (`.mcp.json` Legacy first, then `mcp.json`). There
