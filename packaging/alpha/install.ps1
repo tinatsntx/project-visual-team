@@ -67,6 +67,14 @@ if (-not $endpoint.ok) {
     )
 }
 Write-Check 'PASS' 'endpoint config' "$($endpoint.url) ($($endpoint.config))"
+# A defined override is the hook's actual destination -- surface it so the
+# packaged health check below is not mistaken for delivery proof.
+$endpointOverride = Get-EndpointOverride -PackagedUrl $endpoint.url
+if ($endpointOverride.state -eq 'invalid') {
+    Write-Check 'WARN' 'endpoint override' 'VISUAL_TEAM_MCP_URL is defined but not a valid http(s) URL -- the hook will silently not deliver'
+} elseif ($endpointOverride.state -eq 'differs') {
+    Write-Check 'WARN' 'endpoint override' "VISUAL_TEAM_MCP_URL=$($endpointOverride.url) -- hooks deliver there, NOT the packaged endpoint"
+}
 $health = Test-EndpointHealth -McpUrl $endpoint.url
 if (-not $health.ok) {
     Stop-WithGuidance "alpha service is not reachable: $($health.detail)" @(
@@ -102,8 +110,11 @@ try {
 
 $existingMarketplace = @($marketplaces | Where-Object { $_.name -eq $script:MarketplaceName }) | Select-Object -First 1
 $sameName = @($plugins.installed | Where-Object { $_.name -eq $script:PluginName })
-$ours = @($sameName | Where-Object { (ConvertTo-NormalizedPath $_.source.path) -eq $oursPath }) | Select-Object -First 1
-$alternates = @($sameName | Where-Object { (ConvertTo-NormalizedPath $_.source.path) -ne $oursPath })
+# Identity is source.path AND the normalized local marketplace source -- not
+# path alone. Version is checked separately so a same-identity different
+# version still reports as a version conflict, not a foreign source.
+$ours = @($sameName | Where-Object { Test-OurPluginEntry $_ $oursPath $oursRoot $null }) | Select-Object -First 1
+$alternates = @($sameName | Where-Object { -not (Test-OurPluginEntry $_ $oursPath $oursRoot $null) })
 
 if ($existingMarketplace -and (ConvertTo-NormalizedPath $existingMarketplace.root) -ne $oursRoot) {
     Stop-WithGuidance "marketplace '$script:MarketplaceName' already points at $(ConvertTo-NormalizedPath $existingMarketplace.root)" @(
@@ -115,7 +126,8 @@ if ($existingMarketplace -and (ConvertTo-NormalizedPath $existingMarketplace.roo
 
 $enabledForeign = @($alternates | Where-Object { $_.enabled }) | Select-Object -First 1
 if ($enabledForeign) {
-    Stop-WithGuidance "an enabled 'visual-team' plugin from a different source exists: $($enabledForeign.source.path)" @(
+    $foreignSource = if ($enabledForeign.source.path) { $enabledForeign.source.path } elseif ($enabledForeign.source.source) { "$($enabledForeign.source.source):$($enabledForeign.source.id)" } else { 'unknown' }
+    Stop-WithGuidance "an enabled 'visual-team' plugin from a different source exists: $foreignSource" @(
         'This installer never disables or replaces an existing install.',
         'Disable it yourself in Codex (or with the CLI), then re-run -- or keep that install and do not install this alpha.'
     )
@@ -161,8 +173,7 @@ try {
 $mpNow = @($marketplacesNow | Where-Object { $_.name -eq $script:MarketplaceName -and (ConvertTo-NormalizedPath $_.root) -eq $oursRoot }) | Select-Object -First 1
 $pluginNow = @($pluginsNow.installed | Where-Object {
     $_.name -eq $script:PluginName -and
-    (ConvertTo-NormalizedPath $_.source.path) -eq $oursPath -and
-    $_.version -eq $expectedVersion
+    (Test-OurPluginEntry $_ $oursPath $oursRoot $expectedVersion)
 }) | Select-Object -First 1
 if (-not $mpNow) {
     Stop-WithGuidance "post-install verification failed: '$script:MarketplaceName' is not registered at $PackageRoot" @(

@@ -91,12 +91,24 @@ export function resolveSourceIdentity() {
     if (!revision) return { revision: "unverified-preview", short: "preview", preview: null };
   }
 
-  // Tracked drift vs the named revision, plus any untracked files sitting
-  // inside packaged input dirs. `diff --quiet` exits 1 on differences (the
-  // helper returns null for nonzero exits); status --porcelain catches
-  // untracked files inside the scoped paths.
+  // The named tree must BE the checkout being verified. An export nested
+  // under an ignored dir of an ancestor repo (e.g. dist/) inherits that
+  // repo's HEAD while the scoped status sees none of its files — those bytes
+  // are not the commit's packaged inputs. A standalone export outside any
+  // repo has no toplevel at all. Both are explicitly unverified.
+  const toplevel = git(["rev-parse", "--show-toplevel"], { allowFailure: true });
+  if (!toplevel || resolve(toplevel).toLowerCase() !== projectRoot.toLowerCase()) {
+    return { revision: "unverified-preview", short: "preview", preview: revision };
+  }
+
+  // Tracked drift vs the named revision, plus any untracked OR IGNORED files
+  // sitting inside packaged input dirs (the package copies whole dirs, so an
+  // ignored file inside plugin/ ships in the zip but is invisible to git).
+  // `diff --quiet` exits 1 on differences (the helper returns null for
+  // nonzero exits); status --porcelain --ignored catches both untracked and
+  // ignored files inside the scoped paths.
   const clean = git(["diff", "--quiet", revision, "--", ...packagedInputs], { allowFailure: true });
-  const untrackedOrDirty = git(["status", "--porcelain", "--", ...packagedInputs]);
+  const untrackedOrDirty = git(["status", "--porcelain", "--ignored", "--", ...packagedInputs]);
   if (clean === null || untrackedOrDirty !== "") {
     return { revision: "unverified-preview", short: "preview", preview: revision };
   }

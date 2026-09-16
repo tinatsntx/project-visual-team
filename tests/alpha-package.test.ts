@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  appendFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -15,6 +16,7 @@ import type { AddressInfo, Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { pathToFileURL } from "node:url";
 import { buildAlphaPackage } from "../scripts/build-alpha-package.mjs";
 
 /**
@@ -194,6 +196,24 @@ function installedEntry(fx: Fixture, over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * A real remote-installed plugin as the real CLI reports it — source carries
+ * {source:"remote", id} with no local path. Observed on codex-cli
+ * 0.154.0-alpha.6.2 (e.g. the official gmail plugin); these entries are valid
+ * and must never be read as malformed or as ours.
+ */
+function remoteEntry(over: Record<string, unknown> = {}) {
+  return {
+    name: "gmail",
+    version: "0.1.10",
+    enabled: true,
+    source: { source: "remote", id: "com.openai.gmail" },
+    marketplaceSource: null,
+    marketplace: "core",
+    ...over,
+  };
+}
+
 /** A desktop-bundled codex stub at LOCALAPPDATA\OpenAI\Codex\bin\<build>\. */
 function desktopStub(fx: Fixture, build: string, version?: string): string {
   const dir = join(fx.stubDir, "localappdata", "OpenAI", "Codex", "bin", build);
@@ -262,6 +282,11 @@ function runPs(
     VT_STUB_ADD_EXIT: "0",
     ...overrides,
   };
+  // The endpoint override must not leak from the ambient environment: the
+  // hook treats any DEFINED value as the destination, so a parent-set
+  // variable would silently change every scripted run. Tests opt in via
+  // overrides.
+  if (!("VISUAL_TEAM_MCP_URL" in overrides)) delete env.VISUAL_TEAM_MCP_URL;
   return new Promise((resolvePromise) => {
     const child = spawn(
       POWERSHELL!,
@@ -294,9 +319,12 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
       // The stub models the real CLI: after an add, subsequent list calls
       // report the newly recorded state.
+      // The real CLI also lists unrelated remote-installed plugins — valid
+      // entries with no local source path; they must not break the state read.
       writeStubState(fx, {
+        installed: [remoteEntry()],
         postMarketplaces: [{ name: "visual-team-native", root: fx.pkg }],
-        postInstalled: [installedEntry(fx)],
+        postInstalled: [remoteEntry(), installedEntry(fx)],
       });
 
       const first = await runPs(fx, "install.ps1");
@@ -347,6 +375,65 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       // Both reads happened — the conflict was found from state, not from a failed add.
       assert.ok(invocations(fx).includes("plugin marketplace list --json"));
       assert.ok(invocations(fx).includes("plugin list --available --json"));
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("an enabled remote-sourced visual-team is a foreign-source conflict, detected before mutation", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // A remote install has no local source.path — differently sourced, so
+      // enabled duplicate detection must still catch it before any add.
+      writeStubState(fx, {
+        installed: [remoteEntry({ name: "visual-team", source: { source: "remote", id: "third-party.visual-team" }, marketplace: "other-mp" })],
+      });
+      const result = await runPs(fx, "install.ps1");
+      assert.equal(result.code, 1);
+      assert.match(result.stdout, /different source/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("same source.path and version with a different marketplaceSource is not ours — enabled is a conflict", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // Path + version match is not identity: the marketplace source differs.
+      writeStubState(fx, {
+        installed: [installedEntry(fx, { marketplaceSource: { sourceType: "local", source: "C:\\different-package" } })],
+      });
+      const result = await runPs(fx, "install.ps1");
+      assert.equal(result.code, 1);
+      assert.match(result.stdout, /different source/);
+      assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
+    } finally {
+      fx.server?.close();
+      rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+
+  it("a successful add whose readback carries a different marketplaceSource fails verification", async () => {
+    const fx = await makeFixture();
+    try {
+      const port = await startHealth(fx);
+      pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
+      // The CLI accepts the add but records a different marketplace source —
+      // name + path + version alone do not prove this package's install.
+      writeStubState(fx, {
+        postMarketplaces: [{ name: "visual-team-native", root: fx.pkg }],
+        postInstalled: [installedEntry(fx, { marketplaceSource: { sourceType: "local", source: "C:\\different-package" } })],
+      });
+      const result = await runPs(fx, "install.ps1");
+      assert.equal(result.code, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /post-install verification failed/);
     } finally {
       fx.server?.close();
       rmSync(fx.root, { recursive: true, force: true });
@@ -679,6 +766,12 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       const invalid = await runPs(fx, "doctor.ps1", [], { VISUAL_TEAM_MCP_URL: "not-a-url" });
       assert.equal(invalid.code, 1);
       assert.match(invalid.stdout, /FAIL\] endpoint override/);
+      // Whitespace IS defined: the hook accepts it as the destination and
+      // delivers nowhere — it must surface as invalid, never as "not set".
+      const whitespace = await runPs(fx, "doctor.ps1", [], { VISUAL_TEAM_MCP_URL: "   " });
+      assert.equal(whitespace.code, 1);
+      assert.match(whitespace.stdout, /FAIL\] endpoint override/);
+      assert.doesNotMatch(whitespace.stdout, /is not set -- the hook uses the packaged endpoint/);
       // Matching override is reported plainly.
       const matches = await runPs(fx, "doctor.ps1", [], { VISUAL_TEAM_MCP_URL: `http://127.0.0.1:${port}/mcp` });
       assert.equal(matches.code, 0, matches.stdout + matches.stderr);
@@ -712,6 +805,98 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
     } finally {
       fx.server?.close();
       rmSync(fx.root, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Source identity — the package claims a commit, so the named tree must BE
+// that checkout. A copied source folder nested under an ignored dir (dist/)
+// inherits the parent's HEAD and a scoped status finds none of its files;
+// those bytes are not that commit's packaged inputs.
+// ---------------------------------------------------------------------------
+
+const REPO_ROOT = process.cwd();
+const PACKAGED_INPUTS = ["plugin", "packaging/alpha"];
+const PACKAGED_SCRIPTS = ["build-alpha-package.mjs", "build-native-codex-compat.mjs"];
+const GIT_AVAILABLE = spawnSync("git", ["--version"]).status === 0;
+
+async function copyInputs(destRoot: string) {
+  for (const rel of PACKAGED_INPUTS) {
+    cpSync(join(REPO_ROOT, rel), join(destRoot, rel), { recursive: true });
+  }
+  mkdirSync(join(destRoot, "scripts"), { recursive: true });
+  for (const f of PACKAGED_SCRIPTS) {
+    cpSync(join(REPO_ROOT, "scripts", f), join(destRoot, "scripts", f));
+  }
+}
+
+async function identityOf(root: string) {
+  const mod = await import(pathToFileURL(join(root, "scripts", "build-alpha-package.mjs")).href);
+  return mod.resolveSourceIdentity() as { revision: string; preview: string | null };
+}
+
+describe("alpha package source identity", () => {
+  it("a copied source tree nested under an ignored dir cannot inherit the parent checkout's identity", async (t) => {
+    if (!GIT_AVAILABLE) { t.skip("git unavailable"); return; }
+    const savedOverride = process.env.VISUAL_TEAM_SOURCE_SHA;
+    delete process.env.VISUAL_TEAM_SOURCE_SHA;
+    try {
+      const distDir = join(REPO_ROOT, "dist");
+      mkdirSync(distDir, { recursive: true });
+      const exportDir = mkdtempSync(join(distDir, "vt-srcid-export-"));
+      try {
+        await copyInputs(exportDir);
+        // Coordinator's sentinel: changed bytes inside the copy are not the
+        // parent HEAD's packaged inputs.
+        appendFileSync(join(exportDir, "packaging", "alpha", "README.txt"), "\nSENTINEL: not the reviewed source\n");
+        const identity = await identityOf(exportDir);
+        assert.equal(identity.revision, "unverified-preview",
+          "a nested export must never report the parent checkout's sha as its own");
+        assert.match(identity.preview ?? "", /^[0-9a-f]{40}$/,
+          "the inherited parent HEAD is recorded as previewOf, not claimed");
+      } finally {
+        rmSync(exportDir, { recursive: true, force: true });
+      }
+    } finally {
+      if (savedOverride === undefined) delete process.env.VISUAL_TEAM_SOURCE_SHA;
+      else process.env.VISUAL_TEAM_SOURCE_SHA = savedOverride;
+    }
+  });
+
+  it("a standalone export outside any repo is explicitly unverified, and a clean git checkout verifies", async (t) => {
+    if (!GIT_AVAILABLE) { t.skip("git unavailable"); return; }
+    const savedOverride = process.env.VISUAL_TEAM_SOURCE_SHA;
+    delete process.env.VISUAL_TEAM_SOURCE_SHA;
+    try {
+      // No git at all — unverifiable, never mislabeled.
+      const plain = mkdtempSync(join(tmpdir(), "vt-srcid-plain-"));
+      try {
+        await copyInputs(plain);
+        const identity = await identityOf(plain);
+        assert.equal(identity.revision, "unverified-preview");
+        assert.equal(identity.preview, null);
+      } finally {
+        rmSync(plain, { recursive: true, force: true });
+      }
+
+      // A clean standalone checkout IS its own checkout — identity verifies.
+      const checkout = mkdtempSync(join(tmpdir(), "vt-srcid-git-"));
+      try {
+        await copyInputs(checkout);
+        const git = (args: string[]) => spawnSync("git", args, { cwd: checkout, encoding: "utf8" });
+        assert.equal(git(["init", "-q"]).status, 0);
+        assert.equal(git(["add", "-A"]).status, 0);
+        assert.equal(git(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"]).status, 0);
+        const head = git(["rev-parse", "HEAD"]).stdout.trim();
+        const identity = await identityOf(checkout);
+        assert.equal(identity.revision, head, "a clean standalone checkout verifies to its own HEAD");
+      } finally {
+        rmSync(checkout, { recursive: true, force: true });
+      }
+    } finally {
+      if (savedOverride === undefined) delete process.env.VISUAL_TEAM_SOURCE_SHA;
+      else process.env.VISUAL_TEAM_SOURCE_SHA = savedOverride;
     }
   });
 });

@@ -260,21 +260,46 @@ function Get-PluginState {
         }
     }
     foreach ($entry in $doc.installed) {
-        if (-not $entry.name -or -not $entry.source -or -not $entry.source.path) {
-            throw 'an installed plugin entry is missing its name or source.path field'
+        # Common identity: a name. Remote plugins carry source:{source:"remote",
+        # id:<string>} with no local path -- valid entries, just never ours.
+        if (-not $entry.name) {
+            throw 'an installed plugin entry is missing its name field'
         }
         if ($entry.name -eq $script:PluginName) {
+            # The relevant entry must carry its full shape before state is
+            # read: enabled flag, version, and a recognizable source identity.
             if (-not ($entry.PSObject.Properties.Name -contains 'enabled')) {
                 throw 'the visual-team plugin entry is missing its enabled field'
             }
             if (-not $entry.version) {
                 throw 'the visual-team plugin entry is missing its version field'
             }
+            if (-not $entry.source -or (-not $entry.source.path -and -not $entry.source.source)) {
+                throw 'the visual-team plugin entry has an unrecognized source shape'
+            }
         }
     }
-    # Observed schema: { installed: [ { name, version, enabled, source:{path},
+    # Observed schema: { installed: [ { name, version, enabled,
+    #   source:{path} | source:{source:"remote",id},
     #   marketplaceSource:{sourceType,source}, marketplace } ], available: [...] }
     return @{ installed = @($doc.installed); available = @($doc.available) }
+}
+
+# True when an installed visual-team entry is THIS package's install -- local
+# source path, version, AND the normalized local marketplace source all match.
+# Same path/version with a different marketplace source is a different install
+# record, not ours. Remote/differently-sourced entries are simply not ours.
+function Test-OurPluginEntry {
+    param($Entry, [string]$OursPath, [string]$OursRoot, [string]$ExpectedVersion)
+    if (-not $Entry) { return $false }
+    if ((ConvertTo-NormalizedPath $Entry.source.path) -ne $OursPath) { return $false }
+    if ($ExpectedVersion -and $Entry.version -ne $ExpectedVersion) { return $false }
+    $ms = $Entry.marketplaceSource
+    if (-not $ms -or -not $ms.source) { return $false }
+    if ($ms.PSObject.Properties.Name -contains 'sourceType' -and $ms.sourceType -ne 'local') { return $false }
+    if ((ConvertTo-NormalizedPath $ms.source) -ne $OursRoot) { return $false }
+    if ($Entry.PSObject.Properties.Name -contains 'marketplace' -and $Entry.marketplace -and $Entry.marketplace -ne $script:MarketplaceName) { return $false }
+    return $true
 }
 
 # --- endpoint ----------------------------------------------------------------
@@ -302,8 +327,12 @@ function Get-PackagedEndpoint {
 # go. Reports @{ state = absent|invalid|differs|matches; url? }.
 function Get-EndpointOverride {
     param([string]$PackagedUrl)
+    # The hook treats any DEFINED value as the destination -- including an
+    # empty or whitespace string, which disables delivery. Only a truly unset
+    # variable is 'absent'; defined-but-invalid must surface, never read as
+    # absent.
     $override = $env:VISUAL_TEAM_MCP_URL
-    if ([string]::IsNullOrWhiteSpace($override)) {
+    if ($null -eq $override) {
         return @{ state = 'absent'; url = $null }
     }
     $parsed = $null

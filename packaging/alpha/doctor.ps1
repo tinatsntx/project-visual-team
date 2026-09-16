@@ -97,8 +97,10 @@ if ($codex) {
         $oursPath = ConvertTo-NormalizedPath (Join-Path $PackageRoot $script:PluginDirName)
         $expectedVersion = $null
         try { $expectedVersion = (Get-Content -LiteralPath (Join-Path $pluginRoot '.codex-plugin\plugin.json') -Raw | ConvertFrom-Json).version } catch { }
-        $oursPlugin = @($sameName | Where-Object { (ConvertTo-NormalizedPath $_.source.path) -eq $oursPath }) | Select-Object -First 1
-        $foreign = @($sameName | Where-Object { (ConvertTo-NormalizedPath $_.source.path) -ne $oursPath })
+        # Same identity rule as the installer: source.path AND the normalized
+        # local marketplace source -- not path alone.
+        $oursPlugin = @($sameName | Where-Object { Test-OurPluginEntry $_ $oursPath (ConvertTo-NormalizedPath $PackageRoot) $null }) | Select-Object -First 1
+        $foreign = @($sameName | Where-Object { -not (Test-OurPluginEntry $_ $oursPath (ConvertTo-NormalizedPath $PackageRoot) $null) })
 
         if (-not $oursPlugin) {
             Report $false 'plugin' "'$script:PluginName' is not installed from this package -- run .\install.ps1"
@@ -109,8 +111,10 @@ if ($codex) {
         }
         $enabledForeign = @($foreign | Where-Object { $_.enabled })
         if ($enabledForeign.Count -gt 0) {
+            $fs = $enabledForeign[0]
+            $foreignSource = if ($fs.source.path) { $fs.source.path } elseif ($fs.source.source) { "$($fs.source.source):$($fs.source.id)" } else { 'unknown' }
             Report $false 'plugin source conflict' `
-                "an enabled visual-team from a different source exists: $($enabledForeign[0].source.path)"
+                "an enabled visual-team from a different source exists: $foreignSource"
         } elseif ($foreign.Count -gt 0) {
             Write-Check 'NOTE' 'other visual-team' 'a disabled install from another source exists -- left untouched'
         }
