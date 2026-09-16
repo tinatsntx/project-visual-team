@@ -21,13 +21,25 @@ cwd never leave the hook process.
 ## Retention
 
 Anonymous alpha: in-memory only, tasks expire ~2 hours after creation
-(configurable per process via `VISUAL_TEAM_TTL_MS`), and nothing is written
-to disk — including by the hook script, which keeps no local binding files.
+(configurable per process via `VISUAL_TEAM_TTL_MS`). The plugin task service
+writes no task records to disk; the hook keeps no local binding files.
 Correlation bindings are bounded and swept with their task. A server
 restart drops all tasks and bindings: a resumed Codex session must produce a
 new validated `start_visual_task` receipt before its untargeted events
 route again (until then they are rejected, not misrouted). No cross-device
 history, no permanent bot memory.
+
+## Caller-provided labels and host retention
+
+Titles, summaries, result labels, and artifact references are caller-provided
+text. Keep them generic and free of secrets; the plugin cannot establish that
+a label is safe merely because it passes a length/schema check. Raw content
+is not captured automatically by the hook.
+
+ChatGPT and Codex can retain conversations and tool calls under their own
+settings, and the hosting provider retains operational/request logs under
+its own service settings. The plugin's in-memory expiry does not erase those
+host records, exported acceptance evidence, or copies a user chooses to save.
 
 ## Public beta decision
 

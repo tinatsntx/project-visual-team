@@ -21,4 +21,6 @@ public-release clearance.
 - Real participant feedback — M5 cannot be approximated synthetically.
 - Public identity: name clearance, logo finalization, verified developer
   identity, public website, privacy policy, terms — all owner decisions.
-- Production HTTPS endpoint, MCP Inspector pass, and plugin review.
+- Production domain/authentication decision and plugin review. The current
+  HTTPS alpha endpoint passes the bounded Inspector CLI protocol smoke; see
+  `docs/mcp-inspector-evidence.json`.

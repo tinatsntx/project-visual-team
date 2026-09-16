@@ -1,0 +1,27 @@
+[
+  {
+    "draft": 1,
+    "url": "https://github.com/tinatsntx/project-visual-team/issues/1",
+    "title": "Guard test: non-observed `activity` must not resolve a pending ask"
+  },
+  {
+    "draft": 2,
+    "url": "https://github.com/tinatsntx/project-visual-team/issues/2",
+    "title": "`npm run replay -- --verbose` shows event detail and targets"
+  },
+  {
+    "draft": 3,
+    "url": "https://github.com/tinatsntx/project-visual-team/issues/3",
+    "title": "Fixture-authoring guide"
+  },
+  {
+    "draft": 4,
+    "url": "https://github.com/tinatsntx/project-visual-team/issues/4",
+    "title": "Hook-script tests for a string `tool_response` and the response bound"
+  },
+  {
+    "draft": 5,
+    "url": "https://github.com/tinatsntx/project-visual-team/issues/5",
+    "title": "Measurable 320 px overflow check for the evidence panel"
+  }
+]

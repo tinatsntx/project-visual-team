@@ -9,8 +9,11 @@ isolation, interrupt/resume, and hook-disabled workflow pass. Evidence:
 `docs/m4-native-closeout.md` and `docs/m4-native-host-evidence.json`.
 M4 replaces M2's temporary one-active-task limit with explicit session
 correlation; explicit `$visual-team` invocation remains required.
-SWE-2 is executing brief 010 for release preparation. M5 needs real testers;
-M6/M7 preparation is not public-release or submission acceptance.
+Brief 010 release preparation is accepted at `9c8e825`: docs,
+offline replay, lint/CI, a recorded synthetic screenshot demo, five open
+contributor tickets, and hosted Inspector evidence. M5 needs real testers;
+M6 launch/M7 need owner identity, domain, legal, and support choices. See
+`docs/release-preparation-closeout.md`.
 Coordinator accepted `2eda8b3`; all three follow-up probes pass. Initial supported
 path: ChatGPT web + Windows Codex CLI + Render. Real native PostToolUse reaches
 the existing ChatGPT web widget on this Pro account, with CSP enforced.
@@ -74,7 +77,8 @@ the accepted entry point: implicit discovery sometimes started before reading
 the skill and failed metadata handling. Untargeted hooks can cross active
 tasks, and hookless specialist completion is not accurately reflected in the
 roster. M3 owns truthful presentation; M4 owns correlation and hook coverage.
-Real native permission prompting remains unexecuted in the current settings.
+M2 did not execute real native permission prompting; the accepted M4
+closeout now supplies that evidence.
 Evidence: `docs/m2-consumer-workflow-acceptance.md`.
 
 ## Current state

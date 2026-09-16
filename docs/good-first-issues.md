@@ -1,8 +1,8 @@
-# Good first issue drafts
+# Good first issues
 
-Prepared for M6 — **not opened as GitHub issues yet** (opening them is a
-coordinator action). Each is genuinely bounded: reproduction/context, file
-pointers, scope, and acceptance criteria.
+Opened and read back by the coordinator on 2026-09-15 CT as GitHub issues
+#1–#5, all labeled `good first issue`. See `good-first-issue-links.json`
+for exact links. Each has context, scope, and acceptance criteria.
 
 ## 1. Guard test: non-observed `activity` must not resolve a pending ask
 
@@ -89,7 +89,7 @@ disclosure in fullscreen) has no long-content coverage — and a static
 `renderToStaticMarkup` test cannot prove wrapping. The existing headless
 capture pipeline (`scripts/m3-capture.mts`) renders real layouts.
 
-**Repro.** Add a capture scenario with an event `label` of ~300 chars,
+**Repro.** Add a capture scenario with an event `label` of 240 chars (the contract limit),
 screenshot fullscreen at a 320 px viewport via the existing headless
 Chrome path, then assert measurably: evaluate
 `document.scrollingElement.scrollWidth <= 320` (no horizontal overflow) on

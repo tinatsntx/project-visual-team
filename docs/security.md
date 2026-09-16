@@ -24,8 +24,10 @@ Threat model seeds for the alpha (expand before public beta — Milestone 5/6).
 
 ## Known limitations (documented, not hidden)
 
-- Local-dev `mcp.json` points at `http://localhost:8787/mcp`; production
-  submission requires a public HTTPS endpoint (Milestone 7).
+- Committed `plugin/mcp.json` points at the tested Render HTTPS alpha
+  endpoint. The local server and unconfigured hook default to localhost;
+  configure both URLs together as documented in `setup.md`. Production
+  submission and an authentication decision remain pending (Milestone 7).
 - Untargeted hook events resolve only through a `session_id`/`agent_id`
   binding established by observed evidence (the start-tool receipt or a bound
   SubagentStart); unknown, expired, or conflicting correlation is rejected.

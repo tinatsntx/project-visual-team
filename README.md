@@ -32,7 +32,7 @@ Prereqs: Node.js 20.19+, 22.13+, or 24+; npm ≥ 10 (the floor is set by the
 dev lint toolchain — eslint requires `^20.19.0 || ^22.13.0 || >=24`).
 
 ```powershell
-npm install          # install all workspaces
+npm ci               # install the locked workspace dependencies
 npm run typecheck    # strict TS check across the monorepo
 npm test             # unit + contract + fixture-replay tests
 npm run build        # bundle the UI (esbuild -> apps/plugin-ui/dist)
@@ -58,14 +58,15 @@ npm run replay -- team-with-permission   # or --list for all fixtures
 
 ## Testing in ChatGPT / Codex
 
-1. Start the server (`npm run dev`). For ChatGPT developer mode you need a
-   reachable URL — tunnel localhost (e.g. `ngrok http 8787`) or deploy.
-2. Register the MCP server in ChatGPT developer mode; copy the
-   `plugin_asdk_app...` id into `plugin/.app.json`.
-3. Expose `plugin/` through a local marketplace
-   (`~/.agents/plugins/marketplace.json` or `.agents/plugins/marketplace.json`)
-   and install it from the Plugins Directory. See
-   `docs/feasibility-report.md` for the platform matrix to fill in.
+Use the separate instructions in [setup](docs/setup.md): attach the
+registered developer app in ChatGPT, or install the native Codex package
+and invoke its skill explicitly. After deploying changed UI assets, Refresh
+the developer app and open a fresh ChatGPT chat. The host tool endpoint and
+hook `VISUAL_TEAM_MCP_URL` must point at the same deployment.
+
+A [captioned synthetic screenshot walkthrough](docs/demo/index.html) shows
+the UI states; [M4 acceptance](docs/m4-native-closeout.md) records the separate
+real ChatGPT/native tests.
 
 ## Using the workflow
 

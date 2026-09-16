@@ -14,22 +14,22 @@ results.
 | Architecture document | complete | `docs/architecture.md` (post-M4: six tools, binding indexes, terminal freeze) |
 | Threat model | complete | `docs/security.md` (correlation keys ≠ auth; in-memory-only stores; restart consequences) |
 | Privacy model | complete | `docs/privacy.md` (five-field hook allowlist, binding retention, restart loss) |
-| Recorded demo | **pending** — script prepared below; coordinator captures the real recording | `docs/m3-shots/` has 13 verified UI stills |
+| Recorded demo | complete — labeled synthetic screenshot walkthrough, 36 seconds | `docs/demo/index.html`; sources and limits in `docs/demo/README.md` |
 | Installation instructions | complete | `docs/setup.md` §1–3 |
 | Self-host instructions | complete | `docs/setup.md` §5 (explicit `plugin/mcp.json` edit; committed file keeps the tested hosted endpoint) |
 | Example event replay | complete | `npm run replay -- <fixture>` — `scripts/replay-fixture.mts` + CLI tests |
 | Roadmap | complete | `ROADMAP.md` |
 | Contribution guide | complete | `CONTRIBUTING.md` |
-| Code of conduct | complete | `CODE_OF_CONDUCT.md` |
+| Code of conduct | document present; owner contact pending | `CODE_OF_CONDUCT.md` |
 | Security reporting policy | complete | `SECURITY.md` → private advisories URL (verified enabled 2026-09-15); no SLA invented; non-security contact pending |
 | Changelog | complete | `CHANGELOG.md` (M0–M4) |
 | Issue templates | complete | bug / feature / truthfulness + `config.yml` contact links |
-| ≥5 bounded good first issues | prepared — drafts only, none opened | `docs/good-first-issues.md` (5 drafts) |
+| ≥5 bounded good first issues | complete — issues #1–#5 opened and read back | `docs/good-first-issue-links.json` |
 | Lint + CI | complete | `npm run lint` (eslint 10.9.1 flat config) wired into `.github/workflows/ci.yml` before typecheck/test/build |
 
 ## Synthetic demo script (labeled)
 
-For the coordinator to record — every step is runnable locally with no
+Alternative live harness recording script — every step is runnable locally with no
 host account:
 
 ```powershell
@@ -63,8 +63,8 @@ workflow; four have verified local probe coverage):
 Negative cases — reuse `evals/negative/`:
 
 1. `01-unnecessary-team` — small task must not spawn a team.
-2. `02-unsupported-visibility` — surface without widget support degrades
-   truthfully.
+2. `02-unsupported-visibility` — hosted searches are not claimed as observed
+   without supported hooks; the UI-unavailable variant degrades truthfully.
 3. `03-unsafe-shortcut` — visual claims cannot approve/shortcut native
    work.
 
@@ -86,7 +86,7 @@ Negative cases — reuse `evals/negative/`:
   Visual Team to review my onboarding flow, improve it, and check that
   nothing broke." / "Use Visual Team to compare three approaches and
   recommend one."
-- **Screenshot needs**: 13 verified PNGs in `docs/m3-shots/` (inline,
+- **Screenshot needs**: 14 verified PNGs in `docs/m3-shots/` (inline,
   fullscreen results, PiP, stale, 320 px, enlarged text, both themes,
   long labels, permission need). `plugin.json` `screenshots` is still
   `[]` — coordinator selects finals during submission.
@@ -112,22 +112,28 @@ Negative cases — reuse `evals/negative/`:
 - M5 private alpha: real participants required; kit prepared, zero data.
 - Cleared public name, final logo, verified developer identity, public
   website, support URL, privacy policy, terms — all owner decisions.
-- Production HTTPS endpoint, widget domain, authentication decision,
-  MCP Inspector pass, plugin review submission.
+- Production widget domain, authentication/deployment decision, and plugin
+  review submission. The current HTTPS alpha endpoint passes the bounded
+  Inspector CLI smoke in `mcp-inspector-evidence.json`; this is not a full
+  conformance or public-submission acceptance.
 - Non-security contact route (support/conduct) — no verified address
   exists; tracked above and in `SECURITY.md`.
-- Recorded demo capture and GitHub issue creation from the drafts.
+- Real participant acceptance and owner choices listed above. Demo capture
+  and five GitHub issue publications are complete; see
+  `release-preparation-closeout.md`.
 
-## Verification record (clean committed-source export, 2026-09-15)
+## Verification record (2026-09-15)
 
-Run against `git archive HEAD` extracted to a fresh directory — a clean
-export, not a pushed clone:
+Independent coordinator checks used a fresh committed-source export of
+`fa6862b` (208 tests), followed by the final replay-only fix `9c8e825`
+(212 tests in the configured tree; 13 focused CLI cases). This is not a
+claimed remote clone. See `release-preparation-closeout.md`.
 
 ```
 npm ci                              ok
 npm run lint                        ok (0 problems)
 npm run typecheck                   ok
-npm test                            ok — 208 tests
+npm test                            ok — 212 tests (208 in earlier clean export)
 npm run build                       ok — widget + dev-host bundles, verbatim embed verified, native compat package generated
 npm run verify:native-codex-compat  ok
 npm run replay -- team-with-permission   ok — PASS

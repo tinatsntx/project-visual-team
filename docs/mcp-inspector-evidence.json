@@ -1,0 +1,182 @@
+{
+  "at": "2026-09-16T02:42:26.910Z",
+  "inspectorVersion": "2.6.0",
+  "endpoint": "https://project-visual-team-mcp.onrender.com/mcp",
+  "deployedProductSha": "0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e",
+  "scope": "CLI protocol smoke on the accepted single-user alpha endpoint; not a full conformance suite, Inspector UI test, authentication proof, or public submission clearance.",
+  "initialized": {
+    "serverInfo": {
+      "name": "visual-team",
+      "version": "0.1.0"
+    },
+    "protocolVersion": "2025-11-25",
+    "capabilities": {
+      "resources": {
+        "listChanged": true
+      },
+      "tools": {
+        "listChanged": true
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "initialize",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "tools/list strict",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "resources/list",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "resources/read",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "render app metadata",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "start_visual_task",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "render_visual_task",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "get_visual_task",
+      "exit": 5,
+      "pass": true
+    },
+    {
+      "name": "get_visual_task",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "record_codex_event",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "report_workflow_step",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "finish_visual_task",
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "name": "get_visual_task",
+      "exit": 0,
+      "pass": true
+    }
+  ],
+  "tools": [
+    {
+      "name": "start_visual_task",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "report_workflow_step",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "record_codex_event",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_visual_task",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "finish_visual_task",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "render_visual_task",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "schemaFindings": [
+    {
+      "toolName": "record_codex_event",
+      "findings": [
+        {
+          "rule": "untyped-schema",
+          "severity": "warning",
+          "schema": "inputSchema",
+          "path": "properties.payload.additionalProperties",
+          "issue": "Schema carries no validation keyword at all, so it accepts any value — the object-literal spelling of a bare `true`.",
+          "suggestion": "Declare what the value actually is — e.g. `{\"type\": \"object\", \"additionalProperties\": true}` for a free-form object. That is a deliberate change of contract, which is the point: as written it constrains nothing."
+        }
+      ]
+    }
+  ],
+  "appInfo": {
+    "hasApp": true,
+    "toolName": "render_visual_task",
+    "resourceUri": "ui://visual-team/task-v1.html",
+    "csp": {
+      "connectDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true,
+    "resourceMimeType": "text/html;profile=mcp-app"
+  },
+  "resource": {
+    "uri": "ui://visual-team/task-v1.html",
+    "mimeType": "text/html;profile=mcp-app",
+    "bytes": 171426
+  },
+  "task": {
+    "id": "vt_8ded6bc20567540e6a45b66f",
+    "state": "COMPLETED",
+    "eventCount": 3,
+    "provenance": "reported"
+  },
+  "privateCapability": {
+    "returnedInMeta": true,
+    "absentFromPublicFields": true,
+    "requiredForRead": true,
+    "requestMetaAccepted": true
+  }
+}

@@ -849,6 +849,11 @@ Use a small group containing:
 
 ## Milestone 6 — Open-source release
 
+**Technical materials prepared — 2026-09-15 CT.** Docs, replay CLI, lint/CI,
+recorded synthetic screenshot walkthrough, and five contributor issues are
+complete. Public launch remains gated on M5 and owner choices. Evidence:
+`docs/release-preparation-closeout.md`.
+
 ### Required repository quality
 
 - Architecture document.
@@ -875,6 +880,11 @@ Use:
 > An open-source visual team interface that makes native ChatGPT and Codex work easier to understand—without creating another agent platform.
 
 ## Milestone 7 — Public Plugin submission
+
+**Not submitted.** Current HTTPS alpha endpoint passes the bounded MCP
+Inspector 2.6.0 CLI smoke (zero schema errors, one warning). This does not
+clear production identity/domain/authentication/legal gates; see
+`docs/mcp-inspector-evidence.json` and the release-preparation closeout.
 
 ### Required materials
 

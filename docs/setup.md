@@ -54,7 +54,8 @@ plugin install in §4.
 2. Register the MCP server in ChatGPT developer mode and copy the issued
    `asdk_app_...` id into `plugin/.app.json` (the committed file carries
    the M0 developer app's id — replace it for your own app).
-3. In a chat, ask for visual task tracking; the app renders the widget
+3. Attach the registered app to a chat, then ask for visual task tracking;
+   the app renders the widget
    inline. `render_visual_task` mounts it; routine updates flow over the
    host bridge.
 4. **After any deployment of new UI/server code, refresh the developer
@@ -93,9 +94,10 @@ observed lifecycle events.
 **URL pairing.** Two settings must point at the *same* server for a run:
 `plugin/mcp.json`'s `url` is where the host calls the MCP tools;
 `VISUAL_TEAM_MCP_URL` (Codex process env) is where the hook script posts
-events. Local dev can leave both at their localhost defaults; a hosted run
-must set the env override so hook events reach the same endpoint the host
-tools use.
+events. For local dev, explicitly change the committed hosted URL in
+`plugin/mcp.json` to localhost before building the local package; the hook
+can then use its localhost default. A hosted run must set the process env
+override so hook events reach the same endpoint the host tools use.
 
 ## 5. Self-hosting / pointing at your own server
 

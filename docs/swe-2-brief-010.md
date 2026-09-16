@@ -1,8 +1,9 @@
 # SWE-2 brief 010 — release preparation after M4 review
 
-**Queued, not yet assigned.** Start only when the coordinator hands this
-brief over after reviewing brief 009. This prepares M5/M6 and M7 materials;
-it does not claim participant acceptance or public-release clearance.
+**Accepted at `9c8e825` — technical preparation complete.** Handed directly to
+SWE-2 through Devin after M4 review; see `release-preparation-closeout.md`
+for commits, review corrections, real evidence, and remaining owner gates.
+This does not claim participant acceptance or public-release clearance.
 
 ## Outcome
 

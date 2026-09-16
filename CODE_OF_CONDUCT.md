@@ -6,6 +6,7 @@ In short: be respectful, be constructive, assume good intent, and keep the
 community welcoming to everyone — including the nontechnical users this
 product is built for.
 
-Instances of unacceptable behavior may be reported to the maintainers via the
-contact listed in `SECURITY.md`. All complaints will be reviewed and
-investigated promptly and fairly.
+A private, non-security conduct-reporting contact is still pending the
+owner's selection. This is an open launch requirement; do not post sensitive
+conduct reports in public issues. `SECURITY.md` provides the separate
+verified route for software vulnerability reports.
