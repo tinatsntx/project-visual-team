@@ -77,17 +77,31 @@ export function App() {
     return (
       <>
         {notice}
-        <FullscreenView task={task} recentEvents={recentEvents} stale={stale} />
+        <FullscreenView task={task} recentEvents={recentEvents} stale={stale} lastUpdatedAt={lastUpdatedAt} />
       </>
     );
   }
   if (mode === "pip" && PIP_FEATURE_ENABLED) {
-    return <PipView task={task} stale={stale} refresh={refresh} onRetry={retry} />;
+    return (
+      <PipView
+        task={task}
+        recentEvents={recentEvents}
+        refresh={refresh}
+        lastUpdatedAt={lastUpdatedAt}
+        onRetry={retry}
+      />
+    );
   }
   return (
     <>
       {notice}
-      <InlineView task={task} recentEvents={recentEvents} stale={stale} />
+      <InlineView
+        task={task}
+        recentEvents={recentEvents}
+        stale={stale}
+        lastUpdatedAt={lastUpdatedAt}
+        onRetry={retry}
+      />
     </>
   );
 }

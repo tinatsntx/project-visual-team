@@ -28,7 +28,11 @@
         "provenance": "reported",
         "to": "FAILED",
         "label": "Reported: task failed.",
-        "detail": "result: could not reproduce the crash path; verification: failed"
+        "detail": "result: could not reproduce the crash path; verification: failed",
+        "result": {
+          "summary": "could not reproduce the crash path",
+          "verification": "failed"
+        }
       }
     }
   ],

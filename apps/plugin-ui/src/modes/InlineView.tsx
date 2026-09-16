@@ -1,72 +1,76 @@
 import { useState } from "react";
 import type { TaskSnapshot, VisualEvent } from "@visual-team/contracts";
 import { hostBridge } from "../bridge/hostBridge.js";
-import { RobotAvatar } from "../components/RobotAvatar.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import { EvidencePanel } from "../components/EvidencePanel.js";
-import { needActions, taskLine, workerLine } from "../accessibility/stateText.js";
-import { useReducedMotion } from "../accessibility/useReducedMotion.js";
+import { ResultBlock } from "../components/ResultBlock.js";
+import { TeamView } from "../components/TeamView.js";
+import {
+  latestActivityLine,
+  lastRefreshLine,
+  needActions,
+  NO_PENDING_NEEDS_TEXT,
+  taskLine,
+} from "../accessibility/stateText.js";
+
+/** Mirrors TERMINAL_TASK_STATES — kept local so the widget stays reducer-free. */
+const TERMINAL = new Set(["COMPLETED", "FAILED", "CANCELED"]);
 
 /**
- * Inline card (PROJECT_PLAN.md §12.1): lead bot, title, verified status, up to
- * two supporting bots, one primary action ("Open team") plus compact
- * secondaries. No tabs, no deep navigation, no chat composer.
+ * Inline card (brief 011): text status first — unresolved needs with their
+ * ask-holder and where to respond, the recorded phase with its provenance,
+ * the latest recorded activity with source/time, and the last successful
+ * refresh stated separately. A terminal task shows its reported outcome,
+ * checks, and artifact references in the default summary — no need to open
+ * the team to see work. Characters live in the optional "View team" view.
+ *
  * §13.6 notice: titles/summaries are stored metadata — say so once, briefly.
  */
 export function InlineView({
   task,
   recentEvents,
   stale = false,
+  lastUpdatedAt = null,
+  onRetry,
 }: {
   task: TaskSnapshot;
   recentEvents: VisualEvent[];
   /** Stale/unavailable refresh: last-known data renders without motion. */
   stale?: boolean;
+  /** Last successful refresh, stated separately from last activity. */
+  lastUpdatedAt?: string | null;
+  onRetry?: () => void;
 }) {
-  const reduced = useReducedMotion();
   const [showEvidence, setShowEvidence] = useState(false);
-  const lead = task.workers.find((w) => w.role === "lead") ?? task.workers[0];
-  const support = task.workers.filter((w) => w !== lead).slice(0, 2);
+  const [showTeam, setShowTeam] = useState(false);
   const needs = needActions(task);
+  const done = TERMINAL.has(task.state);
 
   return (
     <section className="vt-inline" aria-label={`Visual team status: ${task.title}`}>
-      <div className="vt-inline-main">
-        {lead && (
-          <RobotAvatar
-            role={lead.role}
-            state={lead.state}
-            label={lead.label}
-            animated={!reduced && !stale && !task.noRecentActivity}
-          />
+      <h3 className="vt-title">{task.title}</h3>
+      <div className="vt-needs" role="status">
+        {needs.length > 0 ? (
+          needs.map((line) => (
+            <p key={line} className="vt-needs-user">
+              {line}
+            </p>
+          ))
+        ) : (
+          <p className="vt-muted">{NO_PENDING_NEEDS_TEXT}</p>
         )}
-        <div className="vt-inline-text">
-          <h3 className="vt-title">{task.title}</h3>
-          <p className="vt-status">
-            <StatusBadge state={task.state} kind="task" />
-            {lead && <span className="vt-lead-line">{workerLine(lead, task)}</span>}
-          </p>
-          {task.noRecentActivity && <p className="vt-muted">No recent activity.</p>}
-          {needs.map((line) => (
-            <p key={line} className="vt-needs-user">{line}</p>
-          ))}
-        </div>
       </div>
-      {support.length > 0 && (
-        <ul className="vt-support" aria-label="Supporting team members">
-          {support.map((w) => (
-            <li key={w.id}>
-              <RobotAvatar
-                role={w.role}
-                state={w.state}
-                label={w.label}
-                size={24}
-                animated={!reduced && !stale && !task.noRecentActivity}
-              />
-              <span>{workerLine(w, task)}</span>
-            </li>
-          ))}
-        </ul>
+      <p className="vt-status">
+        <StatusBadge state={task.state} kind="task" />
+        <span className="vt-muted">{task.stateProvenance}</span>
+      </p>
+      <p className="vt-meta">{latestActivityLine(recentEvents)}</p>
+      <p className="vt-meta">{lastRefreshLine(lastUpdatedAt)}</p>
+      {task.noRecentActivity && <p className="vt-muted">No recent activity.</p>}
+      {done && (
+        <div className="vt-inline-result">
+          <ResultBlock task={task} events={recentEvents} />
+        </div>
       )}
       <div className="vt-actions">
         <button
@@ -74,14 +78,21 @@ export function InlineView({
           className="vt-btn vt-btn-primary"
           onClick={() => void hostBridge.requestDisplayMode("fullscreen")}
         >
-          Open team
+          Open details
         </button>
+        {stale && onRetry && (
+          <button type="button" className="vt-btn" onClick={onRetry}>
+            Try again
+          </button>
+        )}
         <button
           type="button"
           className="vt-btn vt-btn-compact"
-          onClick={() => void hostBridge.requestDisplayMode("pip")}
+          aria-expanded={showTeam}
+          aria-controls="vt-inline-team"
+          onClick={() => setShowTeam((v) => !v)}
         >
-          Pop out
+          View team
         </button>
         <button
           type="button"
@@ -90,9 +101,21 @@ export function InlineView({
           aria-controls="vt-inline-evidence"
           onClick={() => setShowEvidence((v) => !v)}
         >
-          View details
+          View evidence
+        </button>
+        <button
+          type="button"
+          className="vt-btn vt-btn-compact"
+          onClick={() => void hostBridge.requestDisplayMode("pip")}
+        >
+          Pop out
         </button>
       </div>
+      {showTeam && (
+        <div id="vt-inline-team">
+          <TeamView task={task} stale={stale} />
+        </div>
+      )}
       {showEvidence && (
         <div id="vt-inline-evidence">
           <EvidencePanel events={recentEvents} />

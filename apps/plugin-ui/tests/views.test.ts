@@ -6,13 +6,15 @@ import type { TaskSnapshot, VisualEvent, WorkerSnapshot } from "@visual-team/con
 import { InlineView } from "../src/modes/InlineView.tsx";
 import { FullscreenView } from "../src/modes/FullscreenView.tsx";
 import { PipView } from "../src/modes/PipView.tsx";
+import { TeamView } from "../src/components/TeamView.tsx";
 
 /**
- * M3 display semantics (brief 008) — static-markup assertions on the real
- * views: attributed needs point at the right surface, canceled specialists
- * under a finished task read as ended tracking, finish metadata surfaces,
- * PiP keeps needs/refresh/stale visible as text, and the §13.6 notice is
- * present. Synthetic snapshots only.
+ * M3 display semantics (brief 008) + brief-011 attention-first defaults —
+ * static-markup assertions on the real views: attributed needs point at the
+ * right surface, canceled specialists under a finished task read as ended
+ * tracking, finish metadata surfaces, PiP keeps needs/refresh/stale visible
+ * as text, and the §13.6 notice is present. Characters and motion now live
+ * in the opt-in team view only. Synthetic snapshots only.
  */
 
 const AT = "2026-09-15T20:00:00.000Z";
@@ -61,11 +63,59 @@ describe("inline needs and limits", () => {
     assert.match(html, /ephemeral metadata/);
   });
 
-  it("keeps one primary action and compact secondaries", () => {
+  it("leads with needs, then phase/provenance, latest activity, and refresh", () => {
+    const events = [finishEvent("result: done", "COMPLETED")];
+    const t = task({ needsUser: true, pendingUserNeeds: { "worker:lead": "observed" } });
+    const html = renderToStaticMarkup(
+      createElement(InlineView, { task: t, recentEvents: events, lastUpdatedAt: "2026-09-15T20:05:00.000Z" }),
+    );
+    const needsAt = html.indexOf("answer the Codex permission prompt");
+    const statusAt = html.indexOf("vt-status");
+    assert.ok(needsAt !== -1 && statusAt !== -1 && needsAt < statusAt, "needs render before status");
+    assert.match(html, /reported/);
+    assert.match(html, /Latest recorded activity: Reported: task completed\. \(reported,/);
+    assert.match(html, /Last successful refresh:/);
+  });
+
+  it("says 'No pending requests recorded' — never an unconditional all-clear", () => {
+    const html = renderToStaticMarkup(createElement(InlineView, { task: task(), recentEvents: [] }));
+    assert.match(html, /No pending requests recorded\./);
+    assert.doesNotMatch(html, /Nothing needs you/);
+  });
+
+  it("states limited visibility honestly when no events are in view", () => {
+    const html = renderToStaticMarkup(createElement(InlineView, { task: task(), recentEvents: [] }));
+    assert.match(html, /No recorded activity visible/);
+    assert.doesNotMatch(html, /nothing is happening|no work/i);
+  });
+
+  it("keeps one primary action; team is a secondary view", () => {
     const html = renderToStaticMarkup(createElement(InlineView, { task: task(), recentEvents: [] }));
     assert.equal((html.match(/vt-btn-primary/g) ?? []).length, 1);
-    assert.match(html, /Open team/);
+    assert.match(html, /Open details/);
+    assert.match(html, />View team</);
     assert.match(html, /vt-btn-compact/);
+    assert.doesNotMatch(html, /Open team/);
+  });
+
+  it("shows the terminal outcome, reported checks, and artifacts in the default inline summary", () => {
+    const t = task({
+      state: "COMPLETED",
+      workers: [worker("lead", "lead", "COMPLETED", true)],
+      result: {
+        summary: "label changed and build checked",
+        verification: "passed",
+        artifacts: [{ label: "package.json", uri: "file:package.json" }],
+      },
+    });
+    const html = renderToStaticMarkup(
+      createElement(InlineView, { task: t, recentEvents: [finishEvent("result: done")] }),
+    );
+    assert.match(html, /Reported result/);
+    assert.match(html, /Reported checks: passed/);
+    assert.match(html, /label changed and build checked/);
+    assert.match(html, /package\.json/);
+    assert.match(html, /file:package\.json/);
   });
 });
 
@@ -98,6 +148,25 @@ describe("pip text equivalents", () => {
     assert.match(html, /tracking ended; no finish signal was recorded/);
     assert.doesNotMatch(html, /Remy — canceled/);
   });
+
+  it("keeps an accessible Results disclosure for a terminal task", () => {
+    const t = task({
+      state: "COMPLETED",
+      workers: [worker("lead", "lead", "COMPLETED", true)],
+      result: { summary: "shipped", verification: "passed" },
+    });
+    const html = renderToStaticMarkup(
+      createElement(PipView, { task: t, recentEvents: [finishEvent("result: shipped")] }),
+    );
+    assert.match(html, /<summary>Results<\/summary>/);
+    assert.match(html, /Reported checks: passed/);
+    assert.match(html, /shipped/);
+  });
+
+  it("does not offer a results disclosure while work is live", () => {
+    const html = renderToStaticMarkup(createElement(PipView, { task: task() }));
+    assert.doesNotMatch(html, /<summary>Results<\/summary>/);
+  });
 });
 
 describe("pip goal and stale-free motion", () => {
@@ -112,19 +181,72 @@ describe("pip goal and stale-free motion", () => {
     for (const el of [
       createElement(InlineView, { task: t, recentEvents: [], stale: false }),
       createElement(FullscreenView, { task: t, recentEvents: [], stale: false }),
-      createElement(PipView, { task: t, stale: false, refresh: "live" as const }),
+      createElement(PipView, { task: t, refresh: "live" as const }),
     ]) {
       assert.doesNotMatch(renderToStaticMarkup(el), /\bvt-bob\b/);
     }
     assert.match(renderToStaticMarkup(createElement(InlineView, { task: t, recentEvents: [] })), /No recent activity\./);
   });
+});
 
-  it("keeps activity motion for a working worker with fresh evidence", () => {
+describe("characters and motion are opt-in (brief 011)", () => {
+  it("no default view renders character markup — the roster is behind View team", () => {
     const t = task({ noRecentActivity: false });
-    const html = renderToStaticMarkup(
+    for (const el of [
       createElement(InlineView, { task: t, recentEvents: [], stale: false }),
+      createElement(FullscreenView, { task: t, recentEvents: [], stale: false }),
+      createElement(PipView, { task: t, refresh: "live" as const }),
+    ]) {
+      const html = renderToStaticMarkup(el);
+      assert.doesNotMatch(html, /\bvt-bob\b/);
+      // Robot avatars render only inside the team view.
+      assert.doesNotMatch(html, /<svg/);
+    }
+  });
+
+  it("team view keeps motion off by default and animates only on explicit opt-in", () => {
+    const t = task({ noRecentActivity: false });
+    const off = renderToStaticMarkup(createElement(TeamView, { task: t, stale: false }));
+    assert.doesNotMatch(off, /\bvt-bob\b/);
+    assert.match(off, /Turn motion on/);
+    const on = renderToStaticMarkup(
+      createElement(TeamView, { task: t, stale: false, motion: true }),
     );
-    assert.match(html, /\bvt-bob\b/);
+    assert.match(on, /\bvt-bob\b/);
+    assert.match(on, /Turn motion off/);
+  });
+
+  it("opt-in motion is still suppressed by stale data, inactivity, and inactive workers", () => {
+    const staleHtml = renderToStaticMarkup(
+      createElement(TeamView, { task: task({ noRecentActivity: false }), stale: true, motion: true }),
+    );
+    assert.doesNotMatch(staleHtml, /\bvt-bob\b/);
+    const aged = renderToStaticMarkup(
+      createElement(TeamView, { task: task({ noRecentActivity: true }), stale: false, motion: true }),
+    );
+    assert.doesNotMatch(aged, /\bvt-bob\b/);
+    const terminal = renderToStaticMarkup(
+      createElement(TeamView, {
+        task: task({ noRecentActivity: false, workers: [worker("lead", "lead", "COMPLETED", true)] }),
+        stale: false,
+        motion: true,
+      }),
+    );
+    assert.doesNotMatch(terminal, /\bvt-bob\b/);
+  });
+
+  it("fullscreen keeps the roster as a collapsed secondary section with writer ownership", () => {
+    const t = task({
+      workers: [worker("lead", "lead", "WORKING", true), worker("remy", "reviewer", "WORKING")],
+    });
+    const html = renderToStaticMarkup(createElement(FullscreenView, { task: t, recentEvents: [] }));
+    // The disclosure is present but its roster mounts only on open —
+    // characters never ship in the default markup.
+    assert.match(html, /<summary>Team<\/summary>/);
+    assert.doesNotMatch(html, /vt-roster-item/);
+    const team = renderToStaticMarkup(createElement(TeamView, { task: t }));
+    assert.match(team, /· writes/);
+    assert.match(team, /· read-only/);
   });
 });
 
@@ -186,9 +308,8 @@ describe("fullscreen results and canceled specialists", () => {
       state: "COMPLETED",
       workers: [worker("lead", "lead", "COMPLETED", true), worker("remy", "reviewer", "CANCELED")],
     });
-    const html = renderToStaticMarkup(
-      createElement(FullscreenView, { task: t, recentEvents: [finishEvent("result: done")] }),
-    );
+    // The roster line lives in the optional team view; render it directly.
+    const html = renderToStaticMarkup(createElement(TeamView, { task: t }));
     assert.match(html, /tracking ended; no finish signal was recorded/);
     assert.doesNotMatch(html, /Remy is canceled/);
   });

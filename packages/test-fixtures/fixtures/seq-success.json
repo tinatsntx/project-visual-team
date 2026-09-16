@@ -16,7 +16,7 @@
     {
       "kind": "event",
       "expect": "applied",
-      "event": { "id": "s3", "kind": "task_finished", "to": "COMPLETED", "provenance": "reported", "label": "Task finished.", "detail": "result: verified" }
+      "event": { "id": "s3", "kind": "task_finished", "to": "COMPLETED", "provenance": "reported", "label": "Task finished.", "detail": "result: verified", "result": { "summary": "verified", "verification": "passed" } }
     },
     {
       "kind": "event",

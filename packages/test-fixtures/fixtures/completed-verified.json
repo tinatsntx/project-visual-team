@@ -28,7 +28,15 @@
         "provenance": "reported",
         "to": "COMPLETED",
         "label": "Reported: task completed.",
-        "detail": "result: button label changed and build checked; verification: passed; artifacts: package.json (file:package.json), build log (file:build.log)"
+        "detail": "result: button label changed and build checked; verification: passed; artifacts: package.json (file:package.json), build log (file:build.log)",
+        "result": {
+          "summary": "button label changed and build checked",
+          "verification": "passed",
+          "artifacts": [
+            { "label": "package.json", "uri": "file:package.json" },
+            { "label": "build log", "uri": "file:build.log" }
+          ]
+        }
       }
     }
   ],

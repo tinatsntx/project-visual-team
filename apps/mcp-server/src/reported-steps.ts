@@ -1,6 +1,7 @@
 import {
   EVENT_DETAIL_MAX_CHARS,
   type FinishVisualTaskInput,
+  type TaskResult,
   type VisualEvent,
   type WorkflowPhase,
 } from "@visual-team/contracts";
@@ -82,6 +83,20 @@ export function mapTaskFinish(
       reason: `finish metadata is ${detail.length} chars; the detail bound is ${EVENT_DETAIL_MAX_CHARS}`,
     };
   }
+  // The same fields also ride as a structured receipt (brief 011) so views
+  // can render checks/artifacts without parsing the free-text detail. Only
+  // reported task_finished events may carry it — the reducer enforces that.
+  // An explicitly empty summary is the legacy "no summary" case — it must not
+  // mint an invalid receipt (receipts require a non-empty summary string).
+  const summary = input.summary ? input.summary : undefined;
+  const result: TaskResult | undefined =
+    summary !== undefined || input.verification !== undefined || input.artifacts !== undefined
+      ? {
+          ...(summary !== undefined ? { summary } : {}),
+          ...(input.verification !== undefined ? { verification: input.verification } : {}),
+          ...(input.artifacts !== undefined ? { artifacts: input.artifacts } : {}),
+        }
+      : undefined;
   return {
     ok: true,
     event: {
@@ -93,6 +108,7 @@ export function mapTaskFinish(
       to: input.outcome === "failed" ? "FAILED" : "COMPLETED",
       label: PHASE_LABEL[input.outcome],
       ...(detail ? { detail } : {}),
+      ...(result ? { result } : {}),
     },
   };
 }

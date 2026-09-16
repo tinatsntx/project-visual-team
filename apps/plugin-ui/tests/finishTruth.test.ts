@@ -7,9 +7,11 @@ import { applyEvent, createTaskRecord } from "@visual-team/state-machine";
 import { FullscreenView } from "../src/modes/FullscreenView.tsx";
 
 /**
- * Brief-008 follow-up item 1: the real `mapTaskFinish` path must never let
- * free text inside the bounded finish detail mint a "Verification passed"
- * badge. The three cases mirror evals/m3-coordinator-probe.mts — reported
+ * Brief-008 follow-up item 1 + brief-011 structured receipt: the real
+ * `mapTaskFinish` path must never let free text inside the bounded finish
+ * detail mint a "Verification passed" badge, and only the structured
+ * receipt's verification field may drive the "Reported checks:" line.
+ * The three cases mirror evals/m3-coordinator-probe.mts — reported
  * summary text, absent verification, and an artifact label carrying the
  * token.
  */
@@ -47,13 +49,17 @@ describe("finish detail can never mint a verification claim", () => {
   it("explicit failed verification stays failed — summary token does not override", () => {
     const html = finishedHtml({ summary: "Prior run; verification: passed", verification: "failed" });
     assert.doesNotMatch(html, />Verification passed</);
-    // The bounded detail is still rendered verbatim, including its tokens.
+    assert.doesNotMatch(html, /Reported checks: passed/);
+    assert.match(html, /Reported checks: failed/);
+    // The bounded detail is still rendered verbatim in the evidence list.
     assert.match(html, /verification: failed/);
   });
 
   it("absent verification stays absent — summary token does not invent one", () => {
     const html = finishedHtml({ summary: "Reference note; verification: passed" });
     assert.doesNotMatch(html, />Verification passed</);
+    assert.doesNotMatch(html, /Reported checks: passed/);
+    assert.match(html, /Reported checks: Not provided/);
   });
 
   it("an artifact label containing the token cannot create a badge", () => {
@@ -62,6 +68,14 @@ describe("finish detail can never mint a verification claim", () => {
       artifacts: [{ label: "Reference; verification: passed" }],
     });
     assert.doesNotMatch(html, />Verification passed</);
+    assert.doesNotMatch(html, /Reported checks: passed/);
     assert.match(html, /Reported result/);
+    assert.match(html, /Reported checks: Not provided/);
+  });
+
+  it("a not_run receipt renders the exact reported-checks text", () => {
+    const html = finishedHtml({ summary: "Work finished", verification: "not_run" });
+    assert.match(html, /Reported checks: not run/);
+    assert.doesNotMatch(html, /Reported checks: passed/);
   });
 });

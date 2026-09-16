@@ -1,9 +1,22 @@
 # Handoff — Project Visual Team
 
-**Updated:** 2026-09-15
+**Updated:** 2026-09-16
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0 through 4 COMPLETE on the supported path. Current product
-code `0f0e3ab` is reviewed, published, and deployed. Real native specialist
+**Milestone:** Brief 011 "attention and results first" is implemented and
+locally verified — pending coordinator review, not yet pushed or deployed.
+All three display modes default to text status: unresolved needs with
+ask-holder and response location, recorded phase with provenance, latest
+recorded activity with source/time, and last successful refresh stated
+separately. Terminal tasks show the reported outcome, reported checks, and
+artifact references in the default summary; the roster lives in an optional
+team view (motion opt-in, suppressed by reduced motion/stale/inactivity).
+`finish_visual_task` now emits a structured reported receipt on the event
+and snapshot alongside the bounded legacy detail; the reducer accepts it
+only on reported `task_finished` events, enforces the allowlist/combined
+bound, and rejects atomically. The unchanged coordinator probe
+`evals/brief-011-coordinator-probe.mts` passes 6/6.
+Earlier state: milestones 0 through 4 COMPLETE on the supported path. Current
+deployed product code `0f0e3ab` is reviewed, published, and deployed. Real native specialist
 start/permission/activity/finish, same-widget ChatGPT updates, session
 isolation, interrupt/resume, and hook-disabled workflow pass. Evidence:
 `docs/m4-native-closeout.md` and `docs/m4-native-host-evidence.json`.

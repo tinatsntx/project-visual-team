@@ -189,10 +189,44 @@ describe("reported workflow boundaries", () => {
       /result: Smoke test passed; verification: passed; artifacts: PR #12/,
     );
     assert.ok((mapped.event.detail ?? "").length <= EVENT_DETAIL_MAX_CHARS);
+    // The structured receipt rides the same event and lands on the snapshot.
+    assert.deepEqual(mapped.event.result, {
+      summary: "Smoke test passed",
+      verification: "passed",
+      artifacts: [{ label: "PR #12", uri: "https://example.test/pr/12" }],
+    });
+    assert.deepEqual(stored.record.snapshot.result, mapped.event.result);
 
     const bare = mapTaskFinish({ taskId, outcome: "completed", at: clock.nowIso(), eventId: "f2" });
     assert.ok(bare.ok);
     assert.equal(bare.event.detail, undefined);
+    assert.equal(bare.event.result, undefined);
+  });
+
+  it("an explicitly empty summary stays the legacy no-receipt finish", () => {
+    // `summary` was already an optional input; "" must not mint an invalid
+    // receipt or become a new rejection (brief 011 compatibility).
+    const mapped = mapTaskFinish({
+      taskId: "vt_x",
+      outcome: "completed",
+      summary: "",
+      at: clock.nowIso(),
+      eventId: "f1",
+    });
+    assert.ok(mapped.ok);
+    assert.equal(mapped.event.detail, undefined);
+    assert.equal(mapped.event.result, undefined);
+    // A real receipt field alongside the empty summary still validates.
+    const withChecks = mapTaskFinish({
+      taskId: "vt_x",
+      outcome: "completed",
+      summary: "",
+      verification: "not_run",
+      at: clock.nowIso(),
+      eventId: "f2",
+    });
+    assert.ok(withChecks.ok);
+    assert.deepEqual(withChecks.event.result, { verification: "not_run" });
   });
 
   it("retains a maximum summary plus verification and a whole reference", () => {
@@ -211,6 +245,10 @@ describe("reported workflow boundaries", () => {
     assert.ok(detail.includes(`result: ${"S".repeat(500)}`));
     assert.ok(detail.includes("verification: failed"));
     assert.ok(detail.includes("https://example.test/artifact/1"));
+    // Structured fields survive whole alongside the bounded text.
+    assert.equal(mapped.event.result?.summary, "S".repeat(500));
+    assert.equal(mapped.event.result?.verification, "failed");
+    assert.equal(mapped.event.result?.artifacts?.[0]?.uri, "https://example.test/artifact/1");
   });
 
   it("rejects an oversized combined finish before any state change", () => {

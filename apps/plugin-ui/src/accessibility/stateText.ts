@@ -1,4 +1,11 @@
-import type { TaskSnapshot, TaskState, WorkerSnapshot, WorkerState } from "@visual-team/contracts";
+import type {
+  TaskSnapshot,
+  TaskState,
+  VerificationStatus,
+  VisualEvent,
+  WorkerSnapshot,
+  WorkerState,
+} from "@visual-team/contracts";
 
 /**
  * Text for every visual state (PROJECT_PLAN.md §3.7, §12.4). Motion and color
@@ -28,6 +35,53 @@ export const TASK_STATE_TEXT: Record<TaskState, string> = {
   FAILED: "failed",
   CANCELED: "canceled",
 };
+
+/**
+ * Reported-checks display text (brief 011). These are the model's own
+ * reported outcome — never independent verification — and only a structured
+ * receipt may set them; absent structured verification reads "Not provided".
+ */
+export const VERIFICATION_TEXT: Record<VerificationStatus, string> = {
+  passed: "Reported checks: passed",
+  failed: "Reported checks: failed",
+  not_run: "Reported checks: not run",
+};
+
+export const CHECKS_NOT_PROVIDED = "Reported checks: Not provided";
+
+export function reportedChecksLine(verification: VerificationStatus | undefined): string {
+  return verification ? VERIFICATION_TEXT[verification] : CHECKS_NOT_PROVIDED;
+}
+
+/**
+ * The empty state for the needs list (brief 011). Recorded visibility is
+ * bounded — absent evidence is never a guarantee of no pending intervention.
+ */
+export const NO_PENDING_NEEDS_TEXT = "No pending requests recorded.";
+
+/** The recorded phase is the task state plus the provenance of that claim. */
+export function phaseLine(task: TaskSnapshot): string {
+  return `${TASK_STATE_TEXT[task.state]} (${task.stateProvenance})`;
+}
+
+/**
+ * Latest recorded activity with its source and time. No events in view means
+ * limited visibility — never "no work" or "guaranteed quiet".
+ */
+export function latestActivityLine(events: VisualEvent[]): string {
+  const last = events.at(-1);
+  if (!last) {
+    return "No recorded activity visible in this view — the snapshot is the only source.";
+  }
+  return `Latest recorded activity: ${last.label} (${last.provenance}, ${new Date(last.at).toLocaleTimeString()})`;
+}
+
+/** The last successful refresh is stated separately from last activity. */
+export function lastRefreshLine(lastUpdatedAt: string | null | undefined): string {
+  return lastUpdatedAt
+    ? `Last successful refresh: ${new Date(lastUpdatedAt).toLocaleTimeString()}`
+    : "No successful refresh recorded.";
+}
 
 export function workerLine(worker: WorkerSnapshot, task?: TaskSnapshot): string {
   // A CANCELED worker under a finished task means the run ended without a

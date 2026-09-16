@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { TaskSnapshot, WorkerSnapshot } from "@visual-team/contracts";
+import type { TaskSnapshot, VisualEvent, WorkerSnapshot } from "@visual-team/contracts";
 import {
+  latestActivityLine,
+  lastRefreshLine,
   needActions,
+  NO_PENDING_NEEDS_TEXT,
+  phaseLine,
+  reportedChecksLine,
   TASK_STATE_TEXT,
   WORKER_STATE_TEXT,
   workerLine,
@@ -60,6 +65,43 @@ describe("needActions attribution", () => {
   });
   it("no need produces no lines", () => {
     assert.deepEqual(needActions(snap({})), []);
+  });
+});
+
+describe("brief-011 status lines", () => {
+  it("reported checks use the exact required text; absent checks read Not provided", () => {
+    assert.equal(reportedChecksLine("passed"), "Reported checks: passed");
+    assert.equal(reportedChecksLine("failed"), "Reported checks: failed");
+    assert.equal(reportedChecksLine("not_run"), "Reported checks: not run");
+    assert.equal(reportedChecksLine(undefined), "Reported checks: Not provided");
+    assert.equal(NO_PENDING_NEEDS_TEXT, "No pending requests recorded.");
+  });
+
+  it("phase line carries the recorded state plus its provenance", () => {
+    assert.equal(phaseLine(snap({ state: "ACTIVE", stateProvenance: "observed" })), "active (observed)");
+    assert.equal(phaseLine(snap({ state: "COMPLETED", stateProvenance: "reported" })), "completed (reported)");
+  });
+
+  it("latest activity names the event, its source, and its time", () => {
+    const events: VisualEvent[] = [
+      {
+        id: "e1", taskId: "vt_t", at: "2026-09-15T20:00:00.000Z",
+        provenance: "observed", kind: "activity", label: "Observed tool run.",
+      },
+    ];
+    const line = latestActivityLine(events);
+    assert.match(line, /Latest recorded activity: Observed tool run\./);
+    assert.match(line, /observed/);
+    assert.match(line, /\d{2}:\d{2}/);
+  });
+
+  it("empty events read as limited visibility, never 'no work'", () => {
+    assert.match(latestActivityLine([]), /No recorded activity visible/);
+  });
+
+  it("the last successful refresh is stated separately and honestly when absent", () => {
+    assert.match(lastRefreshLine("2026-09-15T20:05:00.000Z"), /Last successful refresh:/);
+    assert.equal(lastRefreshLine(null), "No successful refresh recorded.");
   });
 });
 

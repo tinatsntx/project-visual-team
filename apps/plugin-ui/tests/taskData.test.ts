@@ -12,6 +12,7 @@ import {
 import { TaskDataStore } from "../src/bridge/taskData.ts";
 import { RefreshNotice, askStateMessage } from "../src/components/RefreshNotice.tsx";
 import { InlineView } from "../src/modes/InlineView.tsx";
+import { TeamView } from "../src/components/TeamView.tsx";
 
 /**
  * Regression coverage for widget startup and read recovery (brief 004).
@@ -842,17 +843,52 @@ describe("recovery controls in markup", () => {
 
   it("a stale view does not animate a last-known WORKING worker", () => {
     const task = { ...makeTask("vt_anim"), workers: [WORKER] };
+    // Motion lives only in the opt-in team view (brief 011); even opted in,
+    // last-known data must not look active.
     const live = renderToStaticMarkup(
-      createElement(InlineView, { task, recentEvents: [], stale: false }),
+      createElement(TeamView, { task, stale: false, motion: true }),
     );
-    assert.match(live, /vt-bob/); // control: live data animates
+    assert.match(live, /vt-bob/); // control: fresh data animates once opted in
     const stale = renderToStaticMarkup(
-      createElement(InlineView, { task, recentEvents: [], stale: true }),
+      createElement(TeamView, { task, stale: true, motion: true }),
     );
     assert.doesNotMatch(stale, /vt-bob/); // last-known data must not look active
     const limited = renderToStaticMarkup(
       createElement(InlineView, { task, recentEvents: [], stale: true }),
     );
     assert.doesNotMatch(limited, /vt-bob/);
+  });
+});
+
+describe("structured result delivery (brief 011)", () => {
+  it("a snapshot's reported receipt flows through the store verbatim", () => {
+    const { store } = makeStore({ read: async () => ({ structuredContent: {} }) });
+    const task = {
+      ...makeTask("vt_res", "COMPLETED"),
+      result: {
+        summary: "done",
+        verification: "passed" as const,
+        artifacts: [{ label: "ref", uri: "file:ref" }],
+      },
+    };
+    store.applyToolResult(renderResult(task));
+    assert.deepEqual(store.snapshot().task?.result, task.result);
+    store.dispose();
+  });
+
+  it("switching tasks cannot leak the previous task's receipt", () => {
+    const { store } = makeStore({ read: async () => ({ structuredContent: {} }) });
+    store.applyToolResult(
+      renderResult({
+        ...makeTask("vt_old", "COMPLETED"),
+        result: { summary: "old", verification: "failed" as const },
+      }),
+    );
+    assert.equal(store.snapshot().task?.result?.summary, "old");
+    // A new task arrives without a receipt: nothing from the old view survives.
+    store.applyToolResult(renderResult(makeTask("vt_new", "ACTIVE")));
+    assert.equal(store.snapshot().task?.id, "vt_new");
+    assert.equal(store.snapshot().task?.result, undefined);
+    store.dispose();
   });
 });

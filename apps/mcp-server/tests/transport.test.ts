@@ -271,6 +271,15 @@ describe("registered Streamable HTTP tool transport", () => {
       const finished = read.structuredContent?.recentEvents?.find((e) => e.kind === "task_finished");
       assert.equal(finished?.provenance, "reported");
       assert.match(finished?.detail ?? "", /Reported done/);
+      // The structured reported receipt survives serialization on both the
+      // snapshot and the journaled finish event (brief 011).
+      const taskResult = (read.structuredContent?.task as Record<string, unknown> | undefined)?.result;
+      assert.deepEqual(taskResult, {
+        summary: "Reported done",
+        verification: "passed",
+        artifacts: [{ label: "PR #1", uri: "https://example.test/pr/1" }],
+      });
+      assert.deepEqual((finished as Record<string, unknown> | undefined)?.result, taskResult);
 
       const late = (await callMcp(baseUrl, "tools/call", {
         name: "report_workflow_step",

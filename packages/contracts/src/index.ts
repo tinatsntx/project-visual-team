@@ -116,6 +116,32 @@ export const VisualEventKindSchema = z.enum([
 ]);
 export type VisualEventKind = z.infer<typeof VisualEventKindSchema>;
 
+/** Model-reported check outcome (§9.5). A report, never independent verification. */
+export const VerificationStatusSchema = z.enum(["passed", "failed", "not_run"]);
+export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
+
+/** Artifact reference — a label and optional locator only (§13.1: no contents). */
+export const ResultArtifactSchema = z.object({
+  label: z.string().min(1).max(120),
+  uri: z.string().max(500).optional(),
+});
+export type ResultArtifact = z.infer<typeof ResultArtifactSchema>;
+
+/**
+ * Structured reported result (brief 011): the receipt a `task_finished`
+ * event may carry. It may ride only on a *reported* `task_finished` event —
+ * the reducer rejects receipt-bearing events of any other kind or
+ * provenance before touching state, so observed/derived evidence and other
+ * event kinds can never smuggle a result claim into a snapshot. Free-text
+ * inside `summary` or an artifact `label` is never parsed into claims.
+ */
+export const TaskResultSchema = z.object({
+  summary: z.string().min(1).max(500).optional(),
+  verification: VerificationStatusSchema.optional(),
+  artifacts: z.array(ResultArtifactSchema).max(10).optional(),
+});
+export type TaskResult = z.infer<typeof TaskResultSchema>;
+
 /**
  * Bound for `VisualEvent.detail`. Sized so a finish event can carry a
  * 500-char result summary plus verification and artifact references whole;
@@ -139,6 +165,11 @@ export const VisualEventSchema = z.object({
   label: z.string().min(1).max(240),
   /** Optional technical detail shown in the evidence panel only. */
   detail: z.string().max(EVENT_DETAIL_MAX_CHARS).optional(),
+  /**
+   * Structured reported result receipt. Legal only on a reported
+   * `task_finished` event; enforced by the reducer at apply time.
+   */
+  result: TaskResultSchema.optional(),
 });
 export type VisualEvent = z.infer<typeof VisualEventSchema>;
 
@@ -191,6 +222,13 @@ export const TaskSnapshotSchema = z.object({
    * activity and derived events cannot dismiss it.
    */
   pendingUserNeeds: z.record(z.string(), EvidenceLevelSchema).optional(),
+  /**
+   * The structured reported receipt from the accepted finish event, copied
+   * onto the terminal snapshot. Absent when the finish carried no metadata
+   * or when the task ended without a reported `task_finished` — display
+   * falls back to the event's unstructured detail text honestly.
+   */
+  result: TaskResultSchema.optional(),
   eventCount: z.number().int().nonnegative(),
 });
 export type TaskSnapshot = z.infer<typeof TaskSnapshotSchema>;
@@ -246,16 +284,8 @@ export const FinishVisualTaskInputSchema = z.object({
   outcome: z.enum(["completed", "failed"]),
   /** Non-sensitive result label reported by the host model. */
   summary: z.string().max(500).optional(),
-  verification: z.enum(["passed", "failed", "not_run"]).optional(),
-  artifacts: z
-    .array(
-      z.object({
-        label: z.string().min(1).max(120),
-        uri: z.string().max(500).optional(),
-      }),
-    )
-    .max(10)
-    .optional(),
+  verification: VerificationStatusSchema.optional(),
+  artifacts: z.array(ResultArtifactSchema).max(10).optional(),
   eventId: z.string().min(1).max(128).optional(),
   at: z.string().min(1).max(64).optional(),
 });

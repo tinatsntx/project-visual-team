@@ -1,35 +1,45 @@
+import { useState } from "react";
 import type { TaskSnapshot, VisualEvent } from "@visual-team/contracts";
-import { RobotAvatar } from "../components/RobotAvatar.js";
 import { StatusBadge } from "../components/StatusBadge.js";
 import { EvidencePanel } from "../components/EvidencePanel.js";
-import { needActions, TASK_STATE_TEXT, taskLine, workerLine } from "../accessibility/stateText.js";
-import { useReducedMotion } from "../accessibility/useReducedMotion.js";
+import { ResultBlock } from "../components/ResultBlock.js";
+import { TeamView } from "../components/TeamView.js";
+import {
+  latestActivityLine,
+  lastRefreshLine,
+  needActions,
+  NO_PENDING_NEEDS_TEXT,
+  phaseLine,
+  taskLine,
+} from "../accessibility/stateText.js";
 import { hostBridge } from "../bridge/hostBridge.js";
-import { finishDetail } from "../resultDetail.js";
 
 /**
- * Fullscreen view (PROJECT_PLAN.md §12.2): Goal, Team, Workstreams,
- * Needs you, Results, Evidence. The host's composer stays the conversational
- * control surface — none is recreated here. Results surface the recorded
- * finish detail and verification label; absence is stated, never success.
+ * Fullscreen status view (brief 011): attention and results first —
+ * unresolved needs, the recorded phase with provenance, the latest recorded
+ * activity with source/time, the last successful refresh stated separately,
+ * then the reported result. The truthful roster with single-writer
+ * ownership lives in the collapsed "Team" section — characters are an
+ * optional view, never the default. The host's composer stays the
+ * conversational control surface — none is recreated here.
  */
 export function FullscreenView({
   task,
   recentEvents,
   stale = false,
+  lastUpdatedAt = null,
 }: {
   task: TaskSnapshot;
   recentEvents: VisualEvent[];
   /** Stale/unavailable refresh: last-known data renders without motion. */
   stale?: boolean;
+  /** Last successful refresh, stated separately from last activity. */
+  lastUpdatedAt?: string | null;
 }) {
-  const reduced = useReducedMotion();
   const needs = needActions(task);
-  // Mirrors TERMINAL_TASK_STATES — kept local so the widget bundle doesn't
-  // pull in the reducer package.
-  const done =
-    task.state === "COMPLETED" || task.state === "FAILED" || task.state === "CANCELED";
-  const finish = finishDetail(recentEvents);
+  // Characters mount only on explicit opt-in: the roster does not exist in
+  // the DOM until the "Team" disclosure is opened.
+  const [teamOpen, setTeamOpen] = useState(false);
 
   return (
     <main className="vt-full" aria-label={`Visual team: ${task.title}`}>
@@ -41,43 +51,6 @@ export function FullscreenView({
         </button>
       </header>
 
-      <section aria-labelledby="vt-goal">
-        <h3 id="vt-goal">Goal</h3>
-        <p>{task.summary}</p>
-        <p className="vt-muted">{taskLine(task)}</p>
-      </section>
-
-      <section aria-labelledby="vt-team">
-        <h3 id="vt-team">Team</h3>
-        <ul className="vt-roster">
-          {task.workers.map((w) => (
-            <li key={w.id} className="vt-roster-item">
-              <RobotAvatar
-                role={w.role}
-                state={w.state}
-                label={w.label}
-                animated={!reduced && !stale && !task.noRecentActivity}
-              />
-              <div>
-                <strong>{w.label}</strong> <span className="vt-muted">{w.role}{w.isWriter ? " · writes" : " · read-only"}</span>
-                <p className="vt-muted">{workerLine(w, task)}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section aria-labelledby="vt-streams">
-        <h3 id="vt-streams">Workstreams</h3>
-        <ul>
-          {task.workers.map((w) => (
-            <li key={w.id}>
-              {w.label} owns the {w.role} track.
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <section aria-labelledby="vt-needs">
         <h3 id="vt-needs">Needs you</h3>
         {needs.length > 0 ? (
@@ -87,35 +60,38 @@ export function FullscreenView({
             ))}
           </ul>
         ) : (
-          <p className="vt-muted">Nothing needs you right now.</p>
+          <p className="vt-muted">{NO_PENDING_NEEDS_TEXT}</p>
         )}
+      </section>
+
+      <section aria-labelledby="vt-status">
+        <h3 id="vt-status">Status</h3>
+        <p>
+          <span className="vt-muted">Phase: {phaseLine(task)}</span>
+        </p>
+        <p className="vt-meta">{latestActivityLine(recentEvents)}</p>
+        <p className="vt-meta">{lastRefreshLine(lastUpdatedAt)}</p>
+        {task.noRecentActivity && <p className="vt-muted">No recent activity.</p>}
       </section>
 
       <section aria-labelledby="vt-results">
         <h3 id="vt-results">Results</h3>
-        {!done ? (
-          <p className="vt-muted">Work is still in progress.</p>
-        ) : !finish.event ? (
-          <p className="vt-muted">
-            Task ended as {TASK_STATE_TEXT[task.state].toLowerCase()} — no finish event was
-            recorded in this view's recent history. Check the chat for what the model reported.
-          </p>
-        ) : (
-          <div className="vt-result">
-            {/* No inferred badge: the finish detail is reported free text
-                rendered verbatim — a "verification:" token inside a summary
-                or artifact label must not mint a success claim. */}
-            <p>
-              <span className="vt-verify">Reported result</span>
-            </p>
-            {finish.detail ? (
-              <p className="vt-result-detail">{finish.detail}</p>
-            ) : (
-              <p className="vt-muted">The finish event carried no result summary — check the chat.</p>
-            )}
-          </div>
-        )}
+        <ResultBlock task={task} events={recentEvents} />
       </section>
+
+      <section aria-labelledby="vt-goal">
+        <h3 id="vt-goal">Goal</h3>
+        <p>{task.summary}</p>
+        <p className="vt-muted">{taskLine(task)}</p>
+      </section>
+
+      <details
+        className="vt-team-section"
+        onToggle={(e) => setTeamOpen(e.currentTarget.open)}
+      >
+        <summary>Team</summary>
+        {teamOpen && <TeamView task={task} stale={stale} />}
+      </details>
 
       <section aria-labelledby="vt-evidence">
         <h3 id="vt-evidence">Evidence</h3>

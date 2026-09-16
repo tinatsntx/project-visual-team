@@ -1,8 +1,10 @@
 import {
+  EVENT_DETAIL_MAX_CHARS,
   MAX_VISIBLE_WORKERS,
   type EvidenceLevel,
   type ReduceResult,
   type StartVisualTaskInput,
+  type TaskResult,
   type TaskSnapshot,
   type TaskState,
   type VisualEvent,
@@ -363,6 +365,82 @@ function transitionTask(snapshot: TaskSnapshot, to: TaskState, event: VisualEven
 }
 
 /**
+ * A result receipt is legal only on a *reported* `task_finished` (brief 011):
+ * it is the model's own receipt, so observed/derived evidence and every
+ * other event kind are rejected before any mutation. The shape is checked
+ * field-by-field here so a malformed receipt can never partially apply —
+ * the tool boundary's zod schema is not the only caller of this reducer.
+ */
+function validateResultReceipt(event: VisualEvent): string | null {
+  if (event.result === undefined) return null;
+  if (event.kind !== "task_finished" || event.provenance !== "reported") {
+    return "a result receipt may only ride a reported task_finished event";
+  }
+  const r = event.result;
+  if (!r || typeof r !== "object" || Array.isArray(r)) return "result receipt must be an object";
+  const bad = (msg: string) => `result receipt ${msg}`;
+  // Strict allowlist: a receipt may carry only summary/verification/artifacts.
+  // Unknown keys reject the whole event rather than being silently dropped.
+  for (const key of Object.keys(r)) {
+    if (key !== "summary" && key !== "verification" && key !== "artifacts") {
+      return bad(`has unexpected field "${key}"`);
+    }
+  }
+  if (r.summary !== undefined && (typeof r.summary !== "string" || r.summary.length === 0 || r.summary.length > 500)) {
+    return bad("summary must be a string of 1-500 chars");
+  }
+  if (
+    r.verification !== undefined &&
+    r.verification !== "passed" &&
+    r.verification !== "failed" &&
+    r.verification !== "not_run"
+  ) {
+    return bad("verification must be passed | failed | not_run");
+  }
+  if (r.artifacts !== undefined) {
+    if (!Array.isArray(r.artifacts) || r.artifacts.length > 10) {
+      return bad("artifacts must be an array of at most 10 references");
+    }
+    for (const artifact of r.artifacts) {
+      if (!artifact || typeof artifact !== "object" || Array.isArray(artifact)) {
+        return bad("artifact must be an object");
+      }
+      for (const key of Object.keys(artifact)) {
+        if (key !== "label" && key !== "uri") return bad(`artifact has unexpected field "${key}"`);
+      }
+      const a = artifact as { label?: unknown; uri?: unknown };
+      if (typeof a.label !== "string" || a.label.length === 0 || a.label.length > 120) {
+        return bad("artifact.label must be a string of 1-120 chars");
+      }
+      if (a.uri !== undefined && (typeof a.uri !== "string" || a.uri.length > 500)) {
+        return bad("artifact.uri must be a string of at most 500 chars");
+      }
+    }
+  }
+  // The receipt must fit the same combined bound as the legacy detail text it
+  // mirrors (plan §9.5): nothing larger applies whole, nothing is truncated.
+  const combined =
+    (r.summary?.length ?? 0) +
+    (r.verification?.length ?? 0) +
+    (r.artifacts ?? []).reduce((acc, a) => acc + a.label.length + (a.uri?.length ?? 0), 0);
+  if (combined > EVENT_DETAIL_MAX_CHARS) {
+    return bad(`is ${combined} chars combined; the bound is ${EVENT_DETAIL_MAX_CHARS}`);
+  }
+  return null;
+}
+
+/** Copy the accepted receipt so later callers cannot alias-mutate the log. */
+function cloneResult(result: TaskResult): TaskResult {
+  return {
+    ...(result.summary !== undefined ? { summary: result.summary } : {}),
+    ...(result.verification !== undefined ? { verification: result.verification } : {}),
+    ...(result.artifacts !== undefined
+      ? { artifacts: result.artifacts.map((a) => ({ ...a })) }
+      : {}),
+  };
+}
+
+/**
  * Pure single-event reducer. Does not deduplicate — use `applyEvent` on a
  * TaskRecord for the idempotent, bounded-log variant.
  */
@@ -373,11 +451,17 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
     ...(snapshotIn.pendingUserNeeds
       ? { pendingUserNeeds: { ...snapshotIn.pendingUserNeeds } }
       : {}),
+    ...(snapshotIn.result ? { result: structuredClone(snapshotIn.result) } : {}),
   };
 
   const provenanceError = provenancePermitsTransition(event.provenance, event.kind, event.to);
   if (provenanceError) {
     return { ok: false, snapshot: snapshotIn, error: provenanceError };
+  }
+
+  const receiptError = validateResultReceipt(event);
+  if (receiptError) {
+    return { ok: false, snapshot: snapshotIn, error: receiptError };
   }
 
   // Terminal tasks are frozen: no event may alter state, roster, needsUser,
@@ -585,6 +669,9 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       const err = transitionTask(snapshot, target, event);
       if (err) return { ok: false, snapshot: snapshotIn, error: err };
       finalizeTerminal(snapshot, target, event);
+      // The validated reported receipt lands only after the finish itself
+      // was accepted — the terminal snapshot then carries it verbatim.
+      if (event.result !== undefined) snapshot.result = cloneResult(event.result);
       break;
     }
 
@@ -625,7 +712,9 @@ export function applyEvent(record: TaskRecord, event: VisualEvent): ReduceResult
   if (!result.ok) return result;
   record.seenEventIds.add(event.id);
   record.snapshot = result.snapshot;
-  record.events.push(event);
+  // Journal a detached copy: later caller-side mutation of the receipt must
+  // not rewrite the recorded event.
+  record.events.push(event.result === undefined ? event : { ...event, result: cloneResult(event.result) });
   if (record.events.length > MAX_EVENTS_PER_TASK) {
     record.events.splice(0, record.events.length - MAX_EVENTS_PER_TASK);
   }

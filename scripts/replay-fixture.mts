@@ -218,6 +218,7 @@ function runSequenceFixture(fixture: SequenceFixture): { rec: TaskRecord; lines:
         ...(step.event.workerId !== undefined ? { workerId: step.event.workerId } : {}),
         ...(step.event.to !== undefined ? { to: step.event.to as VisualEvent["to"] } : {}),
         ...(step.event.detail !== undefined ? { detail: step.event.detail } : {}),
+        ...(step.event.result !== undefined ? { result: step.event.result } : {}),
       };
       byId.set(e.id, e);
       applyVisual(rec, e, lines, expected as StepOutcome);

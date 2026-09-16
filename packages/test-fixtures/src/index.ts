@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type {
   EvidenceLevel,
   RecordCodexEventInput,
+  TaskResult,
   VisualEventKind,
 } from "@visual-team/contracts";
 
@@ -36,6 +37,8 @@ export interface FixtureStep {
     to?: string;
     label: string;
     detail?: string;
+    /** Structured reported receipt — legal only on reported task_finished. */
+    result?: TaskResult;
     at?: string;
   };
 }
@@ -73,6 +76,8 @@ export interface SequenceStep {
     to?: string;
     label: string;
     detail?: string;
+    /** Structured reported receipt — legal only on reported task_finished. */
+    result?: TaskResult;
   };
   /** Resend an earlier event verbatim — same id, exercised as a duplicate. */
   of?: string;

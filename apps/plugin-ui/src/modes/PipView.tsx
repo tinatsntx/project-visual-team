@@ -1,57 +1,73 @@
-import type { TaskSnapshot } from "@visual-team/contracts";
+import type { TaskSnapshot, VisualEvent } from "@visual-team/contracts";
 import { hostBridge } from "../bridge/hostBridge.js";
 import type { RefreshHealth } from "../bridge/taskData.js";
-import { RobotAvatar } from "../components/RobotAvatar.js";
-import { needActions, workerLine } from "../accessibility/stateText.js";
-import { useReducedMotion } from "../accessibility/useReducedMotion.js";
+import { StatusBadge } from "../components/StatusBadge.js";
+import { ResultBlock } from "../components/ResultBlock.js";
+import {
+  latestActivityLine,
+  needActions,
+  NO_PENDING_NEEDS_TEXT,
+  workerLine,
+} from "../accessibility/stateText.js";
+
+/** Mirrors TERMINAL_TASK_STATES — kept local so the widget stays reducer-free. */
+const TERMINAL = new Set(["COMPLETED", "FAILED", "CANCELED"]);
 
 /**
- * Picture-in-picture roster (PROJECT_PLAN.md §12.3). The flag stays so the
- * view can be withdrawn if real-host PiP proves unreliable (plan §14).
- * Compact text equivalents keep needs and refresh health visible — a dot or
- * silence alone never carries meaning (brief 008 item 2).
+ * Picture-in-picture status (brief 011): compact text-first glance — title,
+ * recorded phase with provenance, pending needs, worker status lines, and
+ * latest recorded activity. A terminal task keeps an accessible "Results"
+ * disclosure so checks and artifact references are inspectable without the
+ * characters. The display-mode flag stays so the view can be withdrawn if
+ * real-host PiP proves unreliable (plan §14).
  */
 export const PIP_FEATURE_ENABLED = true;
 
 export function PipView({
   task,
-  stale = false,
+  recentEvents = [],
   refresh = "off",
+  lastUpdatedAt = null,
   onRetry,
 }: {
   task: TaskSnapshot;
-  stale?: boolean;
+  recentEvents?: VisualEvent[];
   refresh?: RefreshHealth;
+  lastUpdatedAt?: string | null;
   onRetry?: () => void;
 }) {
-  const reduced = useReducedMotion();
   const needs = needActions(task);
+  const done = TERMINAL.has(task.state);
   return (
     <section className="vt-pip" aria-label={`Team status: ${task.title}`}>
       <h2 className="vt-pip-title">{task.title}</h2>
+      <p className="vt-pip-note">
+        <StatusBadge state={task.state} kind="task" />{" "}
+        <span className="vt-muted">{task.stateProvenance}</span>
+      </p>
+      {needs.length > 0 ? (
+        <p className="vt-pip-note vt-pip-needs" role="status">
+          {needs.join(" ")}
+        </p>
+      ) : (
+        <p className="vt-pip-note">{NO_PENDING_NEEDS_TEXT}</p>
+      )}
       <ul>
         {task.workers.slice(0, 3).map((w) => (
           <li key={w.id}>
-            <RobotAvatar
-              role={w.role}
-              state={w.state}
-              label={w.label}
-              size={22}
-              animated={!reduced && !stale && !task.noRecentActivity}
-            />
             <span className="vt-pip-line">{workerLine(w, task)}</span>
           </li>
         ))}
       </ul>
+      <p className="vt-pip-note">{latestActivityLine(recentEvents)}</p>
       {task.noRecentActivity && <p className="vt-pip-note">No recent activity.</p>}
-      {needs.length > 0 && (
-        <p className="vt-pip-note vt-pip-needs" role="status">
-          {needs.join(" ")}
-        </p>
-      )}
       {(refresh === "stale" || refresh === "unavailable") && (
         <p className="vt-pip-note" role="status">
-          {refresh === "stale" ? "Updates paused — last confirmed state." : "Live updates unavailable."}
+          {refresh === "stale"
+            ? `Updates paused — last confirmed state${
+                lastUpdatedAt ? ` from ${new Date(lastUpdatedAt).toLocaleTimeString()}` : ""
+              }.`
+            : "Live updates unavailable."}
           {onRetry && (
             <>
               {" "}
@@ -61,6 +77,12 @@ export function PipView({
             </>
           )}
         </p>
+      )}
+      {done && (
+        <details className="vt-pip-results">
+          <summary>Results</summary>
+          <ResultBlock task={task} events={recentEvents} />
+        </details>
       )}
       <button type="button" className="vt-btn" onClick={() => void hostBridge.requestDisplayMode("inline")}>
         Back to chat

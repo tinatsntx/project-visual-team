@@ -168,14 +168,28 @@ Use specialists only when at least one condition is true:
 
 ## 5.3 Active work
 
-The user sees:
+The default view is text-first and attention-first — no characters by
+default. It answers, in order:
 
-- current goal;
-- bots assigned;
-- current status of each bot;
-- latest verified activity;
-- blockers or approvals;
-- finished outputs.
+1. **What needs attention?** Unresolved asks first, with the ask-holder and
+   where to respond (native permission prompt in Codex, or the originating
+   chat for a reported question). No fabricated deep links or inactive
+   buttons; where navigation is unsupported, the text says where to act.
+   An empty state reads "No pending requests recorded" — never an
+   unconditional all-clear, since missing events mean limited visibility,
+   not guaranteed inactivity.
+2. **What is happening?** The recorded phase with its provenance, the latest
+   recorded activity with its source and time, and the last successful
+   refresh stated separately. Last activity, cached replay, successful read,
+   inactivity, and terminal state are never conflated.
+3. **What was delivered?** A terminal task shows its reported outcome,
+   reported checks, and artifact references in the default summary — no
+   character view required.
+
+The truthful roster — bots, single-writer ownership, evidence — remains
+available in an optional team view. Motion is off by default, opt-in per
+mounted widget, reset on task switch, and always suppressed by reduced
+motion, stale data, no recent activity, and inactive or terminal workers.
 
 ## 5.4 Completion
 
@@ -185,6 +199,14 @@ The final view must answer four questions:
 2. What was actually done?
 3. What was checked?
 4. What still needs attention?
+
+The finish call's summary, verification, and artifact references ride as a
+structured **reported receipt** on the accepted `task_finished` event and
+the terminal snapshot, alongside the bounded free-text detail. The reducer
+accepts the receipt only on a reported `task_finished`, enforces the shared
+allowlist and combined bound, and rejects atomically — observed/derived
+events and other kinds can never smuggle a result claim, and free text is
+never parsed into claims.
 
 ---
 
