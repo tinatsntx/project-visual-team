@@ -1,11 +1,29 @@
 # Evaluation platform matrix
 
-Updated 2026-09-15. Results/GO decisions in `docs/feasibility-report.md`.
+Updated 2026-09-16. Results/GO decisions in `docs/feasibility-report.md`.
 `PROJECT_PLAN.md` controls scope.
+
+Current guided-alpha revision: `5a66481`, published/deployed, CI 293/293
+with zero skips. Briefs 011/012 pass technical acceptance on Windows Codex
+CLI 0.154.0-alpha.6.2 + ChatGPT web (Chrome, Work conversation) + Render.
+See `docs/attention-alpha-acceptance.md` for exact package hashes and evidence.
+
+| Attention-alpha case | Result |
+|---|---|
+| Needs/status/result summary | PASS: real native permission first with Codex response location; phase/activity/refresh separate; reported finish receipt visible |
+| Same mounted widget | PASS: native events, permission resolution and completion update without re-render |
+| Controlled connection failure | PASS: per-tab Offline causes real failed reads; approval retained; failed retry does not advance time; normal networking restores polling |
+| Accessibility and modes | PASS: dark theme, keyboard retry/focus, reduced-motion emulation, terminal expanded/PiP/inline switching and keyboard PiP results |
+| Guided Windows package | PASS: final versioned ZIP integrity plus actual install/repeat/doctor/conflict checks; normal nine-hook review and real delivery |
+| Participant usefulness | PENDING: five actual participants and 2–7-day voluntary repeat-use evidence; no agent substitutes |
+
+Feature expansion is stopped for the participant study. The M0–M4 evidence
+below remains historical and does not establish new surface coverage.
+
 **M0 COMPLETE / GO:** ChatGPT web + Windows Codex CLI + Render. The eight
 feasibility criteria pass on this supported path. Pending surfaces stay
 unverified and move to later compatibility work; see `docs/m0-closeout.md`.
-Current tested/deployed code: `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
+M4 tested/deployed code: `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
 M4 is accepted on Windows CLI + ChatGPT web. Full real-native proof and
 support limits: `docs/m4-native-closeout.md`, `docs/m4-native-host-evidence.json`.
 M3 visual experience is accepted; real ChatGPT modes, same-widget reported
@@ -20,8 +38,8 @@ is accepted for explicit skill invocation and one active visual task.
 Real native and ChatGPT evidence, partial/failed branches, and the unexecuted
 permission prompt are recorded in `docs/m2-consumer-workflow-acceptance.md`.
 M4 closed the cross-task hook routing and specialist status gaps on this path.
-Current work is release preparation (brief 010) and private-alpha recruitment.
-Latest packaging regenerated/refreshed from `0f0e3ab`; installed skill and
+That round's work was release preparation (brief 010) and private-alpha recruitment.
+M4 packaging regenerated/refreshed from `0f0e3ab`; installed skill and
 hook files match source. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.
 

@@ -1,0 +1,175 @@
+{
+  "task": {
+    "id": "vt_eb6b23dcaea8d30628cb9927",
+    "title": "Attention alpha acceptance",
+    "summary": "Bounded real-host acceptance check.",
+    "mode": "solo",
+    "privacyMode": "standard",
+    "state": "COMPLETED",
+    "stateProvenance": "reported",
+    "workers": [
+      {
+        "id": "lead",
+        "role": "lead",
+        "label": "Alex",
+        "state": "CANCELED",
+        "stateProvenance": "reported",
+        "isWriter": true,
+        "updatedAt": "2026-09-16T22:31:43.270Z",
+        "lastEventId": "evt_vt_eb6b23dcaea8d30628cb9927_13_finish"
+      }
+    ],
+    "createdAt": "2026-09-16T22:21:09.578Z",
+    "updatedAt": "2026-09-16T22:31:43.270Z",
+    "lastActivityAt": "2026-09-16T22:31:43.270Z",
+    "noRecentActivity": false,
+    "needsUser": false,
+    "eventCount": 13,
+    "phase": {
+      "name": "completed",
+      "provenance": "reported",
+      "at": "2026-09-16T22:31:43.270Z"
+    },
+    "result": {
+      "summary": "Two harmless native read checks completed; the second used one-action approval.",
+      "verification": "passed",
+      "artifacts": [
+        {
+          "label": "Acceptance record",
+          "uri": "https://github.com/tinatsntx/project-visual-team/blob/main/docs/attention-alpha-acceptance.md"
+        }
+      ]
+    }
+  },
+  "recentEvents": [
+    {
+      "id": "evt_start_vt_eb6b23dcaea8d30628cb9927",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:21:09.578Z",
+      "provenance": "reported",
+      "kind": "task_started",
+      "label": "Alex picked up the task."
+    },
+    {
+      "id": "evt_vt_eb6b23dcaea8d30628cb9927_2_report_testing",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:21:16.845Z",
+      "provenance": "reported",
+      "kind": "worker_transition",
+      "to": "WORKING",
+      "label": "Reported: testing.",
+      "phase": "testing"
+    },
+    {
+      "id": "hook_1789597280285_3zf3k377",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:21:20.285Z",
+      "provenance": "observed",
+      "kind": "worker_transition",
+      "label": "Working on it.",
+      "to": "WORKING",
+      "detail": "tool: Bash"
+    },
+    {
+      "id": "hook_1789597282251_04xbtx2e",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:21:22.249Z",
+      "provenance": "observed",
+      "kind": "activity",
+      "label": "Finished a step.",
+      "detail": "tool: Bash"
+    },
+    {
+      "id": "hook_1789597292834_bzuduz9t",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:21:32.833Z",
+      "provenance": "observed",
+      "kind": "turn_finished",
+      "label": "Turn finished."
+    },
+    {
+      "id": "hook_1789597572515_hx8wvu38",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:26:12.513Z",
+      "provenance": "observed",
+      "kind": "worker_transition",
+      "label": "Reading the request.",
+      "to": "PLANNING"
+    },
+    {
+      "id": "evt_vt_eb6b23dcaea8d30628cb9927_7_report_testing",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:26:20.778Z",
+      "provenance": "reported",
+      "kind": "worker_transition",
+      "to": "WORKING",
+      "label": "Reported: testing.",
+      "phase": "testing"
+    },
+    {
+      "id": "hook_1789597584887_n9dudmi4",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:26:24.885Z",
+      "provenance": "observed",
+      "kind": "worker_transition",
+      "label": "Working on it.",
+      "to": "WORKING",
+      "detail": "tool: Bash"
+    },
+    {
+      "id": "hook_1789597585316_4v1l2c5g",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:26:25.314Z",
+      "provenance": "observed",
+      "kind": "permission_request",
+      "label": "Waiting for your approval."
+    },
+    {
+      "id": "hook_1789597814246_kxocs0xm",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:30:14.246Z",
+      "provenance": "observed",
+      "kind": "activity",
+      "label": "Finished a step.",
+      "detail": "tool: Bash"
+    },
+    {
+      "id": "hook_1789597828934_satk01a7",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:30:28.933Z",
+      "provenance": "observed",
+      "kind": "turn_finished",
+      "label": "Turn finished."
+    },
+    {
+      "id": "hook_1789597892049_h8pk6lk1",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:31:32.048Z",
+      "provenance": "observed",
+      "kind": "worker_transition",
+      "label": "Reading the request.",
+      "to": "PLANNING"
+    },
+    {
+      "id": "evt_vt_eb6b23dcaea8d30628cb9927_13_finish",
+      "taskId": "vt_eb6b23dcaea8d30628cb9927",
+      "at": "2026-09-16T22:31:43.270Z",
+      "provenance": "reported",
+      "kind": "task_finished",
+      "to": "COMPLETED",
+      "label": "Reported: task completed.",
+      "phase": "completed",
+      "detail": "result: Two harmless native read checks completed; the second used one-action approval.; verification: passed; artifacts: Acceptance record (https://github.com/tinatsntx/project-visual-team/blob/main/docs/attention-alpha-acceptance.md)",
+      "result": {
+        "summary": "Two harmless native read checks completed; the second used one-action approval.",
+        "verification": "passed",
+        "artifacts": [
+          {
+            "label": "Acceptance record",
+            "uri": "https://github.com/tinatsntx/project-visual-team/blob/main/docs/attention-alpha-acceptance.md"
+          }
+        ]
+      }
+    }
+  ]
+}

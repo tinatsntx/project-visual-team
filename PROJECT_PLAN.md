@@ -842,6 +842,14 @@ workflow pass. Evidence: `docs/m4-native-closeout.md` and
 
 ## Milestone 5 — Private alpha
 
+**Technical prerequisites accepted — 2026-09-16.** Briefs 011 and 012 pass
+at deployed revision `5a66481`: 293/293 hosted CI tests with zero skips,
+verified versioned Windows package, and real ChatGPT/native permission,
+same-widget recovery, reported results and accessibility/mode checks.
+Evidence: [coordinator acceptance](docs/attention-alpha-acceptance.md).
+Feature expansion is stopped under the rule below. The five-person and
+2–7-day repeat-use study is pending actual participants; M5 is not complete.
+
 **Guided setup package implemented — 2026-09-16.** `npm run build:alpha-package`
 generates a versioned `dist/visual-team-alpha-<version>-<sha12>/` (local
 marketplace + plugin artifact, `install.ps1`, read-only `doctor.ps1`,

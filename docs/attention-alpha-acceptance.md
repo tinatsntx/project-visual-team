@@ -3,6 +3,9 @@
 2026-09-16. Owner approved the attention/results default, optional team view,
 simplified private-alpha setup, and guided participant sessions. This record
 tracks briefs 011 and 012. It does not replace accepted historical M0–M4 evidence.
+**Technical acceptance: PASS on the supported guided-alpha path at `5a66481`.**
+Product feature expansion is stopped. Five-person usefulness and repeat-use
+evidence remains pending actual participants; this is not market validation.
 
 ## Baseline and ownership
 
@@ -22,16 +25,16 @@ tracks briefs 011 and 012. It does not replace accepted historical M0–M4 evide
 
 | Area | Required evidence | Status |
 |---|---|---|
-| Default summary | Needs/action location first; status, latest activity, confirmation separate; no default characters | 62eecbd: source, focused tests and local browser pass; real host pending |
-| Results | Structured reported result retained; no parsed or inferred verification; legacy data honest | Structured/legacy/misleading-text tests and local all-mode results pass |
+| Default summary | Needs/action location first; status, latest activity, confirmation separate; no default characters | PASS: source/focused tests, local browser, real ChatGPT summary and native approval |
+| Results | Structured reported result retained; no parsed or inferred verification; legacy data honest | PASS: structured/legacy/missing/misleading-text tests; real reported receipt visible inline, expanded and PiP |
 | Truth invariants | Receipt admission/atomicity, deterministic replay, deduplication, terminal freeze, private capability boundary | All nine coordinator probe cases pass; six public input signatures unchanged |
-| Optional team | Explicit view/motion opt-in; reset on task change; reduced motion/stale/inactivity suppress motion | Focused tests and actual App task-switch/reduced-motion checks pass |
-| Package | Versioned prebuilt artifact and integrity; single endpoint; installer/doctor; normal trust | Clean 18f3a18 ZIP and all 18 manifested files verified; ten endpoint tests pass; normal hook review pending live acceptance |
-| Installation | Controlled CLI tests and actual isolated installation/idempotence; no unintended profile changes | Final 18f3a18 artifact passes all six actual native checks, including no-op repeat, conflict refusal and owner-state preservation |
-| Local checks | Lint, typecheck, full tests, build, compatibility and coordinator probes | 2219d36: independently pass lint, typecheck, 292/292 tests (54 suites), build, native compatibility, seven coordinator probes and unchanged six-tool inputs |
-| Live service | Published SHA/CI, deploy SHA, health, widget resource identity | Pending reviewed source |
-| Real widget | Native event, pending permission, completion, controlled read failure/recovery in mounted widget | Pending deployment |
-| Accessibility | Keyboard/focus, dark theme, reduced motion and display modes | Local keyboard disclosure/retry, dark and reduced-motion pass; real host pending |
+| Optional team | Explicit view/motion opt-in; reset on task change; reduced motion/stale/inactivity suppress motion | PASS: focused tests, actual App task switch, real-host reduced-motion emulation removes the motion affordance |
+| Package | Versioned prebuilt artifact and integrity; single endpoint; installer/doctor; normal trust | PASS: final 5a66481 ZIP and 18 payload files verified; ten endpoint cases pass; nine hooks reviewed normally and real delivery observed |
+| Installation | Controlled CLI tests and actual isolated installation/idempotence; no unintended profile changes | PASS: final 5a66481 archive passes all six actual native cases, including repeat no-op, conflict refusal and owner-state preservation |
+| Local checks | Lint, typecheck, full tests, build, compatibility and coordinator probes | PASS: independent 292-test baseline and seven probes; final Windows CI 293/293, zero skips, lint/typecheck/build/compat; six tool inputs unchanged |
+| Live service | Published SHA/CI, deploy SHA, health, widget resource identity | PASS: exact 5a66481 published and deployed; green CI, health 200, six tools, byte-identical hosted widget |
+| Real widget | Native event, pending permission, completion, controlled read failure/recovery in mounted widget | PASS: one real task, same mounted card, observed approval, reported completion, failed retries with unchanged timestamp, automatic recovery |
+| Accessibility | Keyboard/focus, dark theme, reduced motion and display modes | PASS: real dark theme, focus/keyboard retry and PiP disclosure, reduced-motion emulation, terminal mode switching; local tests supplement |
 | Participants | Five actual participants; comparison and 2–7-day voluntary repeat-use follow-up | Pending people; no collected results |
 
 ## Participant evidence
@@ -42,7 +45,7 @@ unassisted installation, comprehension, preference, comparison time, repeat use,
 and false-proof inference. Agents cannot fill in participant answers. Software
 acceptance alone does not establish useful demand or public-release readiness.
 
-## Execution checkpoint
+## Historical execution checkpoints
 
 Both briefs were delivered directly to the existing Devin Visual Team session
 with SWE-2 Max. The initial exploration-only pass was stopped after more than
@@ -58,11 +61,10 @@ passes typechecking and lint; its intermediate behavioral results are below.
 The live six-tool input schemas were captured before changes in the ignored
 `dist/attention-baseline-inputs.json` for a later semantic comparison.
 
-The thread heartbeat `visual-team-attention-alpha-coordination` is active to
-continue SWE-2 review/fix/deployment/acceptance checks without owner relay. It
-must stay quiet on unchanged status and pause once technical acceptance is
-complete or unavoidable owner input is required. Participant evidence remains
-pending. Preserve these coordinator files separately from SWE-2 product commits.
+The thread heartbeat `visual-team-attention-alpha-coordination` continued
+SWE-2 review/fix/deployment/acceptance checks without owner relay and was
+paused at technical closeout. Participant evidence remains pending. These
+coordinator records are committed separately from SWE-2 product changes.
 
 ### Intermediate review — 2026-09-16 15:45 UTC
 
@@ -339,3 +341,182 @@ zero skipped tests, and the native compatibility verifier passes. The product
 build and byte-for-byte widget embed check pass. Local technical gates are
 accepted for publication and live acceptance. This is not yet a live-host or
 participant acceptance claim.
+
+### Publication and hosted environment checks — 21:52 UTC
+
+Coordinator records are committed at `76649c6d39727b6f1b7cf928e0829a0acffee7fb`
+and remote main matches. Render deployment `dep-dalgrebm8hqs739hmnr0` of that
+exact revision failed before promotion: 269/273 applicable Linux tests passed,
+and four React view-state tests failed because `act()` is unavailable when
+the test process inherits `NODE_ENV=production`. The coordinator reproduces
+all four failures under production and all four passes under test. SWE-2 is
+adding a test-only preload so `npm test` uses the test environment before React
+loads, without changing the production build or server environment.
+
+Windows CI run `35154018038` separately passed 291/292 and failed only the
+standalone clean-checkout source-identity assertion (`unverified-preview`
+instead of its own HEAD). All executable installer cases passed there. The
+exact log is retained in ignored `dist/attention-ci-failure.log`; the finding
+was queued once in Devin for bounded diagnosis. No checks are being skipped.
+The previous accepted Render deployment remains live.
+
+The owner native installation was updated through supported `plugin remove`,
+`marketplace remove`, and the verified package's installer. The disabled
+personal plugin was preserved. Installed hook script SHA-256 is
+`769cee7a370a24c501cc7f095e3287080aeb17af1b293cdc73fffbb7f46a00ce`, matching
+reviewed source; packaged endpoint is the existing Render MCP service.
+Normal `/hooks` review shows nine installed/active entries and retained
+Trusted status on the inspected PreToolUse entry. A menu-navigation toggle
+briefly disabled that entry and was immediately restored before any native
+acceptance task or action. No cache, trust hash, or global approval policy was
+edited manually. Live delivery remains pending the corrected deployment.
+
+The React preload is committed as `2c805b1`. The coordinator independently
+reruns all four affected view-state cases under inherited production with
+that preload: 4/4 pass. Before the path correction, both source-identity cases
+also pass locally on Node 22; the failing hosted case is not reproduced by
+switching Node major alone. SWE-2's in-progress correction canonicalizes the
+filesystem paths before comparing the Git checkout root and module root and
+adds bounded gate-reason diagnostics. Both identity cases pass independently
+locally with that change. The hosted rerun is still required; the precise
+Windows runner cause is not claimed proven by these local tests.
+
+### Windows alias reproduction — 22:06 UTC
+
+`c3dc25b626f883c9ee79e03d791957c3cf75626b` is published. Its clean-checkout
+ZIP has 18 verified payload files, byte-identical to the accepted 18f3a18
+package; only manifest revision/time change. ZIP SHA-256:
+`8ab43af6b151534a0558960a4e5357ba13a715ed0a79f5b076e52d6fa55fe93c`.
+All six actual native installer cases pass again under isolated profile
+`dist/native alpha profile YSXynk/`; the owner installation stays on 18f3a18.
+
+CI `35155654687` still passes 291/292. The new diagnostic identifies the
+root-comparison gate (`not-the-checkout`) with empty Git porcelain; changing
+to the regular JavaScript `realpathSync` did not resolve that mismatch.
+The coordinator obtains the actual existing Windows short alias
+`C:\PROGRA~1` using a read-only path query and compares it with
+`C:\Program Files`: regular `realpathSync` returns unequal strings, while
+`realpathSync.native` returns the same long path for both. No directories or
+system settings were changed for this reproduction. The precise correction
+was sent to SWE-2; the full log remains in ignored
+`dist/attention-ci-failure-c3dc25b.log`. Deployment remains held for green CI.
+
+### Hosted corrections accepted — 22:18 UTC
+
+SWE-2 committed the native Windows path normalization and bounded alias
+regression as `5a6648128afb2ab9da8438f83794c669d18a2253`. The coordinator
+reviewed and published it. Windows CI `35156662151` passes **293/293 tests,
+zero skips**, including the formerly failing clean-checkout case and the
+actual 8.3-alias case; lint, typecheck, build and compatibility checks pass.
+The strict source-identity check was retained.
+
+The final prebuilt ZIP is
+`dist/visual-team-alpha-0.1.0-5a6648128afb.zip`, SHA-256
+`38564156c5b5f823fbb7e905a889a74efc6678cde27978d34d1350f91b0a9025`.
+Its 18 payload files and full source revision verify after extraction to
+`dist/guided alpha 5a66481/visual-team-alpha-0.1.0-5a6648128afb/`.
+The actual-native installer probe passes all six cases against this final
+archive (retained isolated profile `dist/native alpha profile UdtbNz/`).
+Compared with the owner-installed 18f3a18 package, seven text files differ
+only in CRLF/LF endings; the hook runner is byte-identical, and all payload
+contents match after line-ending normalization. This is not described as
+whole-package byte identity.
+
+Render deploy `dep-dalhakjm8hqs739ja5mg` promoted exact commit `5a66481`
+at 22:17:40 UTC. Automatic deployment remains off. The coordinator verifies
+HTTP health 200, exactly six public tools, and exact equality of the hosted
+widget resource with the reviewed local build. Resource SHA-256:
+`4877a107193f4fe54c91a7c3f66713890643f31809a0a8177d6830d70b6fc986`.
+Real-host acceptance follows; participant results remain pending.
+
+### Mounted native permission — 22:27 UTC
+
+The coordinator refreshed the existing Visual Team M0 registration and opened
+a fresh ChatGPT conversation. Native explicit skill invocation created solo
+task `vt_eb6b23dcaea8d30628cb9927`, reported testing, and performed one harmless
+date-read action. The backend records genuine PreToolUse, PostToolUse and Stop
+events without manual event injection. ChatGPT called `render_visual_task`
+once and mounted the attention summary. Observed labels separate reported
+testing, observed turn completion, and a later successful-refresh timestamp.
+The no-pending-request label says "recorded", not that intervention is
+impossible. The card uses legible dark colors and no default characters.
+
+A second native turn requested one-action approval for another harmless
+date read. The actual Codex prompt remains pending, with no persistent allow
+rule selected. The same ChatGPT card updates to
+"Alex needs approval — answer the Codex permission prompt" above status;
+latest activity is observed at 17:26:25 local, independently of the advancing
+refresh time. Public snapshot has `WAITING_FOR_USER`, observed provenance,
+`pendingUserNeeds: {"worker:lead":"observed"}`, and nine accepted events.
+No re-render was requested for this change.
+
+Conversation: `https://chatgpt.com/c/6aab16a7-020c-83e9-a4fc-a60d54c2b804`.
+The original in-app browser testing transport was unavailable, so this pass
+uses the owner's authenticated Chrome session through visible UI controls.
+Only public task metadata is retained in the ignored checkpoint JSON files;
+capabilities remain in private MCP metadata and are not printed or saved.
+
+### Same-widget recovery and completion — 22:32 UTC
+
+Chrome DevTools' per-tab Offline emulation produced actual
+`call_mcp` failures (`ERR_INTERNET_DISCONNECTED`), without changing system
+network settings or the server. The mounted card displayed "Live updates
+paused — showing the last confirmed state from 5:27:52 PM" and retained the
+attributed approval, phase and activity. Mouse retry and keyboard retry both
+left that timestamp unchanged while offline. Tab and Shift+Tab exposed clear
+focus rings on the recovery actions; Enter activated retry. Restoring
+"No throttling" recovered polling automatically in the same widget before
+a manual successful retry could be issued. That distinction is retained:
+successful manual retry is proven by the earlier local test, while this live
+case proves automatic same-widget recovery. The approval remained visible
+after recovery, with refresh advancing to 5:30:12 PM.
+
+The coordinator selected native **Yes, proceed this time** only. The action
+exited successfully; the board cleared the resolved need on new native
+evidence. Codex then called the unchanged `finish_visual_task` with a bounded
+reported summary, `verification: passed` scoped to its two read checks, and
+the acceptance-record artifact reference. At 5:31:44 PM the existing ChatGPT
+card showed completed/reported, "Reported result", **"Reported checks:
+passed"**, the full summary, and the reference without opening the team.
+The backend confirms 13 accepted events and identical structured receipt
+on finish event and snapshot. No task re-render was needed, and terminal
+polling stopped with that final confirmation timestamp.
+
+### Accessibility, modes and technical closeout — 22:40 UTC
+
+The real Chrome/ChatGPT dark render is legible with visible keyboard focus.
+DevTools' temporary `prefers-reduced-motion: reduce` emulation removed the
+motion control from the optional team view. Removing the override restored
+"Turn motion on", confirming the preference remained off. The avatar stayed
+inactive for this terminal worker. Source/fixture checks cover active/stale
+suppression and task-switch reset; those are not recast as human observations.
+
+The terminal card switches to its expanded summary and back after polling has
+stopped, retaining the receipt and 5:31:44 PM confirmation. Pop out produces
+ChatGPT's floating compact card. Its Results disclosure opens the summary,
+reported-check label and artifact; Space closes it and Enter opens it, with
+a visible focus outline. Back to chat returns the existing result to inline.
+No task tool re-render was used during these mode checks. The browser was
+left with normal networking, no reduced-motion override, diagnostics closed,
+team hidden and the completed inline summary visible.
+
+The bounded Render log window (22:20:50–22:34:30 UTC) was read through both
+pages to `hasMore:false`: 185 platform/request records, no private capability
+or payload markers found. Raw IP/request logs are not committed. This is
+bounded evidence, not a blanket privacy guarantee. The retained public
+snapshot and 13-event journal are in `docs/attention-alpha-host-evidence.json`;
+the result matches between snapshot and finish event.
+
+**Decision: briefs 011 and 012 technically accepted at `5a66481`.** SWE-2
+received the hosted results directly in Devin and acknowledged the product
+hold; the final closeout is delivered there as well. The coordination
+heartbeat's saved status is PAUSED. The automation tool was unavailable at
+closeout, so only its existing local status/timestamp were updated and read
+back; its prompt, schedule and task binding were preserved.
+
+No feature expansion is authorized by this closeout. Next is the prepared
+five-person counterbalanced study and the voluntary 2–7-day follow-up, using
+`docs/private-alpha-test-kit.md` and the still-blank results template. Missing
+participant answers, timing, preference and repeat-use results are **pending**.
+No market-demand or unassisted-install success claim follows from this
+coordinator-assisted technical run.

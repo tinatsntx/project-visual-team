@@ -1,6 +1,17 @@
 # Milestone 0 — Feasibility Report
 
-**Updated:** 2026-09-15
+**Updated:** 2026-09-16
+
+**Current guided-alpha revision:** `5a6648128afb2ab9da8438f83794c669d18a2253`.
+Briefs 011/012 pass technical acceptance: attention/results default, reported
+completion receipt, versioned Windows installer/doctor, real native approval
+and same-widget ChatGPT recovery/completion. CI passes 293/293 with zero skips;
+the exact revision is deployed and the widget bytes match the reviewed build.
+Evidence: `docs/attention-alpha-acceptance.md`,
+`docs/attention-alpha-host-evidence.json`. Feature expansion is stopped;
+the five-person study and 2–7-day repeat-use results remain pending people.
+The M0–M4 records below remain dated historical evidence.
+
 **Status:** M0 COMPLETE / GO to Milestone 1 for ChatGPT web + Windows Codex
 CLI + Render. ChatGPT web initialization, private bridge refresh,
 same-widget automatic native event delivery, and controlled connection recovery
@@ -8,7 +19,7 @@ pass with CSP enforcement on. Native skill completion, terminal web modes,
 and actual web PiP also pass. All eight feasibility criteria pass on that
 supported path. Untested surfaces remain unverified; full compatibility is
 not claimed. Closeout and backlog ownership: `docs/m0-closeout.md`.
-**Current code tested/deployed:** `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
+**M4 code tested/deployed:** `0f0e3abc48ee7f5ce92153e371dc3308a15e5a8e`.
 M4 is accepted: real native specialist start/permission/activity/finish,
 same-widget ChatGPT updates, concurrent-session isolation, interruption/resume,
 and disabled-hook fallback pass. Independent 199 tests, build, clean package
@@ -25,7 +36,7 @@ the dated real-host M0 evidence below is preserved. M2 consumer workflow
 see `docs/m2-consumer-workflow-acceptance.md` for the actual pass/partial/fail
 branches. M3 subsequently closed as recorded above.
 Full M1 release record: `docs/m1-core-engine-acceptance.md`.
-**Latest packaging tested:** regenerated/refreshed from `0f0e3ab`; installed
+**M4 packaging tested:** regenerated/refreshed from `0f0e3ab`; installed
 skill, hook declaration, and script match source. The corrected installed-root
 hook is retained; nine native hooks are active after normal review.
 Brief 005 and the M0 enablement fixes are accepted.

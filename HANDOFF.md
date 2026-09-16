@@ -2,9 +2,14 @@
 
 **Updated:** 2026-09-16
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** Briefs 011 and 012 are implemented and reviewed. The coordinator
-is completing final checks and live acceptance; neither is deployed yet.
-Product code is frozen while this bounded acceptance runs. The five-person
+**Milestone:** Briefs 011 and 012 are implemented, reviewed and published at
+`5a66481`. **Both briefs pass technical acceptance.** Hosted CI passes 293/293
+with zero skips; the reviewed build is deployed with its exact widget bytes
+verified. Real ChatGPT/native hook, attributed permission, same-widget
+connection recovery, reported completion, dark theme, reduced motion and
+terminal display-mode checks pass. Public host evidence is in
+`docs/attention-alpha-host-evidence.json`.
+Product feature expansion is stopped. The five-person
 usefulness study and its 2–7-day voluntary repeat-use follow-up remain pending
 actual people. See `docs/attention-alpha-acceptance.md` for the current gate
 record, `docs/private-alpha-test-kit.md` for the protocol, and
@@ -21,10 +26,17 @@ only on reported `task_finished` events, enforces the allowlist/combined
 bound (measured on the serialized detail representation), and rejects
 atomically. The unchanged coordinator probe
 `evals/brief-011-coordinator-probe.mts` passes 9/9.
-Brief 012's clean `18f3a18` ZIP passes integrity verification and all six actual
+Brief 012's final `5a66481` ZIP passes integrity verification and all six actual
 native installer checks: isolated install, repeat no-op, read-only doctor,
-conflict refusal without mutation, and owner-profile preservation. Only the
-isolated test profiles have received this package so far. The
+conflict refusal without mutation, and owner-profile preservation. The owner
+profile uses the accepted `18f3a18` package through supported CLI installation
+(same hook bytes and payload contents as the final package; text line endings differ);
+normal `/hooks` review confirms nine active hooks, and the installed script
+matches source. The live acceptance task records genuine PreToolUse,
+PostToolUse, PermissionRequest and Stop events; the mounted ChatGPT card
+updates from those events and retains the bounded reported finish receipt.
+The final ZIP is `dist/visual-team-alpha-0.1.0-5a6648128afb.zip`; integrity,
+source identity, actual install/idempotence/doctor and conflict checks pass. The
 bundled hook resolves its endpoint explicitly: `VISUAL_TEAM_MCP_URL` wins
 when defined and valid http(s); otherwise the packaged MCP config next to
 the installed plugin root (`.mcp.json` Legacy first, then `mcp.json`). There
@@ -49,8 +61,8 @@ failure, and reports a defined `VISUAL_TEAM_MCP_URL` override separately
 from package health. Windows-only PowerShell execution tests cover the
 failure paths against controlled stubs; `npm run build` stays Linux-safe
 and does not build the archive.
-Earlier state: milestones 0 through 4 COMPLETE on the supported path. Current
-deployed product code `0f0e3ab` is reviewed, published, and deployed. Real native specialist
+Earlier state: milestones 0 through 4 COMPLETE on the supported path. Their
+accepted product code was `0f0e3ab`. Real native specialist
 start/permission/activity/finish, same-widget ChatGPT updates, session
 isolation, interrupt/resume, and hook-disabled workflow pass. Evidence:
 `docs/m4-native-closeout.md` and `docs/m4-native-host-evidence.json`.
