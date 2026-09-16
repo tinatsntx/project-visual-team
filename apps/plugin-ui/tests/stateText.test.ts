@@ -49,9 +49,17 @@ describe("needActions attribution", () => {
     const lines = needActions(snap({ needsUser: true, pendingUserNeeds: { "worker:lead": "observed" } }));
     assert.deepEqual(lines, ["Alex needs approval — answer the Codex permission prompt."]);
   });
-  it("a task need points back at the chat", () => {
+  it("a reported task need names the reported question and the originating chat", () => {
     const lines = needActions(snap({ needsUser: true, pendingUserNeeds: { task: "reported" } }));
-    assert.deepEqual(lines, ["A question is waiting — answer in the chat."]);
+    assert.deepEqual(lines, ["A reported question is waiting — answer it in the originating chat."]);
+  });
+  it("an observed task-level need points at the Codex prompt, never an invented question", () => {
+    const lines = needActions(snap({ needsUser: true, pendingUserNeeds: { task: "observed" } }));
+    assert.deepEqual(lines, ["Approval may be pending — answer the Codex permission prompt."]);
+  });
+  it("unknown need attribution degrades to the generic line — no invented question", () => {
+    const lines = needActions(snap({ needsUser: true, pendingUserNeeds: { legacy: "reported" } }));
+    assert.deepEqual(lines, ["This task needs you."]);
   });
   it("both needs produce both actions", () => {
     const lines = needActions(
@@ -77,9 +85,15 @@ describe("brief-011 status lines", () => {
     assert.equal(NO_PENDING_NEEDS_TEXT, "No pending requests recorded.");
   });
 
-  it("phase line carries the recorded state plus its provenance", () => {
-    assert.equal(phaseLine(snap({ state: "ACTIVE", stateProvenance: "observed" })), "active (observed)");
-    assert.equal(phaseLine(snap({ state: "COMPLETED", stateProvenance: "reported" })), "completed (reported)");
+  it("phase line shows the reported workflow phase, never the lifecycle state", () => {
+    // Lifecycle ACTIVE with a retained reported phase shows the phase.
+    const withPhase = snap({
+      state: "ACTIVE",
+      phase: { name: "testing", provenance: "reported", at: "2026-09-15T20:07:00.000Z" },
+    });
+    assert.match(phaseLine(withPhase), /^testing \(reported, /);
+    // Older snapshots without a phase read honestly as not provided.
+    assert.equal(phaseLine(snap({ state: "COMPLETED", stateProvenance: "reported" })), "not provided");
   });
 
   it("latest activity names the event, its source, and its time", () => {

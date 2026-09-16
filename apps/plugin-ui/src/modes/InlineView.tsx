@@ -10,6 +10,7 @@ import {
   lastRefreshLine,
   needActions,
   NO_PENDING_NEEDS_TEXT,
+  phaseLine,
   taskLine,
 } from "../accessibility/stateText.js";
 
@@ -64,6 +65,7 @@ export function InlineView({
         <StatusBadge state={task.state} kind="task" />
         <span className="vt-muted">{task.stateProvenance}</span>
       </p>
+      <p className="vt-meta">Reported phase: {phaseLine(task)}</p>
       <p className="vt-meta">{latestActivityLine(recentEvents)}</p>
       <p className="vt-meta">{lastRefreshLine(lastUpdatedAt)}</p>
       {task.noRecentActivity && <p className="vt-muted">No recent activity.</p>}

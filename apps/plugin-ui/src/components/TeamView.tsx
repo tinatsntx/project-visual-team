@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { TaskSnapshot, WorkerSnapshot } from "@visual-team/contracts";
 import { RobotAvatar } from "./RobotAvatar.js";
 import { workerLine } from "../accessibility/stateText.js";
@@ -20,24 +20,20 @@ const ANIMATED_STATES = new Set<WorkerSnapshot["state"]>(["WORKING", "REVIEWING"
 export function TeamView({
   task,
   stale = false,
-  motion,
-  onMotionChange,
 }: {
   task: TaskSnapshot;
   stale?: boolean;
-  /**
-   * Optional controlled motion preference. When provided, the parent owns
-   * the opt-in state; otherwise the view keeps it internally.
-   */
-  motion?: boolean;
-  onMotionChange?: (on: boolean) => void;
 }) {
   const reduced = useReducedMotion();
-  const [internal, setInternal] = useState(false);
-  // The opt-in never survives a task switch — a new task starts static.
-  useEffect(() => setInternal(false), [task.id]);
-  const motionOn = motion ?? internal;
-  const setMotion = onMotionChange ?? setInternal;
+  const [motionOn, setMotion] = useState(false);
+  // The opt-in never survives a task switch — reset synchronously during
+  // render so the first frame of task B can never show task A's motion,
+  // even if this view is mounted without a task-scoped key.
+  const [prevTaskId, setPrevTaskId] = useState(task.id);
+  if (prevTaskId !== task.id) {
+    setPrevTaskId(task.id);
+    setMotion(false);
+  }
 
   const animated = (w: WorkerSnapshot): boolean =>
     motionOn &&

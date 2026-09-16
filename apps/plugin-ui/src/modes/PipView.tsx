@@ -5,8 +5,10 @@ import { StatusBadge } from "../components/StatusBadge.js";
 import { ResultBlock } from "../components/ResultBlock.js";
 import {
   latestActivityLine,
+  lastRefreshLine,
   needActions,
   NO_PENDING_NEEDS_TEXT,
+  phaseLine,
   workerLine,
 } from "../accessibility/stateText.js";
 
@@ -41,10 +43,6 @@ export function PipView({
   return (
     <section className="vt-pip" aria-label={`Team status: ${task.title}`}>
       <h2 className="vt-pip-title">{task.title}</h2>
-      <p className="vt-pip-note">
-        <StatusBadge state={task.state} kind="task" />{" "}
-        <span className="vt-muted">{task.stateProvenance}</span>
-      </p>
       {needs.length > 0 ? (
         <p className="vt-pip-note vt-pip-needs" role="status">
           {needs.join(" ")}
@@ -52,6 +50,11 @@ export function PipView({
       ) : (
         <p className="vt-pip-note">{NO_PENDING_NEEDS_TEXT}</p>
       )}
+      <p className="vt-pip-note">
+        <StatusBadge state={task.state} kind="task" />{" "}
+        <span className="vt-muted">{task.stateProvenance}</span>
+      </p>
+      <p className="vt-pip-note vt-meta">Reported phase: {phaseLine(task)}</p>
       <ul>
         {task.workers.slice(0, 3).map((w) => (
           <li key={w.id}>
@@ -60,14 +63,17 @@ export function PipView({
         ))}
       </ul>
       <p className="vt-pip-note">{latestActivityLine(recentEvents)}</p>
+      {/* The last successful refresh is stated in every health state — it is
+          never the same fact as latest activity or the stale notice. */}
+      <p className="vt-pip-note vt-meta">{lastRefreshLine(lastUpdatedAt)}</p>
       {task.noRecentActivity && <p className="vt-pip-note">No recent activity.</p>}
       {(refresh === "stale" || refresh === "unavailable") && (
         <p className="vt-pip-note" role="status">
+          {/* Stale/unavailable data keeps explicit last-known wording — the
+              separate refresh-time line above states when it was confirmed. */}
           {refresh === "stale"
-            ? `Updates paused — last confirmed state${
-                lastUpdatedAt ? ` from ${new Date(lastUpdatedAt).toLocaleTimeString()}` : ""
-              }.`
-            : "Live updates unavailable."}
+            ? "Updates paused — last confirmed state shown."
+            : "Live updates unavailable — last confirmed state shown."}
           {onRetry && (
             <>
               {" "}

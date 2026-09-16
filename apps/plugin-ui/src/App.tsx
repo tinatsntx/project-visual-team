@@ -73,17 +73,21 @@ export function App() {
     />
   ) : null;
 
+  // View-local UI state (team/evidence disclosures, motion opt-in) is scoped
+  // to task identity: keying the mode roots remounts them on a task switch,
+  // so nothing a user opened for task A can leak into task B's first render.
   if (mode === "fullscreen") {
     return (
       <>
         {notice}
-        <FullscreenView task={task} recentEvents={recentEvents} stale={stale} lastUpdatedAt={lastUpdatedAt} />
+        <FullscreenView key={task.id} task={task} recentEvents={recentEvents} stale={stale} lastUpdatedAt={lastUpdatedAt} />
       </>
     );
   }
   if (mode === "pip" && PIP_FEATURE_ENABLED) {
     return (
       <PipView
+        key={task.id}
         task={task}
         recentEvents={recentEvents}
         refresh={refresh}
@@ -96,6 +100,7 @@ export function App() {
     <>
       {notice}
       <InlineView
+        key={task.id}
         task={task}
         recentEvents={recentEvents}
         stale={stale}

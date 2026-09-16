@@ -67,6 +67,25 @@ export const WorkflowPhaseSchema = z.enum([
 ]);
 export type WorkflowPhase = z.infer<typeof WorkflowPhaseSchema>;
 
+/**
+ * The workflow event each reported phase may legitimately ride (brief 011
+ * review §4). A phase declaration is admissible only on the *matching* event
+ * — the exact (kind, to) that `report_workflow_step` emits for that phase —
+ * so a terminal claim cannot piggyback a working transition and a working
+ * phase cannot ride an unrelated activity event. Shared by the mapper and
+ * the reducer so the admission rule cannot drift.
+ */
+export const WORKFLOW_PHASE_EVENT = {
+  planning: { kind: "worker_transition", to: "PLANNING" },
+  researching: { kind: "worker_transition", to: "WORKING" },
+  implementing: { kind: "worker_transition", to: "WORKING" },
+  testing: { kind: "worker_transition", to: "WORKING" },
+  reviewing: { kind: "worker_transition", to: "REVIEWING" },
+  waiting_for_user: { kind: "task_transition", to: "WAITING_FOR_USER" },
+  completed: { kind: "task_finished", to: "COMPLETED" },
+  failed: { kind: "task_finished", to: "FAILED" },
+} as const satisfies Record<WorkflowPhase, { kind: string; to: string }>;
+
 // ---------------------------------------------------------------------------
 // Codex lifecycle events (plan §10)
 // ---------------------------------------------------------------------------
@@ -170,6 +189,13 @@ export const VisualEventSchema = z.object({
    * `task_finished` event; enforced by the reducer at apply time.
    */
   result: TaskResultSchema.optional(),
+  /**
+   * Model-reported workflow phase carried by `report_workflow_step` events
+   * (§9.2). Legal only on a *reported* event — the reducer rejects
+   * phase-bearing observed/derived events atomically so native activity can
+   * never claim a phase it did not state.
+   */
+  phase: WorkflowPhaseSchema.optional(),
 });
 export type VisualEvent = z.infer<typeof VisualEventSchema>;
 
@@ -192,6 +218,19 @@ export const WorkerSnapshotSchema = z.object({
   updatedAt: z.string().min(1).max(64),
 });
 export type WorkerSnapshot = z.infer<typeof WorkerSnapshotSchema>;
+
+/**
+ * The last accepted reported workflow phase (§9.2), retained on the snapshot
+ * separately from the lifecycle state and the latest activity line. Only a
+ * reported event may set it; older snapshots without one stay readable.
+ */
+export const ReportedPhaseSchema = z.object({
+  name: WorkflowPhaseSchema,
+  // Only a reported event may set the phase — the schema itself requires it.
+  provenance: z.literal("reported"),
+  at: z.string().min(1).max(64),
+});
+export type ReportedPhase = z.infer<typeof ReportedPhaseSchema>;
 
 export const TaskSnapshotSchema = z.object({
   id: z.string().min(1).max(128),
@@ -229,6 +268,13 @@ export const TaskSnapshotSchema = z.object({
    * falls back to the event's unstructured detail text honestly.
    */
   result: TaskResultSchema.optional(),
+  /**
+   * The most recent accepted reported workflow phase, with its provenance
+   * and report time. Absent on older snapshots or tasks that never received
+   * a `report_workflow_step` call — display reads "not provided", never an
+   * inferred phase.
+   */
+  phase: ReportedPhaseSchema.optional(),
   eventCount: z.number().int().nonnegative(),
 });
 export type TaskSnapshot = z.infer<typeof TaskSnapshotSchema>;

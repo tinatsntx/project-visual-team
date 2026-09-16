@@ -1,6 +1,7 @@
 import {
   EVENT_DETAIL_MAX_CHARS,
   MAX_VISIBLE_WORKERS,
+  WORKFLOW_PHASE_EVENT,
   type EvidenceLevel,
   type ReduceResult,
   type StartVisualTaskInput,
@@ -8,6 +9,7 @@ import {
   type TaskSnapshot,
   type TaskState,
   type VisualEvent,
+  type WorkflowPhase,
   type WorkerRole,
   type WorkerSnapshot,
   type WorkerState,
@@ -461,11 +463,42 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       ? { pendingUserNeeds: { ...snapshotIn.pendingUserNeeds } }
       : {}),
     ...(snapshotIn.result ? { result: structuredClone(snapshotIn.result) } : {}),
+    ...(snapshotIn.phase ? { phase: { ...snapshotIn.phase } } : {}),
   };
 
   const provenanceError = provenancePermitsTransition(event.provenance, event.kind, event.to);
   if (provenanceError) {
     return { ok: false, snapshot: snapshotIn, error: provenanceError };
+  }
+
+  // A workflow phase is a reported claim on its matching workflow event
+  // (brief 011 review §4): observed/derived events may never carry one, the
+  // value must be a real WorkflowPhase, and it may only ride the exact
+  // (kind, to) report_workflow_step emits for it — a terminal claim cannot
+  // piggyback a working transition and no phase rides an unrelated event.
+  if (event.phase !== undefined) {
+    if (event.provenance !== "reported") {
+      return {
+        ok: false,
+        snapshot: snapshotIn,
+        error: "a workflow phase may only ride a reported event",
+      };
+    }
+    const expected = WORKFLOW_PHASE_EVENT[event.phase as WorkflowPhase];
+    if (!expected) {
+      return {
+        ok: false,
+        snapshot: snapshotIn,
+        error: `unknown workflow phase ${JSON.stringify(event.phase)}`,
+      };
+    }
+    if (event.kind !== expected.kind || event.to !== expected.to) {
+      return {
+        ok: false,
+        snapshot: snapshotIn,
+        error: `phase ${JSON.stringify(event.phase)} may only ride a ${expected.kind} to ${expected.to}`,
+      };
+    }
   }
 
   const receiptError = validateResultReceipt(event);
@@ -688,6 +721,13 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       return { ok: false, snapshot: snapshotIn, error: `unsupported event kind ${event.kind}` };
   }
 
+  // A reported phase claim persists on the snapshot with its own provenance
+  // and time — retained through later native activity and log trimming,
+  // and frozen with the terminal snapshot.
+  if (event.phase !== undefined) {
+    // The admission gate above guarantees reported provenance.
+    snapshot.phase = { name: event.phase, provenance: "reported", at: event.at };
+  }
   snapshot.updatedAt = event.at;
   snapshot.lastActivityAt = event.at;
   snapshot.noRecentActivity = false;
@@ -721,9 +761,11 @@ export function applyEvent(record: TaskRecord, event: VisualEvent): ReduceResult
   if (!result.ok) return result;
   record.seenEventIds.add(event.id);
   record.snapshot = result.snapshot;
-  // Journal a detached copy: later caller-side mutation of the receipt must
-  // not rewrite the recorded event.
-  record.events.push(event.result === undefined ? event : { ...event, result: cloneResult(event.result) });
+  // Journal a detached copy: later caller-side mutation of the receipt (or
+  // the event itself) must not rewrite the recorded event.
+  record.events.push(
+    event.result === undefined ? { ...event } : { ...event, result: cloneResult(event.result) },
+  );
   if (record.events.length > MAX_EVENTS_PER_TASK) {
     record.events.splice(0, record.events.length - MAX_EVENTS_PER_TASK);
   }

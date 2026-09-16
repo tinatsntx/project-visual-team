@@ -67,7 +67,7 @@ export function FullscreenView({
       <section aria-labelledby="vt-status">
         <h3 id="vt-status">Status</h3>
         <p>
-          <span className="vt-muted">Phase: {phaseLine(task)}</span>
+          <span className="vt-muted">Reported phase: {phaseLine(task)}</span>
         </p>
         <p className="vt-meta">{latestActivityLine(recentEvents)}</p>
         <p className="vt-meta">{lastRefreshLine(lastUpdatedAt)}</p>

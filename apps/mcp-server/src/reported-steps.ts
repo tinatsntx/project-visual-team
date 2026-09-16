@@ -1,5 +1,6 @@
 import {
   EVENT_DETAIL_MAX_CHARS,
+  WORKFLOW_PHASE_EVENT,
   type FinishVisualTaskInput,
   type TaskResult,
   type VisualEvent,
@@ -33,29 +34,22 @@ const PHASE_LABEL: Record<WorkflowPhase, string> = {
 };
 
 export function mapWorkflowPhase(input: ReportedBase & { phase: WorkflowPhase }): VisualEvent {
-  const base = {
+  // The phase rides the exact workflow event that means it — the shared
+  // WORKFLOW_PHASE_EVENT table is also the reducer's admission rule, so a
+  // phase can never be mapped onto an event it does not correlate with.
+  const shape = WORKFLOW_PHASE_EVENT[input.phase];
+  return {
     id: input.eventId,
     taskId: input.taskId,
     at: input.at,
-    provenance: "reported" as const,
+    provenance: "reported",
+    kind: shape.kind,
+    to: shape.to,
     label: PHASE_LABEL[input.phase],
+    // The reported phase rides the event and lands on the snapshot, so the
+    // recorded phase survives later generic native activity (brief 011 §4).
+    phase: input.phase,
   };
-  switch (input.phase) {
-    case "planning":
-      return { ...base, kind: "worker_transition", to: "PLANNING" };
-    case "researching":
-    case "implementing":
-    case "testing":
-      return { ...base, kind: "worker_transition", to: "WORKING" };
-    case "reviewing":
-      return { ...base, kind: "worker_transition", to: "REVIEWING" };
-    case "waiting_for_user":
-      return { ...base, kind: "task_transition", to: "WAITING_FOR_USER" };
-    case "completed":
-      return { ...base, kind: "task_finished", to: "COMPLETED" };
-    case "failed":
-      return { ...base, kind: "task_finished", to: "FAILED" };
-  }
 }
 
 export type MapFinishResult =
@@ -107,6 +101,8 @@ export function mapTaskFinish(
       kind: "task_finished",
       to: input.outcome === "failed" ? "FAILED" : "COMPLETED",
       label: PHASE_LABEL[input.outcome],
+      // The finish is itself a reported terminal phase claim.
+      phase: input.outcome,
       ...(detail ? { detail } : {}),
       ...(result ? { result } : {}),
     },

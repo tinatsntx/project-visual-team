@@ -50,10 +50,11 @@ describe("inline needs and limits", () => {
     assert.doesNotMatch(html, /answer in the chat/);
   });
 
-  it("routes a reported task need back to the chat", () => {
+  it("routes a reported task need back to the originating chat", () => {
     const t = task({ needsUser: true, pendingUserNeeds: { task: "reported" } });
     const html = renderToStaticMarkup(createElement(InlineView, { task: t, recentEvents: [] }));
-    assert.match(html, /answer in the chat/);
+    assert.match(html, /answer it in the originating chat/);
+    assert.doesNotMatch(html, /answer the Codex permission prompt/);
   });
 
   it("shows no-recent-activity visibly and the §13.6 notice once", () => {
@@ -98,6 +99,30 @@ describe("inline needs and limits", () => {
     assert.doesNotMatch(html, /Open team/);
   });
 
+  it("shows the retained reported phase separately from lifecycle state and activity", () => {
+    const t = task({
+      state: "ACTIVE",
+      stateProvenance: "observed",
+      phase: { name: "testing", provenance: "reported", at: "2026-09-15T20:07:00.000Z" },
+    });
+    const html = renderToStaticMarkup(createElement(InlineView, { task: t, recentEvents: [] }));
+    assert.match(html, /Reported phase: testing \(reported, /);
+    const full = renderToStaticMarkup(createElement(FullscreenView, { task: t, recentEvents: [] }));
+    assert.match(full, /Reported phase: testing \(reported, /);
+    const pip = renderToStaticMarkup(createElement(PipView, { task: t, refresh: "live" }));
+    assert.match(pip, /Reported phase: testing \(reported, /);
+  });
+
+  it("an older snapshot without a phase reads 'not provided', never inferred", () => {
+    for (const el of [
+      createElement(InlineView, { task: task(), recentEvents: [] }),
+      createElement(FullscreenView, { task: task(), recentEvents: [] }),
+      createElement(PipView, { task: task(), refresh: "live" as const }),
+    ]) {
+      assert.match(renderToStaticMarkup(el), /Reported phase: not provided/);
+    }
+  });
+
   it("shows the terminal outcome, reported checks, and artifacts in the default inline summary", () => {
     const t = task({
       state: "COMPLETED",
@@ -126,7 +151,7 @@ describe("pip text equivalents", () => {
       createElement(PipView, { task: t, refresh: "stale", onRetry: () => {} }),
     );
     assert.match(html, /permission prompt/);
-    assert.match(html, /Updates paused/);
+    assert.match(html, /Updates paused — last confirmed state shown\./);
     assert.match(html, /Try again/);
   });
 
@@ -136,7 +161,7 @@ describe("pip text equivalents", () => {
       createElement(PipView, { task: t, refresh: "unavailable", onRetry: () => {} }),
     );
     assert.match(html, /No recent activity\./);
-    assert.match(html, /Live updates unavailable/);
+    assert.match(html, /Live updates unavailable — last confirmed state shown\./);
   });
 
   it("reads a canceled specialist under a completed task as ended tracking, not canceled", () => {
@@ -166,6 +191,29 @@ describe("pip text equivalents", () => {
   it("does not offer a results disclosure while work is live", () => {
     const html = renderToStaticMarkup(createElement(PipView, { task: task() }));
     assert.doesNotMatch(html, /<summary>Results<\/summary>/);
+  });
+
+  it("leads with pending needs before status — attention first even in the compact view", () => {
+    const t = task({ needsUser: true, pendingUserNeeds: { "worker:lead": "observed" } });
+    const html = renderToStaticMarkup(createElement(PipView, { task: t, refresh: "live" }));
+    const needsAt = html.indexOf("permission prompt");
+    const badgeAt = html.indexOf("vt-badge");
+    assert.ok(needsAt !== -1 && badgeAt !== -1 && needsAt < badgeAt, "needs precede the state badge");
+  });
+
+  it("states the last successful refresh in every refresh state and on terminal tasks", () => {
+    for (const refresh of ["live", "stale", "unavailable", "off"] as const) {
+      const html = renderToStaticMarkup(
+        createElement(PipView, {
+          task: task({ state: refresh === "off" ? "COMPLETED" : "ACTIVE" }),
+          refresh,
+          lastUpdatedAt: "2026-09-15T20:05:00.000Z",
+        }),
+      );
+      assert.match(html, /Last successful refresh:/, `refresh=${refresh}`);
+    }
+    const none = renderToStaticMarkup(createElement(PipView, { task: task(), refresh: "live" }));
+    assert.match(none, /No successful refresh recorded\./);
   });
 });
 
@@ -204,32 +252,22 @@ describe("characters and motion are opt-in (brief 011)", () => {
     }
   });
 
-  it("team view keeps motion off by default and animates only on explicit opt-in", () => {
+  it("team view keeps motion off by default — the opt-in control is present but inert", () => {
     const t = task({ noRecentActivity: false });
     const off = renderToStaticMarkup(createElement(TeamView, { task: t, stale: false }));
     assert.doesNotMatch(off, /\bvt-bob\b/);
+    // The affordance exists; the real opt-in click path is covered by the
+    // mounted viewState tests (react-test-renderer).
     assert.match(off, /Turn motion on/);
-    const on = renderToStaticMarkup(
-      createElement(TeamView, { task: t, stale: false, motion: true }),
-    );
-    assert.match(on, /\bvt-bob\b/);
-    assert.match(on, /Turn motion off/);
+    assert.match(off, /aria-pressed="false"/);
   });
 
-  it("opt-in motion is still suppressed by stale data, inactivity, and inactive workers", () => {
-    const staleHtml = renderToStaticMarkup(
-      createElement(TeamView, { task: task({ noRecentActivity: false }), stale: true, motion: true }),
-    );
-    assert.doesNotMatch(staleHtml, /\bvt-bob\b/);
-    const aged = renderToStaticMarkup(
-      createElement(TeamView, { task: task({ noRecentActivity: true }), stale: false, motion: true }),
-    );
-    assert.doesNotMatch(aged, /\bvt-bob\b/);
+  it("terminal workers can never animate — even with motion opted in markup stays static", () => {
+    // A COMPLETED worker has no animated state regardless of the opt-in;
+    // mounted suppression cases live in viewState.test.ts.
     const terminal = renderToStaticMarkup(
       createElement(TeamView, {
         task: task({ noRecentActivity: false, workers: [worker("lead", "lead", "COMPLETED", true)] }),
-        stale: false,
-        motion: true,
       }),
     );
     assert.doesNotMatch(terminal, /\bvt-bob\b/);
@@ -283,6 +321,16 @@ describe("fullscreen results and canceled specialists", () => {
     assert.doesNotMatch(html, /Verification passed/);
   });
 
+  it("a nonterminal task reads as no recorded terminal result — never 'in progress'", () => {
+    for (const state of ["ACTIVE", "WAITING_FOR_USER", "BLOCKED"] as const) {
+      const html = renderToStaticMarkup(
+        createElement(FullscreenView, { task: task({ state }), recentEvents: [] }),
+      );
+      assert.match(html, /No terminal result has been recorded\./, state);
+      assert.doesNotMatch(html, /still in progress/, state);
+    }
+  });
+
   it("never calls a canceled task 'in progress'", () => {
     const t = task({ state: "CANCELED" });
     const html = renderToStaticMarkup(
@@ -324,6 +372,6 @@ describe("fullscreen results and canceled specialists", () => {
       createElement(FullscreenView, { task: t, recentEvents: [] }),
     );
     assert.match(html, /answer the Codex permission prompt/);
-    assert.match(html, /answer in the chat/);
+    assert.match(html, /answer it in the originating chat/);
   });
 });

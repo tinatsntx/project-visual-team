@@ -24,7 +24,9 @@ export function ResultBlock({
   events: VisualEvent[];
 }) {
   if (!TERMINAL.has(task.state)) {
-    return <p className="vt-muted">Work is still in progress.</p>;
+    // Evidence-bounded absence: a waiting/blocked/stale task is not "in
+    // progress" — only that no terminal receipt has been recorded.
+    return <p className="vt-muted">No terminal result has been recorded.</p>;
   }
   const finish = finishDetail(events);
   const result = task.result;

@@ -78,6 +78,41 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Replay a fixture synchronously into a TaskRecord — the same mapper/reducer
+ * path as the timed queue, used to pre-build the harness's second task so a
+ * task switch exercises the real delivery path, not a synthetic snapshot.
+ */
+function replayFixtureRecord(fixture: ReplayFixture, taskId: string): TaskRecord {
+  const start = fixture.steps.find((s) => s.kind === "start");
+  if (!start?.input) throw new Error(`fixture ${fixture.name} has no start step`);
+  const record = createTaskRecord(start.input as StartVisualTaskInput, {
+    taskId,
+    startedAt: nowIso(),
+    eventId: `evt_dev_${taskId}_start`,
+  });
+  for (const step of fixture.steps) {
+    if (step.event) {
+      const mapped = mapCodexEvent({
+        taskId,
+        name: step.event.name,
+        ...(step.event.payload ? { payload: step.event.payload } : {}),
+        at: step.event.at ?? nowIso(),
+        eventId: step.event.eventId ?? `evt_dev_${taskId}_${record.snapshot.eventCount}`,
+      });
+      if (mapped.ok) for (const event of mapped.events) applyEvent(record, event);
+    } else if (step.visual) {
+      applyEvent(record, {
+        ...step.visual,
+        taskId,
+        at: step.visual.at ?? nowIso(),
+        provenance: step.visual.provenance ?? "reported",
+      } as VisualEvent);
+    }
+  }
+  return record;
+}
+
 function createDevCapability(): string {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
@@ -111,7 +146,16 @@ interface JsonRpcRequest {
 
 class DevHost {
   private record: TaskRecord;
+  /**
+   * A second, fully replayed task — the harness "swap task" control serves
+   * it through the real tool-result path so a task switch inside the mounted
+   * widget exercises the store's task-change handling and the views' keyed
+   * reset (brief 011 review §2). Not a platform claim — a dev fixture.
+   */
+  private readonly alternate: TaskRecord;
+  private servingAlternate = false;
   private readonly capability = createDevCapability();
+  private readonly altCapability = createDevCapability();
   private readonly iframe: HTMLIFrameElement;
   private readonly queue: QueueStep[];
   private readonly delivery: DeliveryMode;
@@ -132,6 +176,16 @@ class DevHost {
       startedAt: nowIso(),
       eventId: "evt_dev_start",
     });
+    // A contrasting second task for the switch control: a terminal fixture
+    // when available, so A→B also exercises result/receipt differences.
+    const altFixture =
+      fixture.name === "completed-verified"
+        ? (soloFixture as unknown as ReplayFixture)
+        : (completedVerifiedFixture as unknown as ReplayFixture);
+    this.alternate = replayFixtureRecord(
+      altFixture,
+      `vt_dev_alt_${altFixture.name.replaceAll("-", "_")}`,
+    );
     // Ordered queue preserves fixture interleaving: literal visual events
     // (reported waits/finishes — model calls, not hook traffic) replay
     // through the real reducer alongside mapped codex events.
@@ -166,6 +220,18 @@ class DevHost {
         }
       });
     });
+    // Task switch: deliver the other task's snapshot through the normal
+    // tool-result notification — the widget sees a real task change.
+    document.querySelectorAll<HTMLButtonElement>("[data-task-switch]").forEach((button) => {
+      button.addEventListener("click", () => {
+        this.servingAlternate = !this.servingAlternate;
+        log(
+          `task switch → ${this.activeRecord.snapshot.id} ` +
+            `("${this.activeRecord.snapshot.title}", ${this.activeRecord.snapshot.state})`,
+        );
+        this.postToolResult(this.activeResult(), "task switch delivery");
+      });
+    });
     log(
       `fixture "${fixture.name}" — task ${this.record.snapshot.id}, ` +
         `${this.queue.length} codex events queued, mode=${displayMode}, ` +
@@ -173,8 +239,16 @@ class DevHost {
     );
   }
 
+  private get activeRecord(): TaskRecord {
+    return this.servingAlternate ? this.alternate : this.record;
+  }
+
+  private get activeCapability(): string {
+    return this.servingAlternate ? this.altCapability : this.capability;
+  }
+
   private get snapshot(): TaskSnapshot {
-    return refreshDerivedFlags(this.record.snapshot, nowIso());
+    return refreshDerivedFlags(this.activeRecord.snapshot, nowIso());
   }
 
   private post(msg: unknown): void {
@@ -277,9 +351,13 @@ class DevHost {
     return createRenderVisualTaskResult({
       text: summarize(this.snapshot),
       task: this.snapshot,
-      recentEvents: this.record.events.slice(-20),
-      capability: this.capability,
+      recentEvents: this.activeRecord.events.slice(-20),
+      capability: this.activeCapability,
     });
+  }
+
+  private activeResult() {
+    return this.fullResult();
   }
 
   private postToolResult(params: unknown, note: string): void {
@@ -340,8 +418,8 @@ class DevHost {
         }
         if (
           this.readMode === "reject" ||
-          meta[TASK_CAPABILITY_META_KEY] !== this.capability ||
-          args.taskId !== this.record.snapshot.id
+          meta[TASK_CAPABILITY_META_KEY] !== this.activeCapability ||
+          args.taskId !== this.activeRecord.snapshot.id
         ) {
           log(
             `← tools/call get_visual_task — REJECTED ` +
@@ -361,7 +439,7 @@ class DevHost {
         );
         return {
           content: [{ type: "text", text: summarize(snap) }],
-          structuredContent: { task: snap, recentEvents: this.record.events.slice(-limit) },
+          structuredContent: { task: snap, recentEvents: this.activeRecord.events.slice(-limit) },
         };
       }
       case "record_codex_event":
@@ -370,14 +448,14 @@ class DevHost {
         return createRenderVisualTaskResult({
           text: summarize(this.snapshot),
           task: this.snapshot,
-          recentEvents: this.record.events.slice(-20),
-          capability: this.capability,
+          recentEvents: this.activeRecord.events.slice(-20),
+          capability: this.activeCapability,
         });
       case "start_visual_task":
         return {
           content: [{ type: "text", text: summarize(this.snapshot) }],
-          structuredContent: { taskId: this.record.snapshot.id, task: this.snapshot },
-          _meta: { [TASK_CAPABILITY_META_KEY]: this.capability },
+          structuredContent: { taskId: this.activeRecord.snapshot.id, task: this.snapshot },
+          _meta: { [TASK_CAPABILITY_META_KEY]: this.activeCapability },
         };
       default:
         log(`← tools/call ${String(name)} — unknown tool`);
@@ -386,24 +464,25 @@ class DevHost {
   }
 
   private recordCodexEvent(args: Record<string, unknown>): unknown {
+    const record = this.activeRecord;
     const mapped = mapCodexEvent({
-      taskId: this.record.snapshot.id,
+      taskId: record.snapshot.id,
       name: args.name as CodexEventName,
       ...(args.payload ? { payload: args.payload as CodexHookPayload } : {}),
       at: typeof args.at === "string" ? args.at : nowIso(),
       eventId:
         typeof args.eventId === "string"
           ? args.eventId
-          : `evt_${this.record.snapshot.id}_${this.record.snapshot.eventCount + 1}_${String(args.name)}`,
+          : `evt_${record.snapshot.id}_${record.snapshot.eventCount + 1}_${String(args.name)}`,
     });
     if (!mapped.ok) {
       log(`codex event ${String(args.name)} ignored: ${mapped.reason}`);
       return { content: [{ type: "text", text: `Ignored: ${mapped.reason}` }], structuredContent: { applied: false, reason: mapped.reason } };
     }
-    const applied = applyAll(this.record, mapped.events);
+    const applied = applyAll(record, mapped.events);
     return {
       content: [{ type: "text", text: applied ? "Recorded." : "Duplicate event ignored." }],
-      structuredContent: { applied, taskId: this.record.snapshot.id },
+      structuredContent: { applied, taskId: record.snapshot.id },
     };
   }
 

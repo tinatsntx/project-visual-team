@@ -841,18 +841,13 @@ describe("recovery controls in markup", () => {
     assert.equal(askStateMessage("idle"), null);
   });
 
-  it("a stale view does not animate a last-known WORKING worker", () => {
+  it("a stale view renders no animated workers — motion stays behind the opt-in", () => {
     const task = { ...makeTask("vt_anim"), workers: [WORKER] };
-    // Motion lives only in the opt-in team view (brief 011); even opted in,
-    // last-known data must not look active.
-    const live = renderToStaticMarkup(
-      createElement(TeamView, { task, stale: false, motion: true }),
-    );
-    assert.match(live, /vt-bob/); // control: fresh data animates once opted in
-    const stale = renderToStaticMarkup(
-      createElement(TeamView, { task, stale: true, motion: true }),
-    );
-    assert.doesNotMatch(stale, /vt-bob/); // last-known data must not look active
+    // Motion lives only in the opt-in team view (brief 011); last-known data
+    // must never look active. Mounted opt-in suppression cases live in
+    // viewState.test.ts (real button click under react-test-renderer).
+    const team = renderToStaticMarkup(createElement(TeamView, { task, stale: true }));
+    assert.doesNotMatch(team, /vt-bob/);
     const limited = renderToStaticMarkup(
       createElement(InlineView, { task, recentEvents: [], stale: true }),
     );

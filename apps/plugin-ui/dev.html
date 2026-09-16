@@ -72,6 +72,9 @@
     buttons switch get_visual_task behavior in the same mounted widget —
     e.g. start ?read=reject, wait for the stale banner, click "ok", then
     Try again inside the widget to see stale → live recovery.
+    "swap task" delivers a second replayed fixture task through the normal
+    tool-result path — the mounted widget sees a real task change, so view
+    state (team/evidence disclosures, motion opt-in) must reset by task id.
   -->
   <header>
     <strong>Visual Team — simulated host</strong>
@@ -104,6 +107,8 @@
       <button type="button" data-read-mode="ok">ok</button>
       <button type="button" data-read-mode="reject">reject</button>
       <button type="button" data-read-mode="drop">drop</button>
+      <span class="lbl">task, no reload</span>
+      <button type="button" data-task-switch>swap task</button>
     </nav>
   </header>
   <main><div id="stage"><iframe id="widget" title="Visual Team widget"></iframe></div></main>
