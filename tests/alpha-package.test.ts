@@ -523,25 +523,12 @@ describeWindows("alpha installer/doctor against a stubbed codex", () => {
       const port = await startHealth(fx);
       pairEndpoint(fx, `http://127.0.0.1:${port}/mcp`);
       writeStubState(fx, {});
-      const child = spawnSync(
-        POWERSHELL!,
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(fx.pkg, "install.ps1")],
-        {
-          env: {
-            ...process.env,
-            PATH: STUB_PATH(fx.binDir),
-            VT_STUB_DIR: fx.stubDir,
-            VT_STUB_LOG: fx.log,
-            VT_STUB_VERSION: "0.200.0-different",
-            VT_STUB_EXIT: "0",
-            VT_STUB_ADD_EXIT: "0",
-          },
-          cwd: fx.pkg,
-          encoding: "utf8",
-        },
-      );
-      assert.equal(child.status, 1);
-      assert.match(child.stdout, /0\.154\.0-alpha\.6\.2/);
+      // runPs supplies the controlled PSModulePath/LOCALAPPDATA — a bespoke
+      // spawnSync inherits the ambient module path (Get-FileHash may be
+      // absent) and the real desktop bundle, and would block the stub server.
+      const result = await runPs(fx, "install.ps1", [], { VT_STUB_VERSION: "0.200.0-different" });
+      assert.equal(result.code, 1, result.stdout + result.stderr);
+      assert.match(result.stdout, /0\.154\.0-alpha\.6\.2/, result.stdout + result.stderr);
       assert.equal(invocations(fx).filter((l) => / add /.test(l)).length, 0);
     } finally {
       fx.server?.close();
