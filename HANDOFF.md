@@ -2,10 +2,10 @@
 
 **Updated:** 2026-09-15
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
-**Milestone:** 0, 1, and 2 COMPLETE; M3 visual experience is implemented
-locally (`docs/swe-2-brief-008.md`, evidence
-`docs/m3-visual-experience-acceptance.md`) and awaits coordinator
-acceptance. M2 is accepted for explicit `$visual-team`
+**Milestone:** 0, 1, 2, and 3 COMPLETE on the supported path. M3 is
+accepted/published/deployed at `f78eac1`; evidence is in
+`docs/m3-visual-experience-acceptance.md`. SWE-2 is implementing M4 under
+`docs/swe-2-brief-009.md`. M2 is accepted for explicit `$visual-team`
 invocation and one active visual task at a time. Partial/failed evaluation
 branches and integration limits remain recorded; no blanket eight-case pass
 or private-alpha readiness is claimed.
@@ -76,12 +76,23 @@ Evidence: `docs/m2-consumer-workflow-acceptance.md`.
 
 ## Current state
 
+- M3 product baseline: `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6` on
+  GitHub and Render. Independent 183/183 tests, seven M3 probe cases,
+  typecheck/build/package checks pass; CI `35042201931` is green. Render
+  deploy `dep-dakujgn40ujc738u0um0` is live. Refresh the developer app in
+  ChatGPT after UI deployment; a fresh chat then loads current assets.
+  Real inline/fullscreen/PiP, keyboard evidence, same-widget reported
+  completion, terminal mode switching, and retained results pass.
+- The owner authorized direct coordinator handoffs to SWE-2 in the Devin
+  desktop harness, review/test/fix cycles, and continued milestone work.
+  SWE-2 still owns product coding; coordinator owns publication and live
+  acceptance. Do not wait for the owner to relay coding briefs/results.
 - Accepted consumer skill/package: `6def930`; refreshed installed files match
   source. Public native receipts: `docs/m2-native-host-evidence.json`.
-  Next SWE-2 assignment is brief 008. M2 changes no runtime/UI/endpoint code;
+  M2 changes no runtime/UI/endpoint code;
   no Render redeploy is required for this release. Use explicit skill invocation
   and only one active visual task until the recorded integration gaps close.
-- Accepted product-code baseline published to GitHub and live on Render:
+- Earlier M1 product-code baseline (superseded by M3 above):
   `2eda8b3f42dac033e473345b579c76911ed73917`.
   Exact-code CI `35011395446` is green. Hosted six-tool discovery, reported
   wait/resume/finish, terminal freeze, retained verification, and literal UI
@@ -265,9 +276,9 @@ fallback supplied the result.
 
 See `evals/platform-matrix.md` for cases and the feasibility report for gates.
 
-**Current priority:** coordinator acceptance of M3 visual experience
-(brief 008; local evidence in
-`docs/m3-visual-experience-acceptance.md`). The four
+**Current priority:** M4 native correlation and hooks, brief 009, dispatched
+directly to SWE-2 in Devin. M3 acceptance is recorded in
+`docs/m3-visual-experience-acceptance.md`. The four
 M2 exit criteria have executed evidence; the eight evaluation outcomes and
 remaining limits are recorded individually. No further M1 work is required.
 M4 must fix concurrent hook routing and specialist lifecycle correlation,

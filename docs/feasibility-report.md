@@ -8,13 +8,17 @@ pass with CSP enforcement on. Native skill completion, terminal web modes,
 and actual web PiP also pass. All eight feasibility criteria pass on that
 supported path. Untested surfaces remain unverified; full compatibility is
 not claimed. Closeout and backlog ownership: `docs/m0-closeout.md`.
-**Current code tested/deployed:** `2eda8b3f42dac033e473345b579c76911ed73917`.
+**Current code tested/deployed:** `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6`.
+M3 is accepted: 183 tests, seven new coordinator cases, exact-code CI,
+and real ChatGPT modes/completion/results pass. See
+`docs/m3-visual-experience-acceptance.md`. M4 is in progress under brief 009.
+The following M0–M2 evidence remains historical, not rerun claims.
 M1 is complete: 145 tests and both coordinator probes pass; exact-code CI and
 hosted wait/resume/finish smoke pass. UI/plugin source is unchanged by M1;
 the dated real-host M0 evidence below is preserved. M2 consumer workflow
 `6def930` is now accepted for explicit skill invocation and sequential tasks;
 see `docs/m2-consumer-workflow-acceptance.md` for the actual pass/partial/fail
-branches. Next: M3, `docs/swe-2-brief-008.md`.
+branches. M3 subsequently closed as recorded above.
 Full M1 release record: `docs/m1-core-engine-acceptance.md`.
 **Latest packaging tested:** regenerated/refreshed from `6def930`; installed
 skill, hook declaration, and script match source. The corrected installed-root

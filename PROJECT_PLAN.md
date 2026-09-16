@@ -769,6 +769,12 @@ integration/private-alpha work. Next: `docs/swe-2-brief-008.md`.
 
 ## Milestone 3 — Visual experience
 
+**COMPLETE / GO to Milestone 4 — 2026-09-15 CT.** Accepted at `f78eac1`:
+183 tests, seven coordinator regressions, local accessibility/layout checks,
+and real ChatGPT inline/fullscreen/PiP plus same-widget completion pass.
+See `docs/m3-visual-experience-acceptance.md` for evidence boundaries and
+remaining compatibility/private-alpha checks. Brief 009 is the M4 handoff.
+
 ### Deliverables
 
 - Inline card.

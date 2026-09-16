@@ -1,6 +1,6 @@
 # Milestone 3 visual experience — acceptance evidence
 
-**M3 implementation complete; awaiting coordinator acceptance.** Brief:
+**M3 accepted on the supported ChatGPT web path at `f78eac1`, 2026-09-15 CT.** Brief:
 `docs/swe-2-brief-008.md`. Scope: make the existing inline, fullscreen, and
 PiP views truthful and readable — clear status and next action, visible
 limited-visibility states, bounded finish results, accessibility/responsive
@@ -177,12 +177,60 @@ correctness defect and fixed by removing the badge.
   healthy reads with stale evidence no longer imply live work (probe cases
   5–7); fresh activity still animates (covered in `views.test.ts`).
 
-## Remaining real-host checks (coordinator)
+## Coordinator acceptance and release, 2026-09-15 CT
 
-- Real ChatGPT render of each mode against the live endpoint; real PiP
-  behavior in the host (PiP auto-close on session end is **not**
+The coordinator reproduced three defects in `1dc12c8` (ambiguous verification
+badge, invisible PiP goal, activity-age motion), committed the unchanged
+seven-case probe in `c26c174`, and sent the bounded follow-up directly to
+SWE-2 in Devin. SWE-2 returned `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6`.
+Independent typecheck, **183/183 tests across 41 suites**, native compatibility,
+build/literal embedding, all seven M3 probe cases, and diff checks pass.
+The earlier three coordinator probes also passed during this review; this
+UI-only follow-up changes none of their server/engine paths.
+
+Local browser interaction verified keyboard evidence expansion, fullscreen
+and return, PiP recovery/return focus order, visible focus rings, light/dark
+rendering, 320px width at 175% root text size, and 280px long-title PiP.
+Measured body scrollWidth equals clientWidth at 320px and 280px respectively.
+With a real aged WORKING snapshot and healthy reads, the mounted widget has
+zero activity-animation elements; a fresh WORKING snapshot has one. Changing
+the browser's reduced-motion emulation removes it. Media overrides were reset.
+
+Publication: exact SHA pushed to main; [CI 35042201931](https://github.com/tinatsntx/project-visual-team/actions/runs/35042201931)
+passed. Render deploy `dep-dakujgn40ujc738u0um0` became live at
+`2026-09-16T00:59:22.654487Z`; auto-deploy remains off. Health returned
+`ok:true`. Hosted resource contains the locally built JS and CSS verbatim
+(171426 HTML bytes; JS SHA-256
+`2c45b586215acc11a12301ae73e00329f7c99f55c6b7ea7d4089a97ee213fa25`).
+
+**Real ChatGPT acceptance:** [acceptance conversation](https://chatgpt.com/c/6aa9eb20-fa6c-83e9-9d86-a0636adff782),
+task `vt_04af62f3af5ef81036ce113f`, title "Check Visual Team display".
+The first render used cached pre-M3 app assets. Refreshing Visual Team M0
+in ChatGPT's plugin settings and starting a fresh conversation loaded the
+new privacy notice, decorative avatars, title, and result presentation.
+This refresh is part of the deployment runbook, not a product-code failure.
+
+| M3 exit criterion | Coordinator evidence | Decision |
+|---|---|---|
+| Goal, owner, status, needed action quickly identifiable | Real inline/fullscreen/PiP showed the goal and Alex's state; fullscreen explicitly said nothing needed the user. Local pending-task and pending-worker cases identified chat versus Codex permission prompt. Coordinator glance review found the four answers directly; this is not a timed independent participant study. | Accepted for supported path; participant metric belongs to M5 |
+| Meaning complete without animation | Reduced-motion browser override removes motion; text and keyboard controls remain. Aged activity stays static with healthy reads in the actual ChatGPT widget. | Pass |
+| Claims only supported activity | Seven adversarial probe cases pass. Real widget shows no-recent evidence, reported testing, then reported completion; fullscreen retains the entire bounded detail under Reported result, with no inferred verification badge. | Pass |
+| Inline has no deep navigation/duplicate composer | One primary Open team action, compact Pop out/details controls, keyboard operation, no extra composer. Real fullscreen/return/PiP work, including after terminal polling stops. | Pass |
+
+The same mounted real PiP widget received the coordinator's truthful reported
+completion without a render call or page reload. Back to chat followed by
+Open team still worked; Results retained summary, `verification: passed`,
+and `M3 acceptance record` artifact label as inert reported text. No native
+hook was fabricated in this UI acceptance, and no precise latency claim is made.
+
+## Compatibility and private-alpha follow-ups
+
+- Real ChatGPT inline/fullscreen/PiP and terminal switching pass above.
+  PiP auto-close on session end is **not**
   implemented — §12.3 spec item deferred as a compatibility limit, per brief
-  scope against guessing a host close event).
+  scope against guessing a host close event). The host's floating close
+  control overlaps the upper-left edge of the PiP title slightly; retain
+  this small spacing issue for pre-alpha polish, not a lost-goal claim.
 - Real mobile/narrow viewport and screen-reader runs; the 320 px and
   enlarged-text evidence here is emulation.
 - The M2-recorded limits stand unchanged: explicit `$visual-team` invocation,

@@ -5,7 +5,11 @@ Updated 2026-09-15. Results/GO decisions in `docs/feasibility-report.md`.
 **M0 COMPLETE / GO:** ChatGPT web + Windows Codex CLI + Render. The eight
 feasibility criteria pass on this supported path. Pending surfaces stay
 unverified and move to later compatibility work; see `docs/m0-closeout.md`.
-Current tested/deployed code: `2eda8b3f42dac033e473345b579c76911ed73917`.
+Current tested/deployed code: `f78eac13f0d4f0b2f7263a425ab3f420ce6a8ea6`.
+M3 visual experience is accepted; real ChatGPT modes, same-widget reported
+completion, terminal switching, and result metadata pass. Independent
+183-test suite and seven M3 probes pass. Full evidence and compatibility
+limits: `docs/m3-visual-experience-acceptance.md`.
 M1 core engine is accepted with 145 tests, both unchanged coordinator probes,
 exact-code CI, and hosted HTTP wait/resume/finish smoke. This adds no new
 browser/native matrix claims; earlier dated M0 evidence is unchanged.
@@ -14,7 +18,7 @@ is accepted for explicit skill invocation and one active visual task.
 Real native and ChatGPT evidence, partial/failed branches, and the unexecuted
 permission prompt are recorded in `docs/m2-consumer-workflow-acceptance.md`.
 M4 owns the observed cross-task hook routing and specialist status gaps.
-Next work is M3, brief 008.
+Current work is M4, brief 009.
 Latest packaging regenerated/refreshed from `6def930`; installed skill and
 hook files match source. Isolated Sites port `433d93d`
 is privately deployed; owner MCP availability blocks its live acceptance.
