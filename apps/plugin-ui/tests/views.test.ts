@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { TaskSnapshot, TaskState, VisualEvent, WorkerSnapshot } from "@visual-team/contracts";
+import type { TaskSnapshot, VisualEvent, WorkerSnapshot } from "@visual-team/contracts";
 import { InlineView } from "../src/modes/InlineView.tsx";
 import { FullscreenView } from "../src/modes/FullscreenView.tsx";
 import { PipView } from "../src/modes/PipView.tsx";

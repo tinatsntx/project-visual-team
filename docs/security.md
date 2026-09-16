@@ -33,6 +33,13 @@ Threat model seeds for the alpha (expand before public beta — Milestone 5/6).
   credential and does not replace the task capability token; multiuser
   isolation is still out of scope for the single-user alpha.
 - Non-managed plugin hooks require user trust review before Codex runs them.
+- All state is in-memory per server instance: task records, the bounded
+  `session_id`/`agent_id` binding indexes, and rate-limit counters. A
+  restart drops everything — replay protection depends on per-task event-id
+  dedup inside that process, not on durable state.
+- The Visual Team M0 developer app has no widget domain and no
+  authentication as of 2026-09-15; production/submission claims remain
+  pending.
 
 ## Reporting
 

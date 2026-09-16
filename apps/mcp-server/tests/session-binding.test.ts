@@ -132,6 +132,7 @@ describe("record_codex_event session/agent binding (M4)", () => {
       const receiptA = await startReceipt(baseUrl, "sess-A", a.taskId);
       assert.equal(receiptA.structuredContent?.reason, "self_referential_visual_team_tool");
       const receiptB = await startReceipt(baseUrl, "sess-B", b.taskId);
+      assert.equal(receiptB.structuredContent?.reason, "self_referential_visual_team_tool");
 
       // Untargeted events resolve per-session.
       const workA = await hookEvent(baseUrl, {

@@ -15,18 +15,23 @@
     "build": "npm run build --workspace @visual-team/plugin-ui && npm run verify:ui-resource && npm run build:native-codex-compat",
     "build:native-codex-compat": "node ./scripts/build-native-codex-compat.mjs",
     "verify:ui-resource": "tsx ./scripts/verify-ui-resource.ts",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --import tsx --test \"apps/**/*.test.ts\" \"packages/**/*.test.ts\" && npm run verify:native-codex-compat",
-    "verify:native-codex-compat": "node ./scripts/verify-native-codex-compat.mjs"
+    "verify:native-codex-compat": "node ./scripts/verify-native-codex-compat.mjs",
+    "replay": "tsx ./scripts/replay-fixture.mts"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.0",
     "esbuild": "^0.28.2",
+    "eslint": "^10.9.1",
     "tsx": "^4.23.13",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.70.0"
   },
   "engines": {
     "node": ">=20.0.0"
