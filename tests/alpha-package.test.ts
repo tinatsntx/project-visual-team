@@ -8,6 +8,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -917,6 +918,7 @@ describe("alpha package source identity", () => {
         const diag = [
           `identity=${JSON.stringify(identity)}`,
           `toplevel=${git(["rev-parse", "--show-toplevel"]).stdout.trim()}`,
+          `canonical=${realpathSync.native(checkout)}`,
           `porcelain=${JSON.stringify(git(["status", "--porcelain", "--ignored"]).stdout)}`,
         ].join(" | ");
         assert.equal(identity.revision, head, `a clean standalone checkout verifies to its own HEAD — ${diag}`);
@@ -924,6 +926,48 @@ describe("alpha package source identity", () => {
         rmSync(checkout, { recursive: true, force: true });
       }
     } finally {
+      if (savedOverride === undefined) delete process.env.VISUAL_TEAM_SOURCE_SHA;
+      else process.env.VISUAL_TEAM_SOURCE_SHA = savedOverride;
+    }
+  });
+
+  it("a checkout addressed through an 8.3 short-name alias still verifies — CI repro", async (t) => {
+    // The CI runner's TEMP carries an 8.3 component (C:\Users\RUNNER~1\...):
+    // the module's projectRoot keeps the alias while git --show-toplevel
+    // reports the canonical path. Import the copied builder THROUGH the
+    // short path to prove canonicalization equates them.
+    if (!IS_WINDOWS || !POWERSHELL || !GIT_AVAILABLE) {
+      t.skip("needs Windows PowerShell + git for an 8.3 alias");
+      return;
+    }
+    const savedOverride = process.env.VISUAL_TEAM_SOURCE_SHA;
+    delete process.env.VISUAL_TEAM_SOURCE_SHA;
+    const dir = mkdtempSync(join(tmpdir(), "vt-srcid-alias-"));
+    try {
+      // Ask the OS for the directory's 8.3 name; volumes with 8.3 disabled
+      // return the long name and the case skips.
+      const ps = spawnSync(
+        POWERSHELL!,
+        ["-NoProfile", "-Command",
+          `(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${dir.replace(/'/g, "''")}').ShortPath`],
+        { encoding: "utf8" },
+      );
+      const shortForm = (ps.stdout ?? "").trim();
+      if (ps.status !== 0 || !shortForm || shortForm.toLowerCase() === dir.toLowerCase()) {
+        t.skip("8.3 short names unavailable on this volume");
+        return;
+      }
+      await copyInputs(dir);
+      const git = (args: string[]) => spawnSync("git", args, { cwd: dir, encoding: "utf8" });
+      assert.equal(git(["init", "-q"]).status, 0);
+      assert.equal(git(["add", "-A"]).status, 0);
+      assert.equal(git(["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"]).status, 0);
+      const head = git(["rev-parse", "HEAD"]).stdout.trim();
+      const identity = await identityOf(shortForm);
+      const diag = `identity=${JSON.stringify(identity)} | short=${shortForm} | canonical=${realpathSync.native(shortForm)}`;
+      assert.equal(identity.revision, head, `an 8.3-aliased checkout verifies to its own HEAD — ${diag}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
       if (savedOverride === undefined) delete process.env.VISUAL_TEAM_SOURCE_SHA;
       else process.env.VISUAL_TEAM_SOURCE_SHA = savedOverride;
     }

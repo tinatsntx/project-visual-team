@@ -81,11 +81,13 @@ function readPluginVersion() {
  * Compare two directory paths by canonical form: git's --show-toplevel
  * returns the real path (long names, on-disk case) while projectRoot may
  * carry 8.3 short names (e.g. a Windows runner's TEMP) or symlinks.
- * realpathSync expands both sides; the identity check stays strict.
+ * fs.realpathSync is a JS symlink walk that PRESERVES 8.3 aliases;
+ * realpathSync.native calls the OS binding, which expands them. The
+ * identity check stays strict — only the path normalization differs.
  */
 function canonicalPath(p) {
   try {
-    return realpathSync(p).toLowerCase();
+    return realpathSync.native(p).toLowerCase();
   } catch {
     return resolve(p).toLowerCase();
   }
