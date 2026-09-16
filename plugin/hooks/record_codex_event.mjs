@@ -22,14 +22,24 @@
  * pinned runtime (codex 0.154.x) subagent and resumed-session hooks share
  * the root session_id, so no local state file is needed.
  *
- * Config: VISUAL_TEAM_MCP_URL (default http://localhost:8787/mcp),
+ * Endpoint resolution (brief 012): a defined VISUAL_TEAM_MCP_URL wins and
+ * must be a valid http(s) URL — a defined but empty/malformed/non-http(s)
+ * value records nothing. Otherwise the packaged MCP config is read relative
+ * to the installed plugin root: <root>/.mcp.json (Legacy layout) is the
+ * selected config when present, else <root>/mcp.json (portable layout).
+ * Only mcpServers.visual-team.url is read. A missing, malformed, or
+ * non-http(s) selected config records nothing. There is no implicit
+ * localhost fallback and never a second endpoint tried after a selection.
  *         VISUAL_TEAM_TASK_ID (optional explicit override).
  *
  * Uses node:http (no fetch/undici) so the process exits cleanly on Windows.
  */
 
+import { existsSync, readFileSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const EVENT_NAME = process.argv[2] ?? "PostToolUse";
 const TASK_ID = process.env.VISUAL_TEAM_TASK_ID || undefined;
@@ -39,12 +49,44 @@ const MAX_RESPONSE_BYTES = 256 * 1024;
 const MAX_RUNTIME_MS = 9_000;
 const TASK_ID_PATTERN = /^vt_[0-9a-f]{24}$/;
 
-let MCP_URL;
-try {
-  MCP_URL = new URL(process.env.VISUAL_TEAM_MCP_URL ?? "http://localhost:8787/mcp");
-} catch {
-  MCP_URL = undefined; // bad configuration — stay silent, exit 0 below
+/** Accept only absolute http(s) URLs; anything else records nothing. */
+function parseHttpUrl(value) {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : undefined;
+  } catch {
+    return undefined;
+  }
 }
+
+function readSelectedConfigUrl() {
+  // This script lives at <root>/hooks/record_codex_event.mjs; the packaged
+  // MCP config sits at the installed root in either spelling.
+  const root = dirname(dirname(fileURLToPath(import.meta.url)));
+  for (const name of [".mcp.json", "mcp.json"]) {
+    const path = join(root, name);
+    if (!existsSync(path)) continue;
+    // The first config that exists is the selected one — malformed JSON or a
+    // missing/invalid url means record nothing, not fall back to another file.
+    let parsed;
+    try {
+      parsed = JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+      return undefined;
+    }
+    return parseHttpUrl(parsed?.mcpServers?.["visual-team"]?.url);
+  }
+  return undefined;
+}
+
+function resolveMcpUrl() {
+  const override = process.env.VISUAL_TEAM_MCP_URL;
+  if (override !== undefined) return parseHttpUrl(override); // defined wins; bad defined = silent
+  return readSelectedConfigUrl();
+}
+
+const MCP_URL = resolveMcpUrl();
 
 function readStdin() {
   return new Promise((resolve) => {

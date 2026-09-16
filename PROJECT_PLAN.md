@@ -842,6 +842,15 @@ workflow pass. Evidence: `docs/m4-native-closeout.md` and
 
 ## Milestone 5 — Private alpha
 
+**Guided setup package implemented — 2026-09-16.** `npm run build:alpha-package`
+generates `dist/visual-team-alpha/` (local marketplace + plugin artifact,
+`install.ps1`, read-only `doctor.ps1`, participant README, sha256 integrity
+manifest pinned to the source revision). Windows-only, tested runtime
+codex-cli `0.154.0-alpha.6.2`; hook endpoint resolves from
+`VISUAL_TEAM_MCP_URL` or the packaged MCP config — no implicit localhost.
+Trust and hook approval stay manual; `$visual-team` invocation is still
+explicit. Packaged, not yet distributed — no participant results exist.
+
 ### Participants
 
 Use a small group containing:

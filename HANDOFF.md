@@ -13,8 +13,27 @@ team view (motion opt-in, suppressed by reduced motion/stale/inactivity).
 `finish_visual_task` now emits a structured reported receipt on the event
 and snapshot alongside the bounded legacy detail; the reducer accepts it
 only on reported `task_finished` events, enforces the allowlist/combined
-bound, and rejects atomically. The unchanged coordinator probe
+bound (measured on the serialized detail representation), and rejects
+atomically. The unchanged coordinator probe
 `evals/brief-011-coordinator-probe.mts` passes 6/6.
+Brief 012 "guided private-alpha setup" is implemented and locally verified —
+pending coordinator review, not yet pushed, deployed, or installed. The
+bundled hook resolves its endpoint explicitly: `VISUAL_TEAM_MCP_URL` wins
+when defined and valid http(s); otherwise the packaged MCP config next to
+the installed plugin root (`.mcp.json` Legacy first, then `mcp.json`). There
+is no implicit localhost fallback and no second endpoint after a selection.
+`npm run build:alpha-package` generates `dist/visual-team-alpha/` — the
+complete marketplace/plugin artifact plus `install.ps1`, read-only
+`doctor.ps1`, shared helpers, participant README, and a sha256 integrity
+manifest pinned to the source revision. The installer supports only
+codex-cli 0.154.0-alpha.6.2, resolves Codex via `-CodexPath` or exactly one
+PATH candidate, checks package integrity, Node range, endpoint config and
+service health, then registers the local marketplace and plugin through the
+supported CLI JSON commands — idempotently, failing closed on conflicts,
+unsupported versions, malformed CLI JSON, or CLI failures. It never changes
+trust or approves hooks; the nine-hook review stays manual. Windows-only
+PowerShell execution tests cover the failure paths against a controlled
+stub; `npm run build` stays Linux-safe and does not build the archive.
 Earlier state: milestones 0 through 4 COMPLETE on the supported path. Current
 deployed product code `0f0e3ab` is reviewed, published, and deployed. Real native specialist
 start/permission/activity/finish, same-widget ChatGPT updates, session

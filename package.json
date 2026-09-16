@@ -14,10 +14,11 @@
     "dev:ui": "npm run dev --workspace @visual-team/plugin-ui",
     "build": "npm run build --workspace @visual-team/plugin-ui && npm run verify:ui-resource && npm run build:native-codex-compat",
     "build:native-codex-compat": "node ./scripts/build-native-codex-compat.mjs",
+    "build:alpha-package": "node ./scripts/build-alpha-package.mjs",
     "verify:ui-resource": "tsx ./scripts/verify-ui-resource.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --import tsx --test \"apps/**/*.test.ts\" \"packages/**/*.test.ts\" && npm run verify:native-codex-compat",
+    "test": "node --import tsx --test \"apps/**/*.test.ts\" \"packages/**/*.test.ts\" \"tests/**/*.test.ts\" && npm run verify:native-codex-compat",
     "verify:native-codex-compat": "node ./scripts/verify-native-codex-compat.mjs",
     "replay": "tsx ./scripts/replay-fixture.mts"
   },
