@@ -28,7 +28,8 @@ specification. `ROADMAP.md` maps each milestone's status.
 
 ## Local setup (Windows-first)
 
-Prereqs: Node.js ≥ 20, npm ≥ 10.
+Prereqs: Node.js 20.19+, 22.13+, or 24+; npm ≥ 10 (the floor is set by the
+dev lint toolchain — eslint requires `^20.19.0 || ^22.13.0 || >=24`).
 
 ```powershell
 npm install          # install all workspaces

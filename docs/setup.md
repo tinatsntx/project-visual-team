@@ -2,7 +2,9 @@
 
 Verified on Windows from a clean committed-source export (see
 `docs/release-readiness.md` for the exact verification run). Prereqs:
-Node.js ≥ 20, npm ≥ 10.
+Node.js 20.19+, 22.13+, or 24+ and npm ≥ 10 — the floor is set by the dev
+lint toolchain (eslint requires `^20.19.0 || ^22.13.0 || >=24`); the
+runtime itself needs nothing newer. CI runs `windows-latest` + Node 22.
 
 ## 1. Run the MCP server locally
 
@@ -42,15 +44,23 @@ npm run replay -- team-with-permission   # synthetic fixture through the real en
 npm run dev:serve --workspace @visual-team/plugin-ui   # simulated host at 127.0.0.1:8788/dev.html
 ```
 
-## 3. ChatGPT developer app (tested path)
+## 3. ChatGPT developer app — attach, then Refresh
+
+This is the browser widget path; it is separate from the native Codex
+plugin install in §4.
 
 1. Start the server. ChatGPT developer mode needs a reachable URL — tunnel
    localhost (`ngrok http 8787` style) or use a deployed endpoint.
 2. Register the MCP server in ChatGPT developer mode and copy the issued
-   `asdk_app_...` id into `plugin/.app.json` (the committed file carries the
-   M0 developer app's id — replace it for your own app).
-3. Install the plugin through your local marketplace and invoke
-   `$visual-team <task>` explicitly.
+   `asdk_app_...` id into `plugin/.app.json` (the committed file carries
+   the M0 developer app's id — replace it for your own app).
+3. In a chat, ask for visual task tracking; the app renders the widget
+   inline. `render_visual_task` mounts it; routine updates flow over the
+   host bridge.
+4. **After any deployment of new UI/server code, refresh the developer
+   app** in ChatGPT settings (developer apps cache the MCP registration
+   and widget resource) — then start a **fresh chat** so the session loads
+   current assets. Skipping this is the usual cause of stale widgets.
 
 Note (2026-09-15): the Visual Team M0 developer app has **no widget domain
 and no authentication**; production submission remains pending.
@@ -74,6 +84,18 @@ Then open `/hooks` in Codex, **review the nine Visual Team hook entries**,
 and trust them normally — never bypass trust, never copy files into the
 installed cache. Untrusted hooks simply don't run; the board then reflects
 model-reported states only.
+
+Native work uses the bundled skill: invoke `$visual-team <task>`
+explicitly. There is no ChatGPT app involvement in this path — the skill
+drives `start_visual_task`/reported steps, and trusted hooks deliver
+observed lifecycle events.
+
+**URL pairing.** Two settings must point at the *same* server for a run:
+`plugin/mcp.json`'s `url` is where the host calls the MCP tools;
+`VISUAL_TEAM_MCP_URL` (Codex process env) is where the hook script posts
+events. Local dev can leave both at their localhost defaults; a hosted run
+must set the env override so hook events reach the same endpoint the host
+tools use.
 
 ## 5. Self-hosting / pointing at your own server
 

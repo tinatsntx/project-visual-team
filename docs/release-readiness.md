@@ -100,8 +100,12 @@ Negative cases — reuse `evals/negative/`:
 > platform. Every state carries provenance; the bundled Codex hooks are
 > record-only observers that cannot approve, deny, or block actions; and
 > the board degrades to honest reported status when hooks are absent.
-> Metadata-only storage: no prompts, transcripts, or code ever leave the
-> host boundary. Alpha quality: single-user, in-memory, ~2h retention.
+> Metadata-only by design: there is no automatic capture of prompts,
+> transcripts, command text, or code — hooks forward only an allowlist of
+> correlation metadata. Task titles, summaries, and result labels are
+> caller-provided text; keep them generic and free of sensitive content
+> (the privacy model documents this). Alpha quality: single-user,
+> in-memory, ~2h retention.
 
 ## Pending gates (owner/coordinator — not approximated here)
 
@@ -123,7 +127,7 @@ export, not a pushed clone:
 npm ci                              ok
 npm run lint                        ok (0 problems)
 npm run typecheck                   ok
-npm test                            ok — 204 tests
+npm test                            ok — 208 tests
 npm run build                       ok — widget + dev-host bundles, verbatim embed verified, native compat package generated
 npm run verify:native-codex-compat  ok
 npm run replay -- team-with-permission   ok — PASS

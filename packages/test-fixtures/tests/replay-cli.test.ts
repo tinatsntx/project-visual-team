@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -59,5 +61,59 @@ describe("replay-fixture CLI", () => {
     const r = run([]);
     assert.equal(r.status, 1);
     assert.match(r.stdout, /Available synthetic fixtures/);
+  });
+
+  it("accepts declared rejections in seq-rejected-input", () => {
+    // Every rejection in this fixture is explicitly expected — it must pass.
+    const r = run(["seq-rejected-input"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /3 rejected/);
+    assert.match(r.stdout, /expect: PASS/);
+  });
+
+  it("fails when a step's actual outcome differs from its declared expect", () => {
+    // A derived completion claim is rejected by the engine; declaring it
+    // "applied" must fail even though the fixture's expect block also fails.
+    const dir = mkdtempSync(join(tmpdir(), "vt-fx-"));
+    const file = join(dir, "mismatch.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        name: "mismatch",
+        steps: [
+          { kind: "start", input: { title: "t", summary: "s", mode: "solo" } },
+          { kind: "event", event: { id: "e1", kind: "task_finished", provenance: "derived", label: "x" }, expect: "applied" },
+        ],
+        expect: { taskState: "COMPLETED", workerStates: {} },
+      }),
+    );
+    const r = run(["--file", file]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /expected applied, engine produced rejected/);
+  });
+
+  it("fails on malformed sequence steps instead of silently skipping", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vt-fx-"));
+    const file = join(dir, "malformed.json");
+    writeFileSync(
+      file,
+      JSON.stringify({
+        name: "malformed",
+        steps: [
+          { kind: "start", input: { title: "t", summary: "s", mode: "solo" } },
+          { kind: "event" },
+        ],
+        expect: { taskState: "COMPLETED", workerStates: {} },
+      }),
+    );
+    const r = run(["--file", file]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /requires event\.id, event\.kind, and event\.label/);
+  });
+
+  it("rejects an unreadable --file path with an actionable error", () => {
+    const r = run(["--file", join(tmpdir(), "vt-definitely-missing-fixture.json")]);
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /could not read fixture file/);
   });
 });

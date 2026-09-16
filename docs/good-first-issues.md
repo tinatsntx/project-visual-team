@@ -48,46 +48,58 @@ is no doc explaining how to write one.
 **Scope.** New `docs/fixtures.md`: `ReplayFixture` vs `SequenceFixture`
 step shapes, the injected taskId/monotonic clock, `expect` semantics
 (including `logLength` and per-step `expect: rejected|duplicate`), where
-fixtures live (`packages/test-fixtures/fixtures/*.json`), and how the
-replay tests consume them
+fixtures live (`packages/test-fixtures/fixtures/*.json`), the name
+registries that drive `--list` (`FIXTURE_NAMES` /
+`SEQUENCE_FIXTURE_NAMES` in `packages/test-fixtures/src/index.ts` — a new
+fixture must be registered there), and how the replay tests consume them
 (`packages/state-machine/tests/fixtures.test.ts`, `replay.test.ts`).
 Emphasize: fixtures are synthetic evidence — labels must not describe real
 user activity.
 
-**Acceptance.** A contributor can add a new fixture, see it picked up by
-`--list`, and replay it without reading the test sources.
+**Acceptance.** A contributor can add a new fixture, register it, see it
+picked up by `--list`, and replay it without reading the test sources.
 
-## 4. Hook-script tests for lifecycle argv names and override precedence
+## 4. Hook-script tests for a string `tool_response` and the response bound
 
-**Context.** `apps/mcp-server/tests/hook-script.test.ts` exercises the
-PostToolUse receipt path, but not that argv event names flow through for
-the other eight wired events, nor that a non-empty `VISUAL_TEAM_TASK_ID`
-beats a valid receipt while an empty one does not.
+**Context.** `plugin/hooks/record_codex_event.mjs` accepts `tool_response`
+as either a parsed object or a JSON **string** (`typeof res === "string"`
+→ `JSON.parse`), and bounds MCP responses at 256 KB
+(`MAX_RESPONSE_BYTES`). `apps/mcp-server/tests/hook-script.test.ts`
+covers neither branch. (Per-event argv `name` delivery is already asserted
+for all nine events in `scripts/verify-native-codex-compat.mjs`.)
 
-**Repro.** Spawn `plugin/hooks/record_codex_event.mjs SubagentStart`
-against a stub endpoint (existing harness does this for PostToolUse) — no
-assertion currently checks the delivered `name` field per event.
+**Repro.** PostToolUse payload with `tool_response` as a JSON-encoded
+string containing `structuredContent.taskId` — currently unexercised. And
+a stub endpoint that returns >256 KB — the hook should still exit 0
+silently rather than buffer unboundedly or crash.
 
-**Scope.** Table-driven cases over the nine event names asserting the
-delivered `name`; two override-precedence cases. Test-only change.
+**Scope.** Two cases in `apps/mcp-server/tests/hook-script.test.ts`: the
+string response still extracts the receipt task id (or fails closed if the
+payload is malformed); the oversized response keeps exit 0, no stdout. If
+either needs a script change, stop and report — do not change the hook
+under a test task.
 
 **Acceptance.** New cases pass; `npm test` count grows; no script changes.
 
-## 5. Evidence-panel wording check for long role labels
+## 5. Measurable 320 px overflow check for the evidence panel
 
 **Context.** `apps/plugin-ui` wraps long worker labels/roles
-(`long-labels` fixture, M3). The evidence panel (`Evidence` disclosure in
-fullscreen) is not covered by a long-content test — a very long event
-`label` could overflow the panel at 320 px.
+(`long-labels` fixture, M3), but the evidence panel (`Evidence`
+disclosure in fullscreen) has no long-content coverage — and a static
+`renderToStaticMarkup` test cannot prove wrapping. The existing headless
+capture pipeline (`scripts/m3-capture.mts`) renders real layouts.
 
-**Repro.** Render `FullscreenView` to static markup
-(`apps/plugin-ui/tests/views.test.ts` pattern) with an event whose `label`
-is ~300 chars; inspect whether the markup would wrap — the styles use
-`overflow-wrap` in the board rows but the evidence list may not.
+**Repro.** Add a capture scenario with an event `label` of ~300 chars,
+screenshot fullscreen at a 320 px viewport via the existing headless
+Chrome path, then assert measurably: evaluate
+`document.scrollingElement.scrollWidth <= 320` (no horizontal overflow) on
+the rendered page. A static-markup assertion is not a substitute — layout
+only exists in a real browser.
 
-**Scope.** Add a test asserting the evidence list markup contains the
-long label; if it overflows (missing wrap class), fix `styles.css` only —
-no component changes.
+**Scope.** Extend `scripts/m3-capture.mts` (or a sibling script) with the
+scenario + a `scrollWidth` check written into the shot report; if the
+panel genuinely overflows, fix `styles.css` only — no component changes.
+Test/tooling files only.
 
-**Acceptance.** Test passes; if a CSS change was needed, a narrow-viewport
-note goes in the test comment.
+**Acceptance.** The check runs in `npm run` script form (or a spawned
+test), fails on real overflow, and passes on the committed code.
