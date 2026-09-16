@@ -51,7 +51,7 @@ const WORKER_TRANSITIONS: Record<WorkerState, readonly WorkerState[]> = {
   ASSIGNED: ["PLANNING", "WORKING", "WAITING_FOR_APPROVAL", "BLOCKED", "CANCELED"],
   PLANNING: ["WORKING", "WAITING_FOR_APPROVAL", "BLOCKED", "CANCELED"],
   WORKING: ["WAITING_FOR_APPROVAL", "REVIEWING", "BLOCKED", "IDLE", "COMPLETED", "FAILED", "CANCELED"],
-  WAITING_FOR_APPROVAL: ["WORKING", "IDLE", "FAILED", "CANCELED"],
+  WAITING_FOR_APPROVAL: ["WORKING", "IDLE", "COMPLETED", "FAILED", "CANCELED"],
   BLOCKED: ["WORKING", "IDLE", "WAITING_FOR_APPROVAL", "CANCELED"],
   REVIEWING: ["WORKING", "IDLE", "WAITING_FOR_APPROVAL", "COMPLETED", "FAILED", "CANCELED"],
   COMPLETED: [],
@@ -463,6 +463,15 @@ export function reduceEvent(snapshotIn: TaskSnapshot, event: VisualEvent): Reduc
       if (worker) {
         worker.lastEventId = event.id;
         worker.updatedAt = event.at;
+        // Observed post-tool activity on a worker awaiting approval means
+        // the native tool ran — its ask was decided and work resumed. The
+        // native ordering is Pre -> PermissionRequest -> Post; no second
+        // PreToolUse exists between approval and completion.
+        if (event.provenance === "observed" && worker.state === "WAITING_FOR_APPROVAL") {
+          transitionWorker(worker, "WORKING", event);
+          resolveNeed(snapshot, workerNeedKey(worker.id));
+          reconcileWaitState(snapshot, event);
+        }
       }
       break;
     }

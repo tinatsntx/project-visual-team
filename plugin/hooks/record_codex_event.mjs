@@ -4,48 +4,106 @@
  *
  * Usage: record_codex_event.mjs <CodexEventName>
  *
- * Reads the Codex hook payload (JSON) from stdin and forwards it to the
- * `record_codex_event` MCP tool on the already-connected Visual Team server
- * via Streamable HTTP. This hook RECORDS ONLY: it cannot approve, deny,
- * rewrite, or block any Codex action, it never prints a decision payload,
- * and it always exits 0 so a delivery failure never interrupts work.
+ * Reads the Codex hook payload (JSON) from stdin and forwards a bounded
+ * metadata allowlist to the `record_codex_event` MCP tool on the Visual Team
+ * server via Streamable HTTP. This hook RECORDS ONLY: it cannot approve,
+ * deny, rewrite, or block any Codex action, it never writes to stdout or
+ * stderr, and it always exits 0 — even on malformed input, bad
+ * configuration, an unreachable server, or a timeout — so a delivery
+ * failure never interrupts work.
  *
- * Uses node:http (no fetch/undici) so the process exits cleanly on Windows.
+ * Correlation (M4): an event is normally delivered without a taskId and the
+ * server binds it only when the session/agent was already correlated by
+ * observed evidence — never a most-recent-task guess. The single bootstrap
+ * is the start-tool receipt: a PostToolUse on `mcp__*__start_visual_task`
+ * whose parsed tool_response carries a validated `vt_<24 hex>` taskId in
+ * structuredContent. Only that structured field is read — tool inputs and
+ * arbitrary response bodies are never scanned, stored, or sent. On the
+ * pinned runtime (codex 0.154.x) subagent and resumed-session hooks share
+ * the root session_id, so no local state file is needed.
  *
  * Config: VISUAL_TEAM_MCP_URL (default http://localhost:8787/mcp),
- *         VISUAL_TEAM_TASK_ID (optional; otherwise the server attaches to the
- *         most recently active task).
+ *         VISUAL_TEAM_TASK_ID (optional explicit override).
+ *
+ * Uses node:http (no fetch/undici) so the process exits cleanly on Windows.
  */
 
 import http from "node:http";
 import https from "node:https";
 
-const MCP_URL = new URL(process.env.VISUAL_TEAM_MCP_URL ?? "http://localhost:8787/mcp");
 const EVENT_NAME = process.argv[2] ?? "PostToolUse";
-const TASK_ID = process.env.VISUAL_TEAM_TASK_ID;
+const TASK_ID = process.env.VISUAL_TEAM_TASK_ID || undefined;
 const TIMEOUT_MS = 4_000;
+const MAX_STDIN_BYTES = 64 * 1024;
+const MAX_RESPONSE_BYTES = 256 * 1024;
+const MAX_RUNTIME_MS = 9_000;
+const TASK_ID_PATTERN = /^vt_[0-9a-f]{24}$/;
+
+let MCP_URL;
+try {
+  MCP_URL = new URL(process.env.VISUAL_TEAM_MCP_URL ?? "http://localhost:8787/mcp");
+} catch {
+  MCP_URL = undefined; // bad configuration — stay silent, exit 0 below
+}
 
 function readStdin() {
   return new Promise((resolve) => {
     const chunks = [];
-    process.stdin.on("data", (c) => chunks.push(c));
-    process.stdin.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    process.stdin.on("error", () => resolve(""));
-    setTimeout(() => resolve(""), TIMEOUT_MS).unref();
+    let bytes = 0;
+    let truncated = false;
+    process.stdin.on("data", (c) => {
+      if (bytes + c.length > MAX_STDIN_BYTES) {
+        truncated = true;
+        const take = Math.max(0, MAX_STDIN_BYTES - bytes);
+        if (take) chunks.push(c.subarray(0, take));
+        bytes += take;
+        return;
+      }
+      chunks.push(c);
+      bytes += c.length;
+    });
+    process.stdin.on("end", () =>
+      resolve({ text: Buffer.concat(chunks).toString("utf8"), truncated }),
+    );
+    process.stdin.on("error", () => resolve({ text: "", truncated: true }));
+    setTimeout(() => resolve({ text: "", truncated: true }), TIMEOUT_MS).unref();
   });
 }
 
-function parsePayload(raw) {
-  try {
-    const obj = JSON.parse(raw || "{}");
-    // Keep only non-sensitive correlation fields (plan §13.4).
-    const keep = ["session_id", "turn_id", "agent_id", "agent_type", "tool_name"];
-    const payload = {};
-    for (const k of keep) if (typeof obj[k] === "string") payload[k] = obj[k].slice(0, 256);
-    return payload;
-  } catch {
-    return {};
+function parsePayload(obj) {
+  // Keep only non-sensitive correlation fields (plan §13.4). Prompt text,
+  // tool inputs/responses, transcripts, paths, and cwd never leave stdin.
+  const keep = ["session_id", "turn_id", "agent_id", "agent_type", "tool_name"];
+  const payload = {};
+  for (const k of keep) if (typeof obj[k] === "string") payload[k] = obj[k].slice(0, 256);
+  return payload;
+}
+
+/**
+ * The only receipt trusted to bootstrap a binding: a successful PostToolUse
+ * on a Visual Team start tool. The task id comes exclusively from the
+ * parsed structured result — never from tool_input or raw text.
+ */
+function extractReceiptTaskId(obj) {
+  if (EVENT_NAME !== "PostToolUse") return undefined;
+  const toolName = obj?.tool_name;
+  if (
+    typeof toolName !== "string" ||
+    (toolName !== "start_visual_task" && !toolName.endsWith("__start_visual_task"))
+  ) {
+    return undefined;
   }
+  let res = obj?.tool_response;
+  if (typeof res === "string") {
+    try {
+      res = JSON.parse(res);
+    } catch {
+      return undefined;
+    }
+  }
+  if (!res || typeof res !== "object" || res.isError === true) return undefined;
+  const taskId = res?.structuredContent?.taskId;
+  return typeof taskId === "string" && TASK_ID_PATTERN.test(taskId) ? taskId : undefined;
 }
 
 function rpc(method, params, id) {
@@ -69,7 +127,12 @@ function rpc(method, params, id) {
       },
       (res) => {
         const chunks = [];
-        res.on("data", (c) => chunks.push(c));
+        let bytes = 0;
+        res.on("data", (c) => {
+          if (bytes + c.length > MAX_RESPONSE_BYTES) return req.destroy();
+          chunks.push(c);
+          bytes += c.length;
+        });
         res.on("end", () => {
           const text = Buffer.concat(chunks).toString("utf8");
           const dataLine = text.split("\n").filter((l) => l.startsWith("data:")).at(-1);
@@ -80,6 +143,7 @@ function rpc(method, params, id) {
             resolve(null);
           }
         });
+        res.on("error", () => resolve(null));
       },
     );
     req.on("timeout", () => req.destroy());
@@ -89,13 +153,26 @@ function rpc(method, params, id) {
 }
 
 async function main() {
-  const payload = parsePayload(await readStdin());
+  if (!MCP_URL) return; // unusable configuration — nothing to do
+  const { text, truncated } = await readStdin();
+  // Malformed, empty, or oversized input records nothing — the hook never
+  // emits observed activity on data it could not fully parse.
+  if (truncated || !text) return;
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch {
+    return;
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
+  const payload = parsePayload(obj);
+  const taskId = TASK_ID ?? extractReceiptTaskId(obj);
   const args = {
     name: EVENT_NAME,
     at: new Date().toISOString(),
     eventId: `hook_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     payload,
-    ...(TASK_ID ? { taskId: TASK_ID } : {}),
+    ...(taskId ? { taskId } : {}),
   };
   await rpc("initialize", {
     protocolVersion: "2025-06-18",
@@ -106,5 +183,11 @@ async function main() {
   await rpc("tools/call", { name: "record_codex_event", arguments: args }, 2);
 }
 
-// Record-only: swallow everything, exit 0, let the event loop drain.
-main().catch(() => undefined).then(() => { process.exitCode = 0; });
+// Record-only: hard total-runtime bound, no output, always exit 0.
+const watchdog = setTimeout(() => process.exit(0), MAX_RUNTIME_MS);
+main()
+  .catch(() => undefined)
+  .finally(() => {
+    clearTimeout(watchdog);
+    process.exitCode = 0;
+  });

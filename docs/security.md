@@ -26,8 +26,12 @@ Threat model seeds for the alpha (expand before public beta — Milestone 5/6).
 
 - Local-dev `mcp.json` points at `http://localhost:8787/mcp`; production
   submission requires a public HTTPS endpoint (Milestone 7).
-- Untargeted hook events attach to the most recently active task — acceptable
-  for a single-user local alpha; revisit for multiuser.
+- Untargeted hook events resolve only through a `session_id`/`agent_id`
+  binding established by observed evidence (the start-tool receipt or a bound
+  SubagentStart); unknown, expired, or conflicting correlation is rejected.
+  A correlation key is routing metadata only — it is not an authentication
+  credential and does not replace the task capability token; multiuser
+  isolation is still out of scope for the single-user alpha.
 - Non-managed plugin hooks require user trust review before Codex runs them.
 
 ## Reporting

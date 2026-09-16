@@ -52,6 +52,23 @@ describe("mapCodexEvent (plan §10)", () => {
     assert.match(r.events[0]?.detail ?? "", /review/);
   });
 
+  it("drops the recorder's own MCP tool calls — self-observation is not work", () => {
+    for (const name of ["PreToolUse", "PostToolUse", "PermissionRequest"] as const) {
+      for (const toolName of [
+        "mcp__codex_apps__start_visual_task",
+        "mcp__visual_team__report_workflow_step",
+        "finish_visual_task", // bare alias form
+      ]) {
+        const r = mapCodexEvent({ ...base, name, payload: { tool_name: toolName } });
+        assert.equal(r.ok, false, `${name} on ${toolName} must be dropped`);
+        assert.equal(r.ok ? "" : r.reason, "self_referential_visual_team_tool");
+      }
+      // Unrelated tools on the same event still map normally.
+      const real = mapCodexEvent({ ...base, name, payload: { tool_name: "mcp__other__start_visual_taskish" } });
+      assert.ok(real.ok);
+    }
+  });
+
   it("all mapped events are observed provenance", () => {
     for (const name of ["SessionStart", "UserPromptSubmit", "SubagentStart", "PreToolUse", "PostToolUse", "PermissionRequest", "SubagentStop", "Stop", "Interrupt"] as const) {
       const r = mapCodexEvent({ ...base, name });

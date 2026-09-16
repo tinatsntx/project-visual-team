@@ -56,6 +56,27 @@ visual layer is a status view, never the deliverable.
 7. **`render_visual_task` once more** at completion, then give a complete
    text answer regardless of whether the board rendered.
 
+## How native hooks reach the board
+
+The bundled hooks are record-only observers — they never approve, deny,
+rewrite, or block a Codex action, and they run only after the user trusts
+them in Codex's normal `/hooks` review.
+
+- When the trusted hook observes the `start_visual_task` tool result, the
+  server binds this Codex session's id to the task. Later lifecycle events
+  on that session — including subagent start/stop and the specialist's own
+  tool calls (distinguished by `agent_id`) — then reach the board
+  automatically.
+- An event whose session or agent is unknown, expired, or claims a
+  different live task is rejected (`unbound_session`,
+  `session_bound_to_other_task`, `ambiguous_correlation`) rather than
+  guessed onto whichever task is newest.
+- If hooks are not trusted or delivery fails, the workflow is unchanged:
+  your `report_workflow_step`/`finish_visual_task` calls still drive the
+  board with `reported` provenance.
+- **Never** call `record_codex_event` yourself — hook data is `observed`
+  evidence the host produced; a tool call cannot mint it.
+
 ## Rejections are not failures to route around
 
 - `{applied:false}` is a safe no-op — with a `reason` it is a rejection

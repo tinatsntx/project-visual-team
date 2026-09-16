@@ -2,7 +2,10 @@
 
 Every meaningful state must be backed by:
 
-- hook-delivered `record_codex_event` data (`observed`);
+- hook-delivered `record_codex_event` data (`observed`) — delivered only
+  after the session's `start_visual_task` receipt bound it to the task;
+  unknown, expired, or conflicting session/agent ids are rejected, never
+  guessed onto the newest task;
 - your own `report_workflow_step`/`finish_visual_task` calls (`reported` —
   calling a tool never upgrades a claim to observed);
 - a direct user action;

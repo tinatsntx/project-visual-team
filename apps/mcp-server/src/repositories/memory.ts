@@ -7,7 +7,6 @@ import {
   applyEvent,
   createTaskRecord,
   refreshDerivedFlags,
-  TERMINAL_TASK_STATES,
   type TaskRecord,
 } from "@visual-team/state-machine";
 
@@ -39,8 +38,24 @@ export const systemClock: Clock = {
 
 export const DEFAULT_TTL_MS = 2 * 60 * 60 * 1000; // 2h ephemeral retention
 
+/**
+ * Bounded native-correlation indexes (M4). `sessions` maps a Codex
+ * `session_id` to the task its observed start-tool receipt bound; `agents`
+ * maps a subagent `agent_id` to the task its parent-session SubagentStart
+ * resolved. A correlation key is routing metadata only — never an
+ * authentication credential (docs/security.md).
+ */
+interface Binding {
+  taskId: string;
+  atMs: number;
+}
+
+const MAX_BINDINGS = 512;
+
 export class InMemoryTaskRepository {
   private tasks = new Map<string, StoredTask>();
+  private sessions = new Map<string, Binding>();
+  private agents = new Map<string, Binding>();
 
   constructor(
     private clock: Clock = systemClock,
@@ -70,15 +85,53 @@ export class InMemoryTaskRepository {
     return task.capability === capability;
   }
 
-  /** Most recently active non-terminal task — used to correlate hook events that lack a taskId. */
-  mostRecentActive(): StoredTask | undefined {
-    this.sweep();
-    let best: StoredTask | undefined;
-    for (const t of this.tasks.values()) {
-      if (TERMINAL_TASK_STATES.has(t.record.snapshot.state)) continue;
-      if (!best || t.record.snapshot.lastActivityAt > best.record.snapshot.lastActivityAt) best = t;
+  /**
+   * Record a session_id → task binding observed on a call that already
+   * resolved to the task (an explicit-taskId receipt or an event on an
+   * established session). Bounded; stale entries are swept with their task.
+   */
+  bindSession(sessionId: string, taskId: string): void {
+    this.setBound(this.sessions, sessionId, taskId);
+  }
+
+  /** Record an agent_id → task binding (subagent correlation). */
+  bindAgent(agentId: string, taskId: string): void {
+    this.setBound(this.agents, agentId, taskId);
+  }
+
+  /** Raw binding lookup — may point at a gone task; callers validate via get(). */
+  boundTaskForSession(sessionId: string): string | undefined {
+    return this.sessions.get(sessionId)?.taskId;
+  }
+
+  boundTaskForAgent(agentId: string): string | undefined {
+    return this.agents.get(agentId)?.taskId;
+  }
+
+  /** Resolve a bound session to a live StoredTask, dropping a stale binding. */
+  resolveBoundSession(sessionId: string): StoredTask | undefined {
+    return this.resolveBound(this.sessions, sessionId);
+  }
+
+  resolveBoundAgent(agentId: string): StoredTask | undefined {
+    return this.resolveBound(this.agents, agentId);
+  }
+
+  private setBound(map: Map<string, Binding>, key: string, taskId: string): void {
+    map.delete(key);
+    map.set(key, { taskId, atMs: this.clock.nowMs() });
+    if (map.size > MAX_BINDINGS) {
+      const oldest = map.keys().next();
+      if (!oldest.done) map.delete(oldest.value);
     }
-    return best;
+  }
+
+  private resolveBound(map: Map<string, Binding>, key: string): StoredTask | undefined {
+    const binding = map.get(key);
+    if (!binding) return undefined;
+    const stored = this.get(binding.taskId);
+    if (!stored) map.delete(key); // binding outlived its task — drop it
+    return stored;
   }
 
   /** Snapshot with derived display flags refreshed at read time. */
@@ -104,6 +157,12 @@ export class InMemoryTaskRepository {
     const cutoff = this.clock.nowMs() - this.ttlMs;
     for (const [id, t] of this.tasks) {
       if (t.createdAtMs < cutoff) this.tasks.delete(id);
+    }
+    // Bindings expire with their task — a swept task releases its keys.
+    for (const map of [this.sessions, this.agents]) {
+      for (const [key, binding] of map) {
+        if (!this.tasks.has(binding.taskId)) map.delete(key);
+      }
     }
   }
 }

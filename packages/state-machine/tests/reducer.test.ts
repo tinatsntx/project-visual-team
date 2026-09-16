@@ -670,4 +670,37 @@ describe("attributed pending needs", () => {
     assert.equal(rec.snapshot.needsUser, false);
     assert.equal(rec.snapshot.pendingUserNeeds, undefined);
   });
+
+  it("native order Pre -> Permission -> Post -> Stop completes without a fabricated second Pre", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-p" }));
+    applyEvent(rec, ev({ id: "e2", kind: "worker_transition", workerId: "agent-p", to: "WORKING" }));
+    applyEvent(rec, ev({ id: "e3", kind: "permission_request", workerId: "agent-p" }));
+    const agent = () => rec.snapshot.workers.find((w) => w.externalId === "agent-p");
+    assert.equal(agent()?.state, "WAITING_FOR_APPROVAL");
+    assert.equal(rec.snapshot.needsUser, true);
+    // The approved tool ran — observed post-tool activity resolves the ask.
+    const post = applyEvent(rec, ev({ id: "e4", kind: "activity", workerId: "agent-p" }));
+    assert.equal(post.ok, true);
+    assert.equal(agent()?.state, "WORKING");
+    assert.equal(rec.snapshot.needsUser, false);
+    assert.equal(rec.snapshot.state, "ACTIVE");
+    // The subagent turn ends — a finished specialist reaches COMPLETED.
+    const stop = applyEvent(rec, ev({ id: "e5", kind: "specialist_finished", workerId: "agent-p" }));
+    assert.equal(stop.ok, true);
+    assert.equal(agent()?.state, "COMPLETED");
+  });
+
+  it("a specialist ending while still waiting finishes — its ask is moot", () => {
+    const rec = makeSolo();
+    applyEvent(rec, ev({ id: "e1", kind: "specialist_joined", workerId: "agent-w" }));
+    applyEvent(rec, ev({ id: "e2", kind: "permission_request", workerId: "agent-w" }));
+    const agent = () => rec.snapshot.workers.find((w) => w.externalId === "agent-w");
+    assert.equal(agent()?.state, "WAITING_FOR_APPROVAL");
+    const stop = applyEvent(rec, ev({ id: "e3", kind: "specialist_finished", workerId: "agent-w" }));
+    assert.equal(stop.ok, true);
+    assert.equal(agent()?.state, "COMPLETED");
+    assert.equal(rec.snapshot.needsUser, false);
+    assert.equal(rec.snapshot.state, "ACTIVE");
+  });
 });

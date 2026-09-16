@@ -1,5 +1,62 @@
 {
+  "description": "Visual Team record-only activity hooks. Each command reads the hook payload from stdin and forwards a bounded metadata allowlist to the Visual Team MCP server. They emit no decision output and always exit 0 — they can never approve, deny, rewrite, or block a Codex action.",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" SessionStart",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" UserPromptSubmit",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" SubagentStart",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" PreToolUse",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": ".*",
@@ -7,6 +64,64 @@
           {
             "type": "command",
             "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" PostToolUse",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" PermissionRequest",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" SubagentStop",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" Stop",
+            "async": true,
+            "timeout": 10,
+            "statusMessage": "Recording activity in Visual Team"
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" Interrupt",
+            "async": true,
+            "timeout": 3,
             "statusMessage": "Recording activity in Visual Team"
           }
         ]

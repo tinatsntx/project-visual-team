@@ -9,14 +9,15 @@ locally by `permission-native-flow-preserved` in
 Installed native Codex plus one disposable command that triggers a native
 approval prompt (e.g. a write outside the workspace — non-destructive).
 
-The bundled `hooks.json` wires **only `PostToolUse`**; a `PermissionRequest`
-board state needs an added hook entry — the bundled script accepts the event
-name (`record_codex_event.mjs PermissionRequest`). Wiring it requires the
-normal Codex hook **trust review** (plan §10). Choose one:
+The bundled `hooks.json` now wires `PermissionRequest` (with the other
+lifecycle events) — after the changed bundle is installed and the hooks are
+accepted through the normal Codex **trust review** (plan §10), a
+`PermissionRequest` reaches the board automatically. Choose one:
 
-- **Hooked run:** register the `PermissionRequest` entry, accept the trust
-  prompt, run the case.
-- **Unhooked run:** no extra wiring — see the degraded expectation below.
+- **Hooked run:** refreshed package installed and hooks trusted — run the
+  case as-is.
+- **Unhooked run:** hooks untrusted or unavailable — see the degraded
+  expectation below.
 
 Manually calling `record_codex_event` to stand in for a hook is forbidden —
 that is fabricated evidence.

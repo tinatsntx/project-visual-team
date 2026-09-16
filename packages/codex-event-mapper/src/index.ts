@@ -28,6 +28,28 @@ export type MapResult =
   | { ok: true; events: VisualEvent[] }
   | { ok: false; reason: string };
 
+/**
+ * Visual Team's own MCP tool names. A hook that observes the recorder's own
+ * calls must not write them onto the board as work — that would be
+ * self-generated noise, and the start receipt exists only to bind the
+ * session upstream. tool_name arrives as `mcp__<server>__<tool>` (or a bare
+ * alias), so match the final segment.
+ */
+const SELF_TOOL_NAMES = new Set([
+  "start_visual_task",
+  "report_workflow_step",
+  "record_codex_event",
+  "get_visual_task",
+  "finish_visual_task",
+  "render_visual_task",
+]);
+
+function isSelfToolCall(toolName: string | undefined): boolean {
+  if (!toolName) return false;
+  const leaf = toolName.split("__").at(-1) ?? toolName;
+  return SELF_TOOL_NAMES.has(leaf);
+}
+
 function base(input: MapInput, kind: VisualEvent["kind"], label: string): VisualEvent {
   return {
     id: input.eventId,
@@ -46,6 +68,13 @@ export function mapCodexEvent(input: MapInput): MapResult {
   }
   const p = input.payload ?? {};
   const who = p.agent_id ?? undefined;
+
+  if (
+    (parsed.data === "PreToolUse" || parsed.data === "PostToolUse" || parsed.data === "PermissionRequest") &&
+    isSelfToolCall(p.tool_name)
+  ) {
+    return { ok: false, reason: "self_referential_visual_team_tool" };
+  }
 
   switch (parsed.data) {
     case "SessionStart":

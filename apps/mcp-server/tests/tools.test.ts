@@ -39,21 +39,50 @@ describe("InMemoryTaskRepository", () => {
     assert.equal(repo.get(record.snapshot.id), undefined);
   });
 
-  it("attaches untargeted hook events to the most recent active task", () => {
+  it("resolves untargeted events only through an observed session binding", () => {
     const repo = new InMemoryTaskRepository(clock);
     const { record } = repo.createTask({ title: "a", summary: "s", mode: "solo", privacyMode: "standard" });
-    const stored = repo.mostRecentActive();
-    assert.ok(stored);
+    const taskId = record.snapshot.id;
+    // Unbound sessions resolve to nothing — there is no recency fallback.
+    assert.equal(repo.resolveBoundSession("sess-unbound"), undefined);
+    repo.bindSession("sess-a", taskId);
+    const stored = repo.resolveBoundSession("sess-a");
+    assert.equal(stored?.record.snapshot.id, taskId);
     const mapped = mapCodexEvent({
-      taskId: stored.record.snapshot.id,
+      taskId,
       name: "PreToolUse",
       at: clock.nowIso(),
       eventId: "evt_x",
-      payload: { tool_name: "shell" },
+      payload: { tool_name: "shell", session_id: "sess-a" },
     });
     assert.ok(mapped.ok);
-    repo.apply(stored, ...mapped.events);
+    repo.apply(stored!, ...mapped.events);
     assert.equal(record.snapshot.state, "ACTIVE");
+  });
+
+  it("resolves a child session through its agent binding and expires bindings with the task", () => {
+    let nowMs = Date.parse("2026-09-13T15:00:00.000Z");
+    const movingClock: Clock = {
+      nowIso: () => new Date(nowMs).toISOString(),
+      nowMs: () => nowMs,
+    };
+    const repo = new InMemoryTaskRepository(movingClock, 1_000);
+    const { record } = repo.createTask({ title: "a", summary: "s", mode: "solo", privacyMode: "standard" });
+    const taskId = record.snapshot.id;
+    // Parent session bound; SubagentStart then introduces the child agent.
+    repo.bindSession("sess-parent", taskId);
+    repo.bindAgent("agent-reviewer", taskId);
+    assert.equal(repo.boundTaskForSession("sess-parent"), taskId);
+    assert.equal(repo.boundTaskForAgent("agent-reviewer"), taskId);
+    // A later child-session event resolves via the agent id.
+    const viaAgent = repo.resolveBoundAgent("agent-reviewer");
+    assert.equal(viaAgent?.record.snapshot.id, taskId);
+    // When the task sweeps, every binding expires with it.
+    nowMs += 1_001;
+    assert.equal(repo.get(taskId), undefined);
+    assert.equal(repo.boundTaskForSession("sess-parent"), undefined);
+    assert.equal(repo.boundTaskForAgent("agent-reviewer"), undefined);
+    assert.equal(repo.resolveBoundAgent("agent-reviewer"), undefined);
   });
 
   it("rejects events addressed to a different task across the repository boundary", () => {

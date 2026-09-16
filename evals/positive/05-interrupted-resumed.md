@@ -9,9 +9,10 @@
 A disposable task long enough to interrupt mid-run (e.g. multi-file read
 plus edit in a scratch directory).
 
-The bundled `hooks.json` wires **only `PostToolUse`**; an `Interrupt`/`Stop`
-board signal needs an added hook entry (the bundled script takes the event
-name) plus Codex hook **trust review**. Without it the interrupt is simply
+The bundled `hooks.json` now wires `Interrupt` and `Stop` (with the other
+lifecycle events) — after the changed bundle is installed and the hooks are
+accepted through the normal Codex **trust review**, the interruption reaches
+the board automatically. Without trusted hooks the interrupt is simply
 unobserved — the board keeps the last reported state and later derives
 "No recent activity", which is honest.
 

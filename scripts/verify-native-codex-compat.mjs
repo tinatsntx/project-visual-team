@@ -247,6 +247,11 @@ async function assertHookLaunchCheck(hooksDocument) {
   });
   await new Promise((resolvePromise) => server.listen(0, "127.0.0.1", resolvePromise));
 
+  const recordCalls = () =>
+    requests.filter(
+      (request) => request && request.method === "tools/call" && request.params?.name === "record_codex_event",
+    );
+
   try {
     await rm(launchCheckRoot, { recursive: true, force: true });
     await Promise.all([
@@ -268,7 +273,10 @@ async function assertHookLaunchCheck(hooksDocument) {
       VISUAL_TEAM_TASK_ID: "vt_launch_check",
     };
 
-    for (const { label, command } of hookCommands(hooksDocument)) {
+    const commands = hookCommands(hooksDocument);
+    for (const { label, command } of commands) {
+      const eventName = label.split("[")[0];
+      const before = recordCalls().length;
       const substituted = substituteHookEnv(command, hookEnv);
       assert.ok(!substituted.includes("${"), label + " has an unresolved placeholder: " + substituted);
       const result = await runHookCommand(
@@ -279,6 +287,7 @@ async function assertHookLaunchCheck(hooksDocument) {
           session_id: "launch-check-session",
           tool_name: "shell",
           tool_input: { command: "echo secret-marker" },
+          prompt: "secret prompt text",
           transcript_path: "C:/secret/transcript.jsonl",
         }),
       );
@@ -287,24 +296,86 @@ async function assertHookLaunchCheck(hooksDocument) {
         0,
         label + " launch check failed: " + JSON.stringify({ stdout: result.stdout, stderr: result.stderr }),
       );
+      assert.equal(result.stdout, "", label + " wrote to stdout; a hook must emit no decision payload");
+      const call = recordCalls().at(-1);
+      assert.ok(call && recordCalls().length > before, label + " delivered no record_codex_event call");
+      const args = call.params.arguments;
+      assert.equal(args.name, eventName, label + " sent the wrong event name");
+      assert.equal(args.taskId, "vt_launch_check");
+      assert.equal(args.payload.session_id, "launch-check-session");
+      for (const key of Object.keys(args.payload)) {
+        assert.ok(allowlistedPayloadKeys.includes(key), "hook forwarded a non-allowlisted payload key: " + key);
+      }
+      const serialized = JSON.stringify(call);
+      assert.ok(
+        !serialized.includes("secret-marker") && !serialized.includes("transcript") && !serialized.includes("secret prompt"),
+        label + " forwarded non-allowlisted payload content",
+      );
     }
 
-    const toolCall = requests.find(
-      (request) => request && request.method === "tools/call" && request.params?.name === "record_codex_event",
+    // Receipt binding (synthetic): a PostToolUse on our start tool extracts
+    // only the validated structured taskId — a taskId-shaped value planted
+    // in tool_input must never bind.
+    requests.length = 0;
+    const noPinEnv = { ...childEnv };
+    delete noPinEnv.VISUAL_TEAM_TASK_ID;
+    const receiptTaskId = "vt_0123456789abcdef01234567";
+    const falseTaskId = "vt_aaaaaaaaaaaaaaaaaaaaaaaa";
+    const postToolUseCommand = commands.find(({ label }) => label.startsWith("PostToolUse"));
+    assert.ok(postToolUseCommand, "hooks.json must wire PostToolUse");
+    const receipt = await runHookCommand(
+      substituteHookEnv(postToolUseCommand.command, hookEnv),
+      foreignCwd,
+      noPinEnv,
+      JSON.stringify({
+        session_id: "launch-check-bound-session",
+        tool_name: "mcp__codex_apps__start_visual_task",
+        tool_input: { taskId: falseTaskId, secret: "SYNTHETIC_INPUT_MUST_NOT_BIND" },
+        tool_response: {
+          structuredContent: { taskId: receiptTaskId, task: { id: receiptTaskId } },
+          content: [],
+        },
+        transcript_path: "C:/secret/receipt-transcript.jsonl",
+      }),
     );
-    assert.ok(toolCall, "hook launch check delivered no record_codex_event call");
-    const args = toolCall.params.arguments;
-    assert.equal(args.name, "PostToolUse");
-    assert.equal(args.taskId, "vt_launch_check");
-    assert.equal(args.payload.session_id, "launch-check-session");
-    assert.equal(args.payload.tool_name, "shell");
-    for (const key of Object.keys(args.payload)) {
-      assert.ok(allowlistedPayloadKeys.includes(key), "hook forwarded a non-allowlisted payload key: " + key);
-    }
-    const serialized = JSON.stringify(toolCall);
+    assert.equal(receipt.code, 0, "start-receipt hook run failed");
+    assert.equal(receipt.stdout, "", "start-receipt hook wrote to stdout");
+    const receiptCall = recordCalls().at(-1);
+    assert.equal(
+      receiptCall?.params.arguments.taskId,
+      receiptTaskId,
+      "hook must extract the taskId from the structured tool_response only",
+    );
     assert.ok(
-      !serialized.includes("secret-marker") && !serialized.includes("transcript"),
-      "hook forwarded non-allowlisted payload content",
+      !JSON.stringify(receiptCall).includes(falseTaskId),
+      "hook forwarded a taskId-shaped value from tool_input",
+    );
+
+    // Failure paths must never disrupt native work: bad config, malformed
+    // input, dead server, and oversized stdin all exit 0 with no output and
+    // no record call for input that could not be fully parsed.
+    const callsBeforeFailures = recordCalls().length;
+    for (const [label, stdinText, env] of [
+      ["bad MCP URL", "{}", { ...childEnv, VISUAL_TEAM_MCP_URL: "not a URL" }],
+      ["malformed payload", "{not json", childEnv],
+      ["malformed payload with pin", "{not json", { ...childEnv, VISUAL_TEAM_TASK_ID: "vt_launch_check" }],
+      ["unreachable server", "{}", { ...childEnv, VISUAL_TEAM_MCP_URL: "http://127.0.0.1:1/mcp" }],
+      ["oversized payload", JSON.stringify({ session_id: "x", blob: "y".repeat(200 * 1024) }), childEnv],
+    ]) {
+      const result = await runHookCommand(
+        substituteHookEnv(postToolUseCommand.command, hookEnv),
+        foreignCwd,
+        env,
+        stdinText,
+      );
+      assert.equal(result.code, 0, label + " hook run must exit 0");
+      assert.equal(result.stdout, "", label + " hook run must not write to stdout");
+      assert.equal(result.stderr, "", label + " hook run must not write to stderr");
+    }
+    assert.equal(
+      recordCalls().length,
+      callsBeforeFailures,
+      "malformed/oversized input must not emit a record call",
     );
   } finally {
     server.close();
@@ -410,15 +481,38 @@ assert.deepEqual(marketplace, {
   ],
 });
 
-const postToolUseEntries = nativeHooks.hooks?.PostToolUse;
-assert.ok(Array.isArray(postToolUseEntries) && postToolUseEntries.length > 0, "hooks.json must declare PostToolUse entries");
-for (const [index, entry] of postToolUseEntries.entries()) {
-  assert.equal(entry.matcher, ".*", "PostToolUse[" + index + "] must use the match-all regex matcher");
+const expectedHookEvents = [
+  "SessionStart",
+  "UserPromptSubmit",
+  "SubagentStart",
+  "PreToolUse",
+  "PostToolUse",
+  "PermissionRequest",
+  "SubagentStop",
+  "Stop",
+  "Interrupt",
+];
+assert.deepEqual(
+  Object.keys(nativeHooks.hooks ?? {}).sort(),
+  [...expectedHookEvents].sort(),
+  "hooks.json must wire exactly the supported record-only lifecycle events",
+);
+for (const eventName of expectedHookEvents) {
+  const entries = nativeHooks.hooks?.[eventName];
+  assert.ok(Array.isArray(entries) && entries.length > 0, "hooks.json must declare " + eventName + " entries");
+  for (const [index, entry] of entries.entries()) {
+    assert.equal(entry.matcher, ".*", eventName + "[" + index + "] must use the match-all regex matcher");
+  }
+  const handler = entries[0]?.hooks?.[0];
+  assert.equal(handler?.type, "command");
+  assert.equal(
+    handler?.command,
+    `node "\${PLUGIN_ROOT}/hooks/record_codex_event.mjs" ${eventName}`,
+    eventName + " must launch the record-only forwarder",
+  );
+  assert.equal(handler?.async, true, eventName + " must run async so recording never delays native work");
+  assert.equal(handler?.statusMessage, "Recording activity in Visual Team");
 }
-const postToolUse = postToolUseEntries[0]?.hooks?.[0];
-assert.equal(postToolUse?.type, "command");
-assert.equal(postToolUse?.command, "node \"${PLUGIN_ROOT}/hooks/record_codex_event.mjs\" PostToolUse");
-assert.equal(postToolUse?.statusMessage, "Recording activity in Visual Team");
 
 await Promise.all([
   assertDirectoryDerived(resolve(portablePluginRoot, "hooks"), resolve(nativePluginRoot, "hooks")),

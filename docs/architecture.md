@@ -6,7 +6,7 @@ Milestone 0:
 ```text
 ChatGPT / Codex
   visual-team skill (stub)          native work stays in the host
-  Codex hooks (PostToolUse) ──┐
+  Codex hooks (lifecycle events, record-only) ──┐
                               ▼
               MCP state service (apps/mcp-server)
                 /mcp  Streamable HTTP, stateless transport
