@@ -9,6 +9,10 @@ https://tinatsntx.github.io/project-visual-team/ and the source prerelease is
 `v0.1.0-alpha.1`, both based on `dd00652`. Hosted CI passes 293/293 with zero
 skips. Pages deployment and all 12 published asset hashes were verified;
 two original SVGs differ from the Windows checkout only by CRLF/LF endings.
+The follow-up media revision `bcf7a436cd5511859d06af48eefa7b2b8b84e1c8`
+is now live: CI run `35296307845` and Pages run `35296307894` succeeded,
+and all 14 published assets match their current hash manifest. The public
+MP4 plays in Chrome, and YouTube playback works inside the Product Hunt draft.
 Product engine/runtime code remains the accepted `5a66481` baseline.
 
 The name is retained for this working-alpha entry under the owner's approved
@@ -20,6 +24,9 @@ submission and general public-beta gates remain separate and unfinished.
 Product Hunt sign-in/onboarding is complete and its full draft is saved at
 https://www.producthunt.com/products/visual-team?launch=visual-team .
 The page explicitly says it is not scheduled yet.
+Its scheduling dialog is prepared for September 18 at 12:01 a.m. Pacific /
+2:01 a.m. Central, including the explicit challenge entry and an accurate
+development-contribution response. Final owner approval is pending.
 The fresh demo task `vt_82f9442e59eb3e310747edf0` is completed: two native reads
 exited successfully on CLI 0.155.0-alpha.2.6, the second after genuine one-action
 approval. The same ChatGPT card showed the observed need, resumed activity and

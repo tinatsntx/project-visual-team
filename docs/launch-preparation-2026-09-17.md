@@ -19,8 +19,9 @@ not claim a scheduled entry or challenge eligibility. The current real demo is c
   [name screen and alpha decision](public-name-screen-2026-09-17.md),
   [real-demo runbook](launch-demo-runbook.md), original-icon thumbnail.
 
-The coordinator implemented the static wrapper when the Devin native window
-was unavailable. No agent delegation or product-engine edits occurred.
+The coordinator implemented the static wrapper when Devin's native window
+was not exposed to this session's controls. The owner confirmed Devin itself
+was open and working. No agent delegation or product-engine edits occurred.
 
 ## Local verification
 
@@ -94,3 +95,12 @@ was unavailable. No agent delegation or product-engine edits occurred.
   four screenshots, video, maker comment and four factual tool shoutouts:
   https://www.producthunt.com/products/visual-team?launch=visual-team .
 - Product Hunt scheduled entry: pending; the saved page explicitly says draft.
+- Media follow-up revision `bcf7a436cd5511859d06af48eefa7b2b8b84e1c8` is
+  published. [CI](https://github.com/tinatsntx/project-visual-team/actions/runs/35296307845)
+  and [Pages](https://github.com/tinatsntx/project-visual-team/actions/runs/35296307894)
+  succeeded. All 14 public assets return HTTP 200 and match their SHA-256
+  manifest. The public MP4 was observed playing in Chrome; the Product Hunt
+  YouTube embed also played. The public source-setup page opens signed out.
+- The live schedule dialog confirms September 18 at 12:01 a.m. PT /
+  02:01 a.m. CDT. Its explicit challenge option and honest 695-character
+  contribution response are prepared, awaiting final owner review.

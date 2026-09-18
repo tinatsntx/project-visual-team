@@ -75,6 +75,20 @@ partnerships or endorsements.
 - The old screenshot slideshow is synthetic. It must not be used as the
   current real-host demo.
 
+## Challenge scheduling response
+
+The live scheduling dialog offers September 18 at **12:01 a.m. PT /
+02:01 a.m. CDT**, with an explicit “Yes, join the GPT-6 Astra Challenge”
+option. The required response below is prepared in that dialog; submission
+still awaits the owner's final review.
+
+> Visual Team helps a person follow real Codex task activity: native approval needs, recent recorded activity, agent-reported phases and results in ChatGPT. GPT-6 Astra in Codex coordinated development and wrote some implementation, alongside SWE-2 in Devin and other tools. The product displays metadata from a Codex session; it does not embed or call Astra itself. Our current demo shows two harmless native read checks, a genuine one-action approval, resumed work and a narrowly scoped reported result. Native observations and model reports remain visibly distinct, and approvals stay in Codex. The immediate public path is a clearly labelled sample plus open source and self-host instructions.
+
+The optional contest-referral and investor-outreach fields are left blank.
+The saved draft identifies Tina Whatley as its sole human maker, is marked
+free/open source, and includes Codex, Devin, GitHub and Render shoutouts.
+Product Hunt's YouTube embed was observed playing the genuine demo.
+
 ## Final launch record (fill only from observed results)
 
 - Public URL: https://tinatsntx.github.io/project-visual-team/
