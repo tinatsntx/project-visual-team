@@ -1,8 +1,9 @@
 # Product Hunt working-alpha launch copy
 
-Prepared 2026-09-17. Preliminary name screen is recorded; final owner review
-and Product Hunt scheduling remain pending.
-Target launch: September 18, 2026 at 00:01 Pacific / 02:01 Central.
+Prepared 2026-09-17; checked 2026-09-18. Preliminary name screen is recorded;
+the owner has authorized launch. Product Hunt scheduling is blocked for the
+intended September 18 challenge date: its calendar now starts September 19.
+The draft remains unscheduled; no challenge entry is claimed.
 
 ## Listing fields
 
@@ -40,7 +41,7 @@ You can explore a clearly labelled sample immediately, without signing in.
 The source and self-host instructions are available now. This is a working
 alpha: the accepted live path is ChatGPT web with Windows Codex CLI
 0.154.0-alpha.6.2, and setup requires your own server and developer app.
-Tonight's recorded two-read demonstration also ran on 0.155.0-alpha.2.6;
+The September 17 recorded two-read demonstration also ran on 0.155.0-alpha.2.6;
 that narrow check does not establish full runtime compatibility.
 Tasks are ephemeral, with no account system or persistent history yet.
 
@@ -77,10 +78,11 @@ partnerships or endorsements.
 
 ## Challenge scheduling response
 
-The live scheduling dialog offers September 18 at **12:01 a.m. PT /
+On September 17, the scheduling dialog offered September 18 at **12:01 a.m. PT /
 02:01 a.m. CDT**, with an explicit “Yes, join the GPT-6 Astra Challenge”
-option. The required response below is prepared in that dialog; submission
-still awaits the owner's final review.
+option. The required response below was prepared, but not submitted. The
+September 18 recheck offers September 19 onward and no challenge-entry option.
+The contribution statement is retained for a possible organizer-assisted entry.
 
 > Visual Team helps a person follow real Codex task activity: native approval needs, recent recorded activity, agent-reported phases and results in ChatGPT. GPT-6 Astra in Codex coordinated development and wrote some implementation, alongside SWE-2 in Devin and other tools. The product displays metadata from a Codex session; it does not embed or call Astra itself. Our current demo shows two harmless native read checks, a genuine one-action approval, resumed work and a narrowly scoped reported result. Native observations and model reports remain visibly distinct, and approvals stay in Codex. The immediate public path is a clearly labelled sample plus open source and self-host instructions.
 
@@ -97,8 +99,11 @@ Product Hunt's YouTube embed was observed playing the genuine demo.
   thumbnail are reviewed. https://www.youtube.com/watch?v=b1AtoDnVho0
 - Name screen: `public-name-screen-2026-09-17.md`; retain Visual Team for the
   working alpha under the approved conditional plan. Not legal clearance.
-- Final owner review: pending
+- Final owner review: launch authorized September 18, 2026.
 - Product Hunt draft: https://www.producthunt.com/products/visual-team?launch=visual-team
   (saved; the page explicitly says draft and not scheduled)
-- Scheduled date and visible status: pending
-- Verification timestamp: pending
+- Scheduled date and visible status: unscheduled draft; earliest offered date
+  September 19. The intended September 18 date is unavailable in both calendars.
+- Verification timestamp: September 18, 2026, approximately 08:17 Central.
+- Same-day support request: prepared, not sent; owner choice requested before
+  contacting support or changing the challenge launch date.

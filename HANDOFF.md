@@ -1,6 +1,6 @@
 # Handoff — Project Visual Team
 
-**Updated:** 2026-09-17
+**Updated:** 2026-09-18
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
 
 **Working-alpha launch preparation:** The owner approved an open-source entry
@@ -20,13 +20,20 @@ conditional plan and bounded preliminary screen, not legal clearance. See
 `docs/public-name-screen-2026-09-17.md`. The five-person study, directory
 submission and general public-beta gates remain separate and unfinished.
 
-**Current launch owner step:** final listing review/scheduling remains pending.
+**Current launch blocker:** the owner authorized launch on September 18, but
+Product Hunt now offers September 19 as its earliest scheduling date.
 Product Hunt sign-in/onboarding is complete and its full draft is saved at
 https://www.producthunt.com/products/visual-team?launch=visual-team .
 The page explicitly says it is not scheduled yet.
-Its scheduling dialog is prepared for September 18 at 12:01 a.m. Pacific /
-2:01 a.m. Central, including the explicit challenge entry and an accurate
-development-contribution response. Final owner approval is pending.
+The September 17 preparation of the September 18 challenge option was never
+submitted. On September 18, both the listing and editor scheduling controls
+start at September 19, and the challenge page shows its live leaderboard.
+Product Hunt's help confirms that the previous Launch Now option was removed.
+A same-day support request is prepared; sending it or changing the launch date
+requires the owner's choice. No Product Hunt launch or challenge entry is claimed.
+The launch-day check passed all 14 public asset hashes, source-release and CI
+verification, alpha health, public video playback, sample result labels and
+the self-host guide. The saved maker comment now uses the actual demo date.
 The fresh demo task `vt_82f9442e59eb3e310747edf0` is completed: two native reads
 exited successfully on CLI 0.155.0-alpha.2.6, the second after genuine one-action
 approval. The same ChatGPT card showed the observed need, resumed activity and

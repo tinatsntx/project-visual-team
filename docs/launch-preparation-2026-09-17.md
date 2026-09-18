@@ -73,10 +73,34 @@ was open and working. No agent delegation or product-engine edits occurred.
 - This is a narrow new-runtime demonstration, not full compatibility coverage
   for 0.155.0-alpha.2.6. The installer still supports only its tested runtime.
 
-## Remaining owner-dependent work
+## September 18 launch-day check
 
-- Final saved-draft review and launch scheduling verification.
-- Final Product Hunt copy/media/name-findings review before scheduling.
+- The owner authorized launch on September 18. Final review is no longer pending.
+- Fresh required local checks: typecheck and widget/dev-host build passed;
+  tests passed with 292 successes, 0 failures and the same single unavailable
+  Windows 8.3-name skip. Native compatibility-package verification passed.
+- Public site: all 14 manifest assets returned HTTP 200 with matching SHA-256;
+  the alpha health endpoint and public demo acceptance record also returned 200.
+- Source prerelease remains public at the recorded tag and revision. Current
+  documentation revision `0473a139e3e59abd95ae5dba8e0a21fd96e4c3a2` matched
+  local/remote main with a clean working tree; CI run `35296627462` succeeded.
+- Chrome replayed the public MP4 through 44 seconds. The instant sample opened
+  without a login and its completed scenario retained reported result/check
+  labels. The public self-host guide opened and retained tested-runtime limits.
+- The saved Product Hunt draft retains its copy, four screenshots, video,
+  Tina as human maker, free/open-source status, and factual tool shoutouts.
+  Its maker comment now says September 17 instead of a relative date.
+- **Scheduling blocker:** both the listing and editor calendars now start on
+  September 19. The challenge page shows the live September 18 leaderboard,
+  with no late-entry control observed. Product Hunt's official help confirms
+  [Launch Now was removed](https://help.producthunt.com/en/articles/9823193-where-did-launch-now-go).
+  The intended September 18 entry remains an unscheduled draft.
+- A request for a same-day launch and challenge eligibility confirmation is
+  prepared for Product Hunt support, but has not been sent. Owner choice is
+  needed before that new outbound message or a change to September 19.
+- Verification completed approximately September 18 at 08:17 Central. The
+  machine-readable public-asset receipt remains in ignored
+  `dist/launch-recording/launch-day-site-verification.json`.
 
 ## Publication record
 
@@ -101,6 +125,7 @@ was open and working. No agent delegation or product-engine edits occurred.
   succeeded. All 14 public assets return HTTP 200 and match their SHA-256
   manifest. The public MP4 was observed playing in Chrome; the Product Hunt
   YouTube embed also played. The public source-setup page opens signed out.
-- The live schedule dialog confirms September 18 at 12:01 a.m. PT /
+- On September 17, the schedule dialog confirmed September 18 at 12:01 a.m. PT /
   02:01 a.m. CDT. Its explicit challenge option and honest 695-character
-  contribution response are prepared, awaiting final owner review.
+  contribution response were prepared but not submitted. The September 18
+  recheck above supersedes that scheduling availability.
