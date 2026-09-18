@@ -1,6 +1,7 @@
 # Product Hunt working-alpha launch copy
 
-Prepared 2026-09-17. Draft until public-name screen and final owner review.
+Prepared 2026-09-17. Preliminary name screen is recorded; final owner review
+and Product Hunt scheduling remain pending.
 Target launch: September 18, 2026 at 00:01 Pacific / 02:01 Central.
 
 ## Listing fields
@@ -13,7 +14,7 @@ Target launch: September 18, 2026 at 00:01 Pacific / 02:01 Central.
 Codex. See pending approvals, recent activity, and reported results with
 evidence labels. Explore a sample instantly or run the alpha yourself.
 
-**Primary URL (publish and verify first):**
+**Primary URL (published and verified):**
 https://tinatsntx.github.io/project-visual-team/
 
 **Source:** https://github.com/tinatsntx/project-visual-team
@@ -37,8 +38,10 @@ status. Approvals still happen in Codex; the board cannot approve an action.
 
 You can explore a clearly labelled sample immediately, without signing in.
 The source and self-host instructions are available now. This is a working
-alpha: the tested live path is ChatGPT web with Windows Codex CLI
+alpha: the accepted live path is ChatGPT web with Windows Codex CLI
 0.154.0-alpha.6.2, and setup requires your own server and developer app.
+Tonight's recorded two-read demonstration also ran on 0.155.0-alpha.2.6;
+that narrow check does not establish full runtime compatibility.
 Tasks are ephemeral, with no account system or persistent history yet.
 
 Built with GPT-6 Astra in Codex for development coordination and some
@@ -74,10 +77,14 @@ partnerships or endorsements.
 
 ## Final launch record (fill only from observed results)
 
-- Public URL / source tag / revision: pending
-- Current real video / YouTube URL: pending
-- Name screen / owner decision: pending
+- Public URL: https://tinatsntx.github.io/project-visual-team/
+- Source tag: `v0.1.0-alpha.1`; revision `dd006524b2a5b201fa69c053170b657888ebdb32`.
+- Current real video: 73.77 seconds; four gallery images and original-icon
+  thumbnail are reviewed. https://www.youtube.com/watch?v=b1AtoDnVho0
+- Name screen: `public-name-screen-2026-09-17.md`; retain Visual Team for the
+  working alpha under the approved conditional plan. Not legal clearance.
 - Final owner review: pending
-- Product Hunt draft URL: pending
+- Product Hunt draft: https://www.producthunt.com/products/visual-team?launch=visual-team
+  (saved; the page explicitly says draft and not scheduled)
 - Scheduled date and visible status: pending
 - Verification timestamp: pending

@@ -15,8 +15,14 @@ specification. `ROADMAP.md` maps each milestone's status.
 
 ## Try the sample or run from source
 
+**[Open the instant sample](https://tinatsntx.github.io/project-visual-team/)** —
+no sign-in or installation. The
+[source prerelease](https://github.com/tinatsntx/project-visual-team/releases/tag/v0.1.0-alpha.1)
+is available now.
+
 The static sample uses the current widget with clearly labelled, fictional
-fixtures. It runs in your browser without a live Codex session or MCP service:
+fixtures. It runs in your browser without a live Codex session or MCP service.
+To preview the same site locally:
 
 ```powershell
 npm ci

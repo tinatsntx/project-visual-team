@@ -2,15 +2,15 @@
 
 Owner approved the open-source launch with immediate sample access and source
 instructions. Target Product Hunt date: September 18, 2026. This record does
-not claim a scheduled entry, a current real demo, or challenge eligibility.
+not claim a scheduled entry or challenge eligibility. The current real demo is complete.
 
-## Implemented locally
+## Implemented and published
 
 - `site/`: landing page, three fixture scenarios in the accepted widget,
   source-install guide, privacy/limitations and feedback/security links.
 - Persistent sample label; no live MCP connection or native execution.
   An explicit CSP disallows network connections from the sample.
-- `npm run build:site`: stages 12 explicit source/assets plus `.nojekyll`
+- `npm run build:site`: stages 14 explicit source/assets plus `.nojekyll`
   and a hash manifest. It never copies the repository's full `dist/` tree.
 - `npm run preview:site`: loopback-only local site, including the intended
   `/project-visual-team/` base path.
@@ -41,20 +41,56 @@ was unavailable. No agent delegation or product-engine edits occurred.
   no shared MCP service request. Sample updates use the local message bridge.
 - Local review screenshots are in ignored `dist/launch-review/`; they are
   sample UI evidence, not a real-host demo.
+- The added local MP4 played in Chrome with a 73.77-second duration, advancing
+  playback and no media error. The Codex in-app browser crashed during its
+  playback check, so no in-app-browser video pass is claimed. The page also
+  links to the verified YouTube copy.
+
+## Current real-host recording
+
+- Fresh task: `vt_82f9442e59eb3e310747edf0`, title “Launch demonstration.”
+- Native CLI: **0.155.0-alpha.2.6**, in a separate read-only/on-request session.
+  The current coordinator itself cannot request native approvals.
+- First harmless native read: exit 0. Its observed activity reached the card.
+- Second turn reported `testing` at 20:13:23 Central, then the normal native
+  flow produced `permission_request` at 20:13:29 Central. The same mounted
+  ChatGPT card displayed “Alex needs approval — answer the Codex permission
+  prompt.” The owner approved once without a persistent rule. That read
+  returned exit 0 at 20:20:11 Central; the need cleared on the same card.
+  A native turn-finished event followed at 20:20:28, and the agent reported
+  completion at 20:22:25. Passed covers only the two reads.
+- Reviewed card-only captures contain public task metadata, with no capability
+  tokens, prompts, command contents, code or unrelated account details.
+  A timed capture sequence and timestamp receipts remain in ignored
+  `dist/launch-recording/`. No events or hooks were manually injected.
+- Gallery: one clearly labelled sample screenshot plus three genuine native
+  approval/evidence/result images are ready, all 1270 × 760 PNG.
+- The reviewed 73.77-second H.264 video contains genuine timed captures,
+  disclosed cuts, captions and no audio. Decode verification passed.
+  The owner approved the unlisted upload and YouTube terms; publication is
+  confirmed at https://www.youtube.com/watch?v=b1AtoDnVho0 .
+- This is a narrow new-runtime demonstration, not full compatibility coverage
+  for 0.155.0-alpha.2.6. The installer still supports only its tested runtime.
 
 ## Remaining owner-dependent work
 
-- Product Hunt sign-in and full draft/launch scheduling verification.
-- A current genuine native session and one-time approval during recording.
-  A separate read-only/on-request CLI was launched; its result is not yet
-  observed. The current desktop runtime is 0.155.0-alpha.2.6, newer than the
-  accepted 0.154.0-alpha.6.2. Do not claim fresh compatibility prematurely.
-- Real video and four reviewed gallery captures; YouTube upload/sign-in.
+- Final saved-draft review and launch scheduling verification.
 - Final Product Hunt copy/media/name-findings review before scheduling.
 
 ## Publication record
 
-- Source revision / CI: pending
-- Pages deployment / signed-out URL check: pending
-- Tagged source release: pending
-- Product Hunt scheduled entry: pending
+- Source revision: `dd006524b2a5b201fa69c053170b657888ebdb32`.
+  [CI run 35293599732](https://github.com/tinatsntx/project-visual-team/actions/runs/35293599732)
+  passed: **293 tests, 0 failures, 0 skips**; lint, typecheck and build passed.
+- [Pages run 35293763621](https://github.com/tinatsntx/project-visual-team/actions/runs/35293763621)
+  passed. https://tinatsntx.github.io/project-visual-team/ opens signed out;
+  the instant sample and setup link are available. All 12 published assets
+  match their published SHA-256 manifest. Ten match the local build exactly;
+  the two original SVGs differ only by Windows CRLF versus hosted LF endings.
+- [Source prerelease v0.1.0-alpha.1](https://github.com/tinatsntx/project-visual-team/releases/tag/v0.1.0-alpha.1)
+  published at 2026-09-18T01:18:10Z; tag target independently verified as the
+  full source revision above. This is source, not the guided alpha installer.
+- Product Hunt draft saved with all required items complete, three launch tags,
+  four screenshots, video, maker comment and four factual tool shoutouts:
+  https://www.producthunt.com/products/visual-team?launch=visual-team .
+- Product Hunt scheduled entry: pending; the saved page explicitly says draft.

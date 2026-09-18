@@ -1,0 +1,65 @@
+{
+  "recordedDate": "2026-09-17",
+  "taskId": "vt_82f9442e59eb3e310747edf0",
+  "youtube": "https://www.youtube.com/watch?v=b1AtoDnVho0",
+  "files": [
+    {
+      "path": "thumbnail-240.png",
+      "bytes": 4301,
+      "sha256": "232416a61b498076498098700638e093e4a720733780fd79fa6ec30c5bdd23a1",
+      "format": "png",
+      "width": 240,
+      "height": 240,
+      "provenance": "Original repository icon"
+    },
+    {
+      "path": "01-instant-sample.png",
+      "bytes": 78672,
+      "sha256": "0ca118cf9ef3ab4b84fc5df4beccf8e8e1889cfc00f25b483263660a89aa7b08",
+      "format": "png",
+      "width": 1270,
+      "height": 760,
+      "provenance": "Clearly labelled sample fixture"
+    },
+    {
+      "path": "02-native-approval.png",
+      "bytes": 377833,
+      "sha256": "18e9fbfbb70c3f409750d325458871b4f351cf15030eb690b1811c39720e6a99",
+      "format": "png",
+      "width": 1270,
+      "height": 760,
+      "provenance": "Genuine task metadata; disclosed crop/layout/edit"
+    },
+    {
+      "path": "03-native-evidence.png",
+      "bytes": 318480,
+      "sha256": "ba93979295aa2e86c8814742e04805b0ca26c78cb303d55e4f3e184375672ca2",
+      "format": "png",
+      "width": 1270,
+      "height": 760,
+      "provenance": "Genuine task metadata; disclosed crop/layout/edit"
+    },
+    {
+      "path": "04-reported-result.png",
+      "bytes": 287785,
+      "sha256": "6d9b32cb3365bf4c36acb2e1d17ef0fa2375cf821693d17bda1311e978701c92",
+      "format": "png",
+      "width": 1270,
+      "height": 760,
+      "provenance": "Genuine task metadata; disclosed crop/layout/edit"
+    },
+    {
+      "path": "visual-team-real-demo.mp4",
+      "bytes": 1370631,
+      "sha256": "7a4b74fb902f3cd0ab849ab35fd0713232e33c374553a25882974b6d8611d73a",
+      "format": "mp4",
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 73.766667,
+      "codec": "H.264",
+      "framesPerSecond": 30,
+      "audio": false,
+      "provenance": "Genuine task metadata; disclosed crop/layout/edit"
+    }
+  ]
+}

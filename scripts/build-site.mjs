@@ -27,6 +27,8 @@ const files = [
   ["site/preview/widget.html", "preview/widget.html"],
   ["plugin/assets/composer-icon.svg", "assets/composer-icon.svg"],
   ["plugin/assets/logo.svg", "assets/logo.svg"],
+  ["docs/launch-assets/02-native-approval.png", "assets/native-approval.png"],
+  ["docs/launch-assets/visual-team-real-demo.mp4", "assets/visual-team-real-demo.mp4"],
   ["apps/plugin-ui/dist/visual-team.js", "preview/dist/visual-team.js"],
   ["apps/plugin-ui/dist/visual-team.css", "preview/dist/visual-team.css"],
   ["apps/plugin-ui/dist/dev-host.js", "preview/dist/dev-host.js"],

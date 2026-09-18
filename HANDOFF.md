@@ -1,7 +1,34 @@
 # Handoff — Project Visual Team
 
-**Updated:** 2026-09-16
+**Updated:** 2026-09-17
 **Repo:** https://github.com/tinatsntx/project-visual-team (public, default branch `main`)
+
+**Working-alpha launch preparation:** The owner approved an open-source entry
+with an instant sample and self-host instructions. The public site is live at
+https://tinatsntx.github.io/project-visual-team/ and the source prerelease is
+`v0.1.0-alpha.1`, both based on `dd00652`. Hosted CI passes 293/293 with zero
+skips. Pages deployment and all 12 published asset hashes were verified;
+two original SVGs differ from the Windows checkout only by CRLF/LF endings.
+Product engine/runtime code remains the accepted `5a66481` baseline.
+
+The name is retained for this working-alpha entry under the owner's approved
+conditional plan and bounded preliminary screen, not legal clearance. See
+`docs/public-name-screen-2026-09-17.md`. The five-person study, directory
+submission and general public-beta gates remain separate and unfinished.
+
+**Current launch owner step:** final listing review/scheduling remains pending.
+Product Hunt sign-in/onboarding is complete and its full draft is saved at
+https://www.producthunt.com/products/visual-team?launch=visual-team .
+The page explicitly says it is not scheduled yet.
+The fresh demo task `vt_82f9442e59eb3e310747edf0` is completed: two native reads
+exited successfully on CLI 0.155.0-alpha.2.6, the second after genuine one-action
+approval. The same ChatGPT card showed the observed need, resumed activity and
+reported terminal receipt. This does not establish full new-runtime compatibility.
+The reviewed 74-second demo is unlisted at https://www.youtube.com/watch?v=b1AtoDnVho0
+and four gallery images are ready. The older September 16 task stays closed.
+See `docs/launch-demo-acceptance-2026-09-17.md`, `docs/launch-preparation-2026-09-17.md` and
+`docs/launch-demo-runbook.md` for current launch details.
+
 **Milestone:** Briefs 011 and 012 are implemented, reviewed and published at
 `5a66481`. **Both briefs pass technical acceptance.** Hosted CI passes 293/293
 with zero skips; the reviewed build is deployed with its exact widget bytes
