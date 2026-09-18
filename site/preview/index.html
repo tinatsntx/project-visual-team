@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Explore the sample — Visual Team</title>
+  <link rel="icon" href="../assets/composer-icon.svg" type="image/svg+xml"><link rel="stylesheet" href="../styles.css">
+  <script src="preview.js" defer></script>
+</head>
+<body class="preview-page">
+  <header class="preview-header"><a class="brand" href="../"><img src="../assets/composer-icon.svg" width="30" height="30" alt="">Visual Team</a><a href="../self-host.html">Run from source →</a></header>
+  <p class="sample-notice">Sample data — no live Codex session</p>
+  <main class="preview-main">
+    <div class="preview-heading"><h1>Take a look around.</h1><p class="preview-intro">Choose a scenario. The current widget replays sample events over a few seconds.</p></div>
+    <nav class="scenario-links" aria-label="Sample scenarios"><a href="?fixture=solo-posttooluse" data-fixture="solo-posttooluse">1. Activity</a><a href="?fixture=team-with-permission" data-fixture="team-with-permission">2. Approval needed</a><a href="?fixture=completed-verified" data-fixture="completed-verified">3. Reported result</a></nav>
+    <div id="stage"><iframe id="widget" title="Visual Team widget with sample task data"></iframe></div>
+    <div class="preview-help"><p><strong>Try it:</strong> open the evidence or optional team view, and expand the board. Select the same scenario again to replay it.</p><p>This sample runs locally in your browser. “Observed” labels describe simulated hook events from a fixture, not activity on your computer. No native command or approval runs here. Sample artifact names are illustrative references.</p><p>In live use, respond to the original Codex approval prompt or question. Visual Team can never approve an action.</p><p><a href="../self-host.html">Connect your own setup</a> · <a href="../privacy.html">Privacy &amp; alpha limitations</a></p></div>
+    <noscript><p>Enable JavaScript to explore the sample, or <a href="https://github.com/tinatsntx/project-visual-team">read the source and documentation</a>.</p></noscript>
+  </main>
+  <script type="module" src="./dist/dev-host.js"></script>
+</body>
+</html>

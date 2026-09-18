@@ -13,6 +13,8 @@
     "dev": "npm run dev --workspace @visual-team/mcp-server",
     "dev:ui": "npm run dev --workspace @visual-team/plugin-ui",
     "build": "npm run build --workspace @visual-team/plugin-ui && npm run verify:ui-resource && npm run build:native-codex-compat",
+    "build:site": "npm run build --workspace @visual-team/plugin-ui && node ./scripts/build-site.mjs",
+    "preview:site": "node ./scripts/serve-site.mjs",
     "build:native-codex-compat": "node ./scripts/build-native-codex-compat.mjs",
     "build:alpha-package": "node ./scripts/build-alpha-package.mjs",
     "verify:ui-resource": "tsx ./scripts/verify-ui-resource.ts",

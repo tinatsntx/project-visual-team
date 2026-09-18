@@ -1,6 +1,7 @@
 # Project Visual Team
 
-> Working codename. Public name TBD after clearance — see `docs/adr/ADR-010.md`.
+> Visual Team working alpha. The bounded public-name decision and its limits
+> are recorded in [the preliminary screen](docs/public-name-screen-2026-09-17.md).
 
 An open-source ChatGPT/Codex plugin that represents real work as a small
 visual team — who is doing what, what needs you, and what is done — without
@@ -11,6 +12,24 @@ Codex hook coverage and ChatGPT rendering (`docs/m4-codex-integration-acceptance
 coordinator closeout `docs/m4-native-closeout.md`). Read `HANDOFF.md` for
 the current supported path and `PROJECT_PLAN.md` for the controlling
 specification. `ROADMAP.md` maps each milestone's status.
+
+## Try the sample or run from source
+
+The static sample uses the current widget with clearly labelled, fictional
+fixtures. It runs in your browser without a live Codex session or MCP service:
+
+```powershell
+npm ci
+npm run build:site
+npm run preview:site
+# open http://127.0.0.1:8789/project-visual-team/
+```
+
+For your own live setup, follow the [source-install guide](docs/self-host.md).
+Use your own server and ChatGPT developer-app registration. The guided alpha
+package below is coordinator-prepared and is not a public self-service
+installer. Read the [privacy and alpha limits](docs/privacy.md) before using
+live metadata.
 
 ## What exists today
 
