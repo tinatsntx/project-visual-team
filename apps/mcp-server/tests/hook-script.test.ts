@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
+import type { ServerResponse } from "node:http";
 import type { AddressInfo, Server } from "node:net";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -49,7 +50,7 @@ interface Stub {
   requests: Array<Record<string, unknown>>;
 }
 
-async function startStub(): Promise<Stub> {
+async function startStub(respond?: (res: ServerResponse) => void): Promise<Stub> {
   const requests: Array<Record<string, unknown>> = [];
   const server = createServer((req, res) => {
     const chunks: Buffer[] = [];
@@ -61,7 +62,8 @@ async function startStub(): Promise<Stub> {
         requests.push({});
       }
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ jsonrpc: "2.0", result: {} }));
+      if (respond) respond(res);
+      else res.end(JSON.stringify({ jsonrpc: "2.0", result: {} }));
     });
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -81,9 +83,12 @@ function recordCallCount(stub: Stub) {
   ).length;
 }
 
-function withStub(run: (stub: Stub) => Promise<void>): () => Promise<void> {
+function withStub(
+  run: (stub: Stub) => Promise<void>,
+  respond?: (res: ServerResponse) => void,
+): () => Promise<void> {
   return async () => {
-    const stub = await startStub();
+    const stub = await startStub(respond);
     try {
       await run(stub);
     } finally {
@@ -149,6 +154,77 @@ describe("bundled hook script (record-only)", () => {
       assert.equal(receipt.code, 0);
       assert.equal(lastRecordCall(stub)?.params.arguments.taskId, RECEIPT_TASK);
     }),
+  );
+
+  it(
+    "validates JSON-string start-tool receipts and fails closed on malformed or failed results",
+    withStub(async (stub) => {
+      const env = {
+        VISUAL_TEAM_MCP_URL: `http://127.0.0.1:${stub.port}/mcp`,
+        VISUAL_TEAM_TASK_ID: "",
+      };
+      const receipt = JSON.stringify({
+        structuredContent: { taskId: RECEIPT_TASK },
+        content: [{ type: "text", text: "SYNTHETIC_RESPONSE_MUST_NOT_LEAK" }],
+      });
+      for (const [response, taskId] of [
+        [receipt, RECEIPT_TASK],
+        [receipt.slice(0, -1), undefined],
+        ["null", undefined],
+        [JSON.stringify({ structuredContent: { taskId: RECEIPT_TASK }, isError: true }), undefined],
+      ] as const) {
+        const before = recordCallCount(stub);
+        const result = await runHook(
+          "PostToolUse",
+          JSON.stringify({
+            session_id: "sess-string-receipt",
+            tool_name: "mcp__codex_apps__start_visual_task",
+            tool_input: { taskId: FALSE_TASK },
+            tool_response: response,
+          }),
+          env,
+        );
+        assert.deepEqual(result, { code: 0, stdout: "", stderr: "" });
+        assert.equal(recordCallCount(stub), before + 1, "each receipt must still record metadata");
+        const call = lastRecordCall(stub);
+        assert.ok(call, "no record_codex_event call reached the stub");
+        assert.equal(call.params.arguments.taskId, taskId);
+        assert.deepEqual(call.params.arguments.payload, {
+          session_id: "sess-string-receipt",
+          tool_name: "mcp__codex_apps__start_visual_task",
+        });
+        assert.ok(!JSON.stringify(call).includes("SYNTHETIC_RESPONSE_MUST_NOT_LEAK"));
+      }
+    }),
+  );
+
+  it(
+    "aborts responses larger than 256 KB silently and continues recording",
+    withStub(
+      async (stub) => {
+        const result = await runHook(
+          "PostToolUse",
+          JSON.stringify({ session_id: "sess-oversized-response" }),
+          {
+            VISUAL_TEAM_MCP_URL: `http://127.0.0.1:${stub.port}/mcp`,
+            VISUAL_TEAM_TASK_ID: "",
+          },
+        );
+        assert.deepEqual(result, { code: 0, stdout: "", stderr: "" });
+        assert.deepEqual(stub.requests.map((request) => request.method), [
+          "initialize", "notifications/initialized", "tools/call",
+        ]);
+        assert.equal(recordCallCount(stub), 1);
+      },
+      (res) => {
+        res.write(JSON.stringify({ jsonrpc: "2.0", result: { padding: "x".repeat(256 * 1024) } }));
+        // Keep the response active: only the size bound should let the hook
+        // advance to the next RPC, not EOF or the per-request idle timeout.
+        const keepAlive = setInterval(() => res.write(" "), 250);
+        keepAlive.unref();
+        res.on("close", () => clearInterval(keepAlive));
+      },
+    ),
   );
 
   it(
